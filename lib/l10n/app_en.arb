@@ -1,0 +1,120 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "PickStock",
+  "appSubtitle": "Financial health snapshots from SEC EDGAR",
+  "ingestStart": "Download SEC data",
+  "ingestDownloading": "Downloading… {percent}",
+  "@ingestDownloading": { "placeholders": { "percent": { "type": "String" } } },
+  "ingestParsing": "Loading {count} companies…",
+  "@ingestParsing": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
+  "ingestDone": "{count} companies loaded",
+  "@ingestDone": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
+  "ingestFailed": "Download failed — try again",
+  "ingestSize": "One 1.4 GB download from SEC, then everything is local.",
+
+  "toggleTheme": "Toggle light / dark theme",
+
+  "searchPlaceholder": "Search by symbol or company name",
+  "searchAction": "Analyze",
+  "searchExamples": "Try one of these",
+
+  "browseTitle": "All tickers",
+  "browseSubtitle": "{count, plural, =1{1 symbol} other{{count} symbols}} filed with SEC EDGAR",
+  "@browseSubtitle": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
+  "browseOpen": "Browse all tickers",
+  "browseFilterPlaceholder": "Filter by symbol or company name",
+  "browseMatchCount": "{count, plural, =0{No matches} =1{1 match} other{{count} matches}}",
+  "@browseMatchCount": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
+  "browseEmptyTitle": "No matching symbols",
+  "browseEmptyBody": "Nothing in EDGAR's directory matches \"{query}\".",
+  "@browseEmptyBody": { "placeholders": { "query": { "type": "String" } } },
+  "browseBack": "Back to the report",
+
+  "idleTitle": "Check a company before you invest",
+  "idleBody": "Type a ticker symbol or a company name to pull the last three fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from the company's own 10-K filings.",
+
+  "loadingResolving": "Looking up {ticker} in the SEC ticker registry…",
+  "@loadingResolving": { "placeholders": { "ticker": { "type": "String" } } },
+  "loadingFetching": "Fetching XBRL company facts for {ticker}…",
+  "@loadingFetching": { "placeholders": { "ticker": { "type": "String" } } },
+
+  "errorTitle": "Could not build a snapshot",
+  "errorUnknownTicker": "No SEC filer matches the ticker \"{ticker}\".",
+  "@errorUnknownTicker": { "placeholders": { "ticker": { "type": "String" } } },
+  "errorNoAnnualData": "SEC EDGAR holds no annual (10-K) cash-flow figures for {ticker}.",
+  "@errorNoAnnualData": { "placeholders": { "ticker": { "type": "String" } } },
+  "errorNetwork": "Could not reach SEC EDGAR. Check your connection and try again.",
+  "errorDatabaseEmpty": "No data loaded yet. Download the SEC bulk archive to populate the local database.",
+  "errorService": "SEC EDGAR returned an unexpected response. Try again in a moment.",
+  "retry": "Try again",
+
+  "sectionSanityCheck": "Sanity check",
+  "sectionHighlights": "FY{year} highlights",
+  "@sectionHighlights": { "placeholders": { "year": { "type": "String" } } },
+  "sectionHistory": "{count, plural, =1{One year} other{{count}-year}} history",
+  "@sectionHistory": { "placeholders": { "count": { "type": "int" } } },
+
+  "checkRevenueGrowth": "Revenue growing?",
+  "checkProfitable": "Profitable?",
+  "checkNetCash": "More cash than debt?",
+
+  "verdictYes": "Yes",
+  "verdictNo": "No",
+  "verdictUnknown": "n/a",
+
+  "detailRevenueGrowing": "Growing {percent} year over year",
+  "@detailRevenueGrowing": { "placeholders": { "percent": { "type": "String" } } },
+  "detailRevenueShrinking": "Shrinking {percent} year over year",
+  "@detailRevenueShrinking": { "placeholders": { "percent": { "type": "String" } } },
+  "detailProfitable": "Net income of {amount}",
+  "@detailProfitable": { "placeholders": { "amount": { "type": "String" } } },
+  "detailUnprofitable": "Net loss of {amount}",
+  "@detailUnprofitable": { "placeholders": { "amount": { "type": "String" } } },
+  "detailNetCash": "Net cash of {amount}",
+  "@detailNetCash": { "placeholders": { "amount": { "type": "String" } } },
+  "detailNetDebt": "Net debt of {amount}",
+  "@detailNetDebt": { "placeholders": { "amount": { "type": "String" } } },
+  "detailNotEnoughHistory": "Not enough filing history",
+  "detailUnavailable": "Not reported in these filings",
+
+  "labelFiscalYear": "FY",
+  "labelYear": "Year",
+  "sortByYear": "Sort by fiscal year",
+  "sortNewestFirst": "Newest first",
+  "sortOldestFirst": "Oldest first",
+  "labelRevenue": "Revenue",
+  "labelRevenueGrowth": "Rev YoY",
+  "labelNetIncome": "Net income",
+  "labelFreeCashFlow": "Free cash flow",
+  "labelOperatingCashFlow": "Operating cash flow",
+  "labelCapitalExpenditure": "Capital expenditure",
+  "labelTotalDebt": "Total debt",
+  "labelCash": "Cash",
+  "labelNetDebt": "Net debt / (cash)",
+  "labelCik": "CIK {cik}",
+  "@labelCik": { "placeholders": { "cik": { "type": "String" } } },
+  "labelFiscalYearsCovered": "FY{first} – FY{last}",
+  "@labelFiscalYearsCovered": {
+    "placeholders": {
+      "first": { "type": "String" },
+      "last": { "type": "String" }
+    }
+  },
+
+  "labelNetDebtPosition": "Net debt",
+  "labelNetCashPosition": "Net cash",
+
+  "hintRevenue": "Top-line sales reported on the income statement.",
+  "hintNetIncome": "Bottom-line profit after every cost, tax and one-off.",
+  "hintFreeCashFlow": "Operating cash flow minus capital expenditure — the cash the business actually keeps.",
+  "hintNetDebt": "Total borrowings minus cash. Negative means the company holds more cash than debt.",
+
+  "deltaVersusPriorYear": "vs FY{year}",
+  "@deltaVersusPriorYear": { "placeholders": { "year": { "type": "String" } } },
+
+  "footnoteNegatives": "Values in parentheses are negative — a net cash position.",
+  "footnoteSource": "Source: SEC EDGAR XBRL company facts, 10-K filings only. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.",
+
+  "unitMillionsSuffix": "M"
+}

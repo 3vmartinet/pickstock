@@ -1,63 +1,98 @@
-# Miscellaneous
-*.class
-*.lock
-*.log
-*.pyc
-*.swp
-.buildlog/
-.history
-
-
-
-# Flutter repo-specific
-/bin/cache/
-/bin/internal/bootstrap.bat
-/bin/internal/bootstrap.sh
-/bin/mingit/
-/dev/benchmarks/mega_gallery/
-/dev/bots/.recipe_deps
-/dev/bots/android_tools/
-/dev/devicelab/ABresults*.json
-/dev/docs/doc/
-/dev/docs/flutter.docs.zip
-/dev/docs/lib/
-/dev/docs/pubspec.yaml
-/dev/integration_tests/**/xcuserdata
-/dev/integration_tests/**/Pods
-/packages/flutter/coverage/
-version
-analysis_benchmark.json
-
-# packages file containing multi-root paths
-.packages.generated
-
-# Flutter/Dart/Pub related
-**/doc/api/
+# ---------------------------------------------------------------------------
+# Dart & Flutter build output
+# ---------------------------------------------------------------------------
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-**/generated_plugin_registrant.dart
-.packages
-.pub-preload-cache/
 .pub/
+.pub-cache/
+.pub-preload-cache/
 build/
+**/doc/api/
+**/generated_plugin_registrant.dart
+migrate_working_dir/
 flutter_*.png
 linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 
-# Android related
+# Symbolication and obfuscation artefacts
+app.*.symbols
+app.*.map.json
+
+# Test coverage
+coverage/
+
+# ---------------------------------------------------------------------------
+# Toolchain
+# ---------------------------------------------------------------------------
+# fvm keeps the pinned SDK here as a symlink; .fvmrc is committed instead.
+.fvm/
+
+# ---------------------------------------------------------------------------
+# Editors & IDEs
+# ---------------------------------------------------------------------------
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder holds launch configurations and settings that are worth
+# sharing, so it is deliberately committed.
+#.vscode/
+
+.atom/
+.history
+.swiftpm/
+*.swp
+
+# ---------------------------------------------------------------------------
+# Operating system & misc
+# ---------------------------------------------------------------------------
+.DS_Store
+*.log
+*.pyc
+.build/
+.buildlog/
+.svn/
+
+# ---------------------------------------------------------------------------
+# Platform: macOS  (supported)
+#
+# macos/.gitignore and linux/.gitignore ship with `flutter create` and already
+# cover ephemeral/, Pods/ and xcuserdata/ for those two folders, so only what
+# they miss is listed here.
+# ---------------------------------------------------------------------------
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+
+# ---------------------------------------------------------------------------
+# Platform: Linux  (supported)
+# ---------------------------------------------------------------------------
+**/linux/flutter/generated_plugin_registrant.cc
+**/linux/flutter/generated_plugin_registrant.h
+**/linux/flutter/generated_plugins.cmake
+
+# ---------------------------------------------------------------------------
+# Platforms not currently built, kept because `flutter create --platforms=...`
+# adds the folders without updating this file.
+# ---------------------------------------------------------------------------
+# Android
 **/android/**/gradle-wrapper.jar
-.gradle/
+**/android/**/GeneratedPluginRegistrant.java
 **/android/captures/
 **/android/gradlew
 **/android/gradlew.bat
-**/android/local.properties
-**/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
+**/android/local.properties
+/android/app/debug
+/android/app/profile
+/android/app/release
+.gradle/
+*.class
 *.jks
 
-# iOS/XCode related
+# iOS
 **/ios/**/*.mode1v3
 **/ios/**/*.mode2v3
 **/ios/**/*.moved-aside
@@ -65,55 +100,38 @@ unlinked_spec.ds
 **/ios/**/*.perspectivev3
 **/ios/**/*sync/
 **/ios/**/.sconsign.dblite
+**/ios/**/.symlinks/
 **/ios/**/.tags*
 **/ios/**/.vagrant/
 **/ios/**/DerivedData/
 **/ios/**/Icon?
-**/ios/**/Pods/
-**/ios/**/.symlinks/
 **/ios/**/profile
-**/ios/**/xcuserdata
 **/ios/.generated/
 **/ios/Flutter/.last_build_id
 **/ios/Flutter/App.framework
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
 **/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/ephemeral
 **/ios/Flutter/app.flx
 **/ios/Flutter/app.zip
+**/ios/Flutter/ephemeral
 **/ios/Flutter/flutter_assets/
 **/ios/Flutter/flutter_export_environment.sh
-**/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/ServiceDefinitions.json
 
-# macOS
-**/Flutter/ephemeral/
+# Xcode, shared by the Apple platforms
 **/Pods/
-**/macos/Flutter/GeneratedPluginRegistrant.swift
-**/macos/Flutter/ephemeral
 **/xcuserdata/
+
+# Xcode writes per-user variants of these; only the defaults are shared.
+!**/ios/**/default.mode1v3
+!**/ios/**/default.mode2v3
+!**/ios/**/default.pbxuser
+!**/ios/**/default.perspectivev3
 
 # Windows
 **/windows/flutter/generated_plugin_registrant.cc
 **/windows/flutter/generated_plugin_registrant.h
 **/windows/flutter/generated_plugins.cmake
-
-# Linux
-**/linux/flutter/generated_plugin_registrant.cc
-**/linux/flutter/generated_plugin_registrant.h
-**/linux/flutter/generated_plugins.cmake
-
-# Coverage
-coverage/
-
-# Symbols
-app.*.symbols
-
-# Exceptions to above rules.
-!**/ios/**/default.mode1v3
-!**/ios/**/default.mode2v3
-!**/ios/**/default.pbxuser
-!**/ios/**/default.perspectivev3
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-!/dev/ci/**/Gemfile.lock
+**/windows/flutter/ephemeral/

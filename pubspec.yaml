@@ -1,0 +1,65 @@
+name: pickstock
+description: "Pre-investment financial health snapshots sourced from SEC EDGAR."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # UI toolkit.
+  shadcn_flutter: ^0.0.54
+  flutter_animate: ^4.5.2
+
+  # Internal toolkit (see ../fluf/doc/CONSTITUTION.md).
+  fluf:
+    path: ../fluf
+
+  # Architecture.
+  provider: ^6.1.5
+  get_it: ^8.2.0
+  equatable: ^2.0.7
+
+  # Not referenced by our code, but shadcn_flutter's IconData tables still name
+  # the CupertinoIcons font family; without this the build warns about a font
+  # it expected to find.
+  cupertino_icons: ^1.0.8
+
+  # Local database. drift is the only mature typed-SQL layer that covers
+  # macOS, Linux, Android and iOS from one codebase; sqflite alone has no
+  # Linux support. sqlite3 3.x bundles the native library (it replaced the
+  # now end-of-life sqlite3_flutter_libs).
+  drift: ^2.34.3
+  drift_flutter: ^0.3.1
+  sqlite3: ^3.5.2
+  path_provider: ^2.1.6
+
+  # Bulk ingest.
+  archive: ^4.2.0
+
+  # Data & platform.
+  http: ^1.5.0
+  intl: any
+  logging: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.34.5
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    # SEC EDGAR's ticker directory, snapshotted 2026-08-30 from
+    # https://www.sec.gov/files/company_tickers.json
+    - assets/sec/company_tickers.json

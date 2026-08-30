@@ -1,0 +1,15 @@
+{
+    // Point the Dart/Flutter extension at the fvm-managed SDK, so debugging,
+    // analysis and hot reload all use the same toolchain as `fvm flutter` on
+    // the command line. `.fvm/flutter_sdk` is a symlink maintained by fvm and
+    // resolves to whatever `.fvmrc` tracks.
+    "dart.flutterSdkPath": ".fvm/flutter_sdk",
+    // The symlinked SDK contains a full copy of Flutter; leaving it out of
+    // search and file watching keeps both from crawling it.
+    "search.exclude": {
+        "**/.fvm/flutter_sdk": true
+    },
+    "files.watcherExclude": {
+        "**/.fvm/flutter_sdk": true
+    }
+}
