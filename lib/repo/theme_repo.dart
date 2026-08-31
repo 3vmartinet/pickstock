@@ -28,13 +28,26 @@ class ThemeRepo {
   static const double historyTableMinWidth = 960;
 
   // The browsable ticker directory.
-  static const double filterFieldMaxWidth = 420;
+  static const double masterDetailMinWidth = 1000;
+  static const double masterListWidth = 400;
+  // The ingest gate.
+  static const double progressRingSize = 148;
+  static const double progressRingStroke = 8;
+  static const double progressRingFigureSize = 44;
+  static const double ingestPanelMaxWidth = 520;
+  static const double stageMarkerSize = 28;
+  static const double glyphTint = 0.12;
+  static const double stagePulseScale = 1.12;
+  static const Duration stagePulseDuration = Duration(milliseconds: 900);
 
-  /// Wide enough that a phone gets a single column — two columns squeezed the
-  /// company name down to a few characters.
-  static const double tickerTileMaxWidth = 400;
-  static const double tickerTileHeight = 52;
-  static const double tickerSymbolColumnWidth = 72;
+  static const double filterFieldMaxWidth = 320;
+  static const double sortSelectMaxWidth = 280;
+  static const double sortPopupMaxHeight = 320;
+
+  /// Square tiles, sized so a company name gets a few readable lines and a
+  /// wide window still fits several columns.
+  static const double tickerTileMaxWidth = 190;
+  static const int tickerNameMaxLines = 3;
 
   static const EdgeInsets cardPadding = EdgeInsets.all(spaceLarge);
   static const EdgeInsets compactCardPadding = EdgeInsets.all(spaceMedium);

@@ -59,7 +59,3 @@ flutter:
   uses-material-design: true
   generate: true
 
-  assets:
-    # SEC EDGAR's ticker directory, snapshotted 2026-08-30 from
-    # https://www.sec.gov/files/company_tickers.json
-    - assets/sec/company_tickers.json

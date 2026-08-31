@@ -16,46 +16,162 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appSubtitle => 'Financial health snapshots from SEC EDGAR';
 
   @override
-  String get ingestStart => 'Download SEC data';
+  String get stageDirectoryLabel => 'Ticker directory';
 
   @override
-  String ingestDownloading(String percent) {
-    return 'Downloading… $percent';
+  String get stageDirectoryDetail => 'Symbols and company names';
+
+  @override
+  String get stageSectorsLabel => 'Industry codes';
+
+  @override
+  String get stageSectorsDetail =>
+      'A sector for each filer, about 60 MB a quarter';
+
+  @override
+  String ingestDataSets(int read, int total) {
+    return '$read of $total data sets';
   }
 
   @override
-  String ingestParsing(int count) {
+  String get stageDownloadLabel => 'SEC bulk archive';
+
+  @override
+  String get stageDownloadDetail => 'About 1.4 GB, downloaded once';
+
+  @override
+  String get stageLoadLabel => 'Local database';
+
+  @override
+  String get stageLoadDetail => 'Reading filings for every company';
+
+  @override
+  String get ingestPreparing => 'Preparing your data';
+
+  @override
+  String ingestBytesOfTotal(String received, String total) {
+    return '$received of $total';
+  }
+
+  @override
+  String ingestRate(String rate) {
+    return '$rate/s';
+  }
+
+  @override
+  String ingestRateCompanies(int rate) {
+    final intl.NumberFormat rateNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String rateString = rateNumberFormat.format(rate);
+
+    return '$rateString companies/s';
+  }
+
+  @override
+  String ingestRemaining(String duration) {
+    return '$duration left';
+  }
+
+  @override
+  String ingestCompaniesOfTotal(int loaded, int total) {
+    final intl.NumberFormat loadedNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String loadedString = loadedNumberFormat.format(loaded);
+    final intl.NumberFormat totalNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String totalString = totalNumberFormat.format(total);
+
+    return '$loadedString of $totalString companies';
+  }
+
+  @override
+  String durationMinutesSeconds(int minutes, int seconds) {
+    return '${minutes}m ${seconds}s';
+  }
+
+  @override
+  String durationSeconds(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get gateChecking => 'Checking local data…';
+
+  @override
+  String get gateRequiredTitle => 'Financial data required';
+
+  @override
+  String get gateRequiredBody =>
+      'PickStock reads ten years of filings from a database on this machine. Download SEC\'s bulk archive once — about 1.4 GB — and everything after that works offline.';
+
+  @override
+  String get gateStart => 'Download SEC data';
+
+  @override
+  String get gateFailedTitle => 'Download failed';
+
+  @override
+  String get gateFailedBody =>
+      'The archive could not be fetched. Check your connection and try again.';
+
+  @override
+  String get gateRetry => 'Try again';
+
+  @override
+  String get gateRefresh => 'Refresh data';
+
+  @override
+  String get updateAvailable => 'Update available';
+
+  @override
+  String updateAvailableOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'SEC rebuilt the archive on $dateString. Download it to refresh your figures.';
+  }
+
+  @override
+  String get ingestStageDirectory => 'Fetching the ticker directory…';
+
+  @override
+  String ingestStageDownload(String percent) {
+    return 'Downloading the archive… $percent';
+  }
+
+  @override
+  String ingestStageDownloadSized(String received, String total) {
+    return 'Downloading the archive… $received of $total';
+  }
+
+  @override
+  String ingestStageLoad(int count, int total) {
     final intl.NumberFormat countNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);
     final String countString = countNumberFormat.format(count);
-
-    return 'Loading $countString companies…';
-  }
-
-  @override
-  String ingestDone(int count) {
-    final intl.NumberFormat countNumberFormat =
+    final intl.NumberFormat totalNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);
-    final String countString = countNumberFormat.format(count);
+    final String totalString = totalNumberFormat.format(total);
 
-    return '$countString companies loaded';
+    return 'Loading filings into the database… $countString of $totalString companies';
   }
 
   @override
-  String get ingestFailed => 'Download failed — try again';
+  String get ingestStageFinishing => 'Finishing up…';
 
   @override
-  String get ingestSize =>
-      'One 1.4 GB download from SEC, then everything is local.';
+  String get ingestStageLoadHint =>
+      'Reading 20,000 filings takes a few minutes.';
+
+  @override
+  String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
 
   @override
   String get toggleTheme => 'Toggle light / dark theme';
 
   @override
   String get searchPlaceholder => 'Search by symbol or company name';
-
-  @override
-  String get searchAction => 'Analyze';
 
   @override
   String get searchExamples => 'Try one of these';
@@ -80,6 +196,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browseOpen => 'Browse all tickers';
+
+  @override
+  String get sortByName => 'Name (A–Z)';
+
+  @override
+  String get sortRevenueOneYear => 'Revenue growth, 1 year';
+
+  @override
+  String sortRevenueYears(int years) {
+    return 'Revenue growth, $years-year annualised';
+  }
+
+  @override
+  String get sortFreeCashFlowOneYear => 'Free cash flow growth, 1 year';
+
+  @override
+  String get browseSortLabel => 'Sort';
+
+  @override
+  String get sectorTechnology => 'Tech';
+
+  @override
+  String get sectorHealthcare => 'Pharma & health';
+
+  @override
+  String get sectorFinancials => 'Finance';
+
+  @override
+  String get sectorRealEstate => 'Real estate';
+
+  @override
+  String get sectorEnergy => 'Energy';
+
+  @override
+  String get sectorUtilities => 'Utilities';
+
+  @override
+  String get sectorIndustrials => 'Industrials';
+
+  @override
+  String get sectorAutomotive => 'Automotive';
+
+  @override
+  String get sectorMaterials => 'Materials';
+
+  @override
+  String get sectorConsumer => 'Consumer';
+
+  @override
+  String get sectorCommunications => 'Media & telecom';
+
+  @override
+  String get sectorTransport => 'Transport';
+
+  @override
+  String get sectorAll => 'All';
+
+  @override
+  String get browseNoFigure => '—';
 
   @override
   String get browseFilterPlaceholder => 'Filter by symbol or company name';
@@ -165,6 +340,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sectionQuarterHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Last $count quarters',
+      one: 'One quarter',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String sectionHistory(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -233,7 +419,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelFiscalYear => 'FY';
 
   @override
-  String get labelYear => 'Year';
+  String get labelPeriod => 'Period';
+
+  @override
+  String labelQuarterOfYear(int quarter, int year) {
+    return 'Q$quarter FY$year';
+  }
+
+  @override
+  String get periodAnnual => 'Annual';
+
+  @override
+  String get periodQuarterly => 'Quarterly';
 
   @override
   String get sortByYear => 'Sort by fiscal year';
@@ -269,7 +466,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelCash => 'Cash';
 
   @override
-  String get labelNetDebt => 'Net debt / (cash)';
+  String get labelNetDebt => 'Net debt';
 
   @override
   String labelCik(String cik) {
@@ -283,6 +480,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get labelNetDebtPosition => 'Net debt';
+
+  @override
+  String priorNetDebt(String amount) {
+    return 'was net debt of $amount';
+  }
+
+  @override
+  String priorNetCash(String amount) {
+    return 'was net cash of $amount';
+  }
 
   @override
   String get labelNetCashPosition => 'Net cash';
@@ -300,7 +507,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hintNetDebt =>
-      'Total borrowings minus cash. Negative means the company holds more cash than debt.';
+      'Total borrowings minus cash. A negative figure is a net cash position: the company holds more cash than debt.';
 
   @override
   String deltaVersusPriorYear(String year) {
@@ -309,11 +516,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get footnoteNegatives =>
-      'Values in parentheses are negative — a net cash position.';
+      'Net debt is negative when a company holds more cash than it owes.';
 
   @override
   String get footnoteSource =>
-      'Source: SEC EDGAR XBRL company facts, 10-K filings only. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.';
+      'Source: SEC EDGAR XBRL company facts. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.';
+
+  @override
+  String get footnoteQuarters =>
+      'Fourth-quarter income and cash-flow figures are derived by subtracting the first three quarters from the full year; balance-sheet figures are as filed.';
 
   @override
   String get unitMillionsSuffix => 'M';

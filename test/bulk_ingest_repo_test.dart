@@ -60,6 +60,11 @@ List<int> _archiveBytes(Map<String, Map<String, dynamic>> filesByName) {
   return ZipEncoder().encode(archive);
 }
 
+/// The stream's error reaches the consumer before the generator's `finally`
+/// has finished deleting the archive, so cleanup assertions wait a beat.
+Future<void> _settleCleanup() =>
+    Future<void>.delayed(const Duration(milliseconds: 50));
+
 void main() {
   late AppDatabase database;
   late Directory workingDirectory;
@@ -79,9 +84,35 @@ void main() {
     }
   });
 
-  BulkIngestRepo repoServing(List<int> bytes) => BulkIngestRepo(
+  /// The ingest makes two requests: the small ticker directory, then the
+  /// archive. The fake serves both, keyed by URL.
+  BulkIngestRepo repoServing(
+    List<int> archiveBytes, {
+    Map<String, dynamic>? directory,
+  }) => BulkIngestRepo(
     workingDirectory: workingDirectory,
-    client: MockClient((_) async => http.Response.bytes(bytes, 200)),
+    client: MockClient((request) async {
+      // The sector data sets are optional; absent ones are skipped.
+      if (request.url.path.contains('financial-statement-data-sets')) {
+        return http.Response('', 404);
+      }
+      if (request.url.toString() == tickerDirectoryUrl) {
+        return http.Response(
+          jsonEncode(
+            directory ??
+                {
+                  '0': {
+                    'cik_str': 320193,
+                    'ticker': 'AAPL',
+                    'title': 'Apple Inc.',
+                  },
+                },
+          ),
+          200,
+        );
+      }
+      return http.Response.bytes(archiveBytes, 200);
+    }),
   );
 
   test('loads every filer in the archive into the database', () async {
@@ -140,6 +171,54 @@ void main() {
     expect(await database.companyFor('0000320193'), isNotNull);
   });
 
+  test('loads the ticker directory alongside the figures', () async {
+    await repoServing(
+      _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      }),
+      directory: {
+        '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+        '1': {'cik_str': 1067983, 'ticker': 'BRK-B', 'title': 'BERKSHIRE'},
+      },
+    ).ingest().drain<void>();
+
+    final tickers = await database.allTickers();
+    expect(tickers.map((t) => t.symbol), ['AAPL', 'BRK-B']);
+    // Symbols arrive as CIKs padded to ten digits, matching the archive.
+    expect(tickers.first.cik, '0000320193');
+  });
+
+  test('fetches the directory before the 1.4 GB archive', () async {
+    final progress = await repoServing(
+      _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      }),
+    ).ingest().toList();
+
+    expect(progress.first, isA<IngestFetchingDirectory>());
+    expect(
+      progress.indexWhere((p) => p is IngestDownloading),
+      greaterThan(progress.indexWhere((p) => p is IngestFetchingDirectory)),
+    );
+  });
+
+  test('reports loading progress as a fraction of the archive', () async {
+    final progress = await repoServing(
+      _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+        'CIK0001045810.json': _facts('NVIDIA CORP', fy: 2025, val: 200),
+        // Not a filer: excluded from the total, so the bar reaches 100%.
+        'README.txt': {'not': 'a filer'},
+      }),
+    ).ingest().toList();
+
+    final loading = progress.whereType<IngestLoading>().toList();
+    expect(loading.first.totalCompanies, 2);
+    expect(loading.first.companiesLoaded, 0);
+    expect(loading.last.companiesLoaded, 2);
+    expect(loading.last.fraction, 1.0);
+  });
+
   test('reports download progress before parsing', () async {
     final bytes = _archiveBytes({
       'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
@@ -151,6 +230,145 @@ void main() {
     expect(downloading.fraction, 1.0);
   });
 
+  test('creates the staging directory when it does not exist', () async {
+    // getTemporaryDirectory() on macOS returns a path inside the sandbox
+    // container that has not necessarily been created yet, and openWrite does
+    // not create parents.
+    final missing = Directory('${workingDirectory.path}/not-created-yet');
+    expect(missing.existsSync(), isFalse);
+
+    final repo = BulkIngestRepo(
+      workingDirectory: missing,
+      client: MockClient((request) async {
+        if (request.url.path.contains('financial-statement-data-sets')) {
+          return http.Response('', 404);
+        }
+        if (request.url.toString() == tickerDirectoryUrl) {
+          return http.Response(
+            jsonEncode({
+              '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+            }),
+            200,
+          );
+        }
+        return http.Response.bytes(
+          _archiveBytes({
+            'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+          }),
+          200,
+        );
+      }),
+    );
+
+    await repo.ingest().drain<void>();
+    expect(await database.companyFor('0000320193'), isNotNull);
+  });
+
+  test('fails loudly when the archive decodes to nothing', () async {
+    final repo = BulkIngestRepo(
+      workingDirectory: workingDirectory,
+      client: MockClient((request) async {
+        if (request.url.path.contains('financial-statement-data-sets')) {
+          return http.Response('', 404);
+        }
+        if (request.url.toString() == tickerDirectoryUrl) {
+          return http.Response(
+            jsonEncode({
+              '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+            }),
+            200,
+          );
+        }
+        // Not a zip at all.
+        return http.Response.bytes(utf8.encode('nonsense'), 200);
+      }),
+    );
+
+    // A corrupt download decodes to an empty archive instead of throwing, so
+    // an empty result has to be treated as a failure rather than recorded.
+    await expectLater(
+      repo.ingest().drain<void>(),
+      throwsA(isA<FormatException>()),
+    );
+    expect(await database.lastIngest(), isNull);
+    // And the unusable archive is cleared up rather than reused.
+    await _settleCleanup();
+    expect(workingDirectory.listSync(), isEmpty);
+  });
+
+  test(
+    'reuses an archive already on disk instead of downloading again',
+    () async {
+      final archive = _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      });
+      // Left behind by an attempt that downloaded but failed to load.
+      File('${workingDirectory.path}/companyfacts.zip')
+          .writeAsBytesSync(archive);
+
+      var archiveRequests = 0;
+      final repo = BulkIngestRepo(
+        workingDirectory: workingDirectory,
+        client: MockClient((request) async {
+          if (request.url.toString() == tickerDirectoryUrl) {
+            return http.Response(
+              jsonEncode({
+                '0': {
+                  'cik_str': 320193,
+                  'ticker': 'AAPL',
+                  'title': 'Apple Inc.',
+                },
+              }),
+              200,
+            );
+          }
+          // Only a GET of the archive itself is a download; the ingest also
+          // HEADs it for the date and GETs the optional sector data sets.
+          if (request.method == 'GET' &&
+              request.url.toString() == bulkCompanyFactsUrl) {
+            archiveRequests++;
+          }
+          return http.Response.bytes(archive, 200);
+        }),
+      );
+
+      final progress = await repo.ingest().toList();
+
+      expect(archiveRequests, 0, reason: 'the 1.4 GB download was repeated');
+      expect(progress.whereType<IngestDownloading>(), isEmpty);
+      expect(await database.companyFor('0000320193'), isNotNull);
+    },
+  );
+
+  test('a half-written download never looks complete', () async {
+    final repo = BulkIngestRepo(
+      workingDirectory: workingDirectory,
+      client: MockClient((request) async {
+        if (request.url.path.contains('financial-statement-data-sets')) {
+          return http.Response('', 404);
+        }
+        if (request.url.toString() == tickerDirectoryUrl) {
+          return http.Response(
+            jsonEncode({
+              '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+            }),
+            200,
+          );
+        }
+        return http.Response.bytes(const [1, 2, 3], 500);
+      }),
+    );
+
+    await expectLater(repo.ingest().drain<void>(), throwsA(anything));
+    await _settleCleanup();
+    // Nothing under the final name, so a retry downloads afresh.
+    expect(
+      File('${workingDirectory.path}/companyfacts.zip').existsSync(),
+      isFalse,
+    );
+    expect(workingDirectory.listSync(), isEmpty);
+  });
+
   test('leaves no archive behind on disk', () async {
     await repoServing(
       _archiveBytes({
@@ -158,6 +376,7 @@ void main() {
       }),
     ).ingest().drain<void>();
 
+    await _settleCleanup();
     expect(workingDirectory.listSync(), isEmpty);
   });
 }

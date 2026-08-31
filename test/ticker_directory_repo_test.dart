@@ -1,18 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 
+import 'support/test_directory.dart';
+
 void main() {
+  late AppDatabase database;
   late TickerDirectoryRepo repo;
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    repo = TickerDirectoryRepo();
-    await repo.load();
+    database = await registerTestDependencies();
+    repo = GetIt.I.get<TickerDirectoryRepo>();
   });
 
-  test('parses the whole bundled directory', () {
+  tearDown(() async {
+    await database.close();
+    await GetIt.I.reset();
+  });
+
+  test('loads every symbol the ingest wrote', () {
     expect(repo.isLoaded, isTrue);
-    expect(repo.tickerCount, greaterThan(10000));
+    expect(repo.tickerCount, testTickers.length);
   });
 
   test('resolves a plain symbol to its zero-padded CIK', () {
@@ -23,9 +33,7 @@ void main() {
   });
 
   test('resolves symbols the old input rules made unreachable', () {
-    // Hyphenated, and seven characters — both previously rejected.
     expect(repo.lookup('BRK-B')?.name, 'BERKSHIRE HATHAWAY INC');
-    expect(repo.lookup('KCAC-UN'), isNotNull);
     expect(repo.lookup('KCAC-UN')!.ticker.length, 7);
   });
 
@@ -38,13 +46,32 @@ void main() {
   });
 
   test('several symbols can share one filer', () {
-    final classA = repo.lookup('BRK-A');
-    final classB = repo.lookup('BRK-B');
-    expect(classA!.cik, classB!.cik);
-    expect(classA.ticker, isNot(classB.ticker));
+    expect(repo.lookup('BRK-A')!.cik, repo.lookup('BRK-B')!.cik);
   });
 
-  test('refuses lookups before the directory is parsed', () {
+  test('ranks symbol matches above name matches', () {
+    // Both companies are called "Apple …", but AAPL is the symbol match.
+    final matches = repo.search('AAPL');
+    expect(matches.first.ticker, 'AAPL');
+    expect(repo.search('apple').map((c) => c.ticker), contains('AAPI'));
+  });
+
+  test('caps results when a limit is given', () {
+    // An empty query deliberately returns everything; a real one is capped.
+    expect(repo.search('A', limit: 2), hasLength(2));
+    expect(repo.search(''), hasLength(testTickers.length));
+  });
+
+  test('reads nothing when the database has never been ingested', () async {
+    // Same database, emptied — a second open instance makes drift complain.
+    await database.clearFinancials();
+    await repo.load();
+
+    expect(repo.isLoaded, isFalse);
+    expect(repo.tickerCount, 0);
+  });
+
+  test('refuses lookups before the directory is loaded', () {
     expect(() => TickerDirectoryRepo().lookup('AAPL'), throwsStateError);
   });
 }

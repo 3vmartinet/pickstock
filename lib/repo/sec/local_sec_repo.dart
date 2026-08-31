@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
+import 'package:pickstock/data/snapshot/fiscal_quarter_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
@@ -12,6 +13,10 @@ TickerDirectoryRepo get _tickerDirectoryRepo =>
 
 /// How many fiscal years a report shows, newest last.
 const int reportedYears = 10;
+
+/// How many quarters a report shows. Two years is enough to see a trend
+/// without the table becoming a wall of rows.
+const int reportedQuarters = 8;
 
 /// Serves snapshots from the local database populated by the bulk ingest.
 ///
@@ -33,6 +38,8 @@ class LocalSecRepo implements SecRepo {
 
     final rows = await _database.yearsFor(listing.cik);
     if (rows.isEmpty) throw const SecException(SecFailure.noAnnualData);
+
+    final quarterRows = await _database.quartersFor(listing.cik);
 
     final stored = await _database.companyFor(listing.cik);
     final reported = rows.length > reportedYears
@@ -63,6 +70,37 @@ class LocalSecRepo implements SecRepo {
             cash: row.cash,
           ),
       ],
+      quarters: _quartersFrom(quarterRows),
     );
+  }
+
+  /// The most recent quarters, each carrying the same quarter a year earlier so
+  /// growth is like-for-like even at the edge of the window.
+  List<FiscalQuarterFigures> _quartersFrom(List<FiscalQuarterRow> rows) {
+    final reported = rows.length > reportedQuarters
+        ? rows.sublist(rows.length - reportedQuarters)
+        : rows;
+
+    return [
+      for (final row in reported)
+        FiscalQuarterFigures(
+          fiscalYear: row.fiscalYear,
+          quarter: row.quarter,
+          revenue: row.revenue,
+          priorRevenue: rows
+              .where(
+                (other) =>
+                    other.fiscalYear == row.fiscalYear - 1 &&
+                    other.quarter == row.quarter,
+              )
+              .firstOrNull
+              ?.revenue,
+          netIncome: row.netIncome,
+          operatingCashFlow: row.operatingCashFlow,
+          capitalExpenditure: row.capitalExpenditure,
+          totalDebt: row.totalDebt,
+          cash: row.cash,
+        ),
+    ];
   }
 }

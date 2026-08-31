@@ -1,10 +1,12 @@
 import 'package:equatable/equatable.dart';
+import 'package:pickstock/data/snapshot/period_figures.dart';
+import 'package:pickstock/l10n/app_localizations.dart';
 
 /// One fiscal year of figures, in whole US dollars as filed.
 ///
 /// Every field is nullable: a company only has to tag the concepts its own
 /// filings use, so any single line can legitimately be missing for a year.
-class FiscalYearFigures extends Equatable {
+class FiscalYearFigures extends Equatable implements PeriodFigures {
   const FiscalYearFigures({
     required this.fiscalYear,
     this.revenue,
@@ -17,20 +19,28 @@ class FiscalYearFigures extends Equatable {
   });
 
   final int fiscalYear;
+  @override
   final double? revenue;
 
   /// Prior year's revenue, carried here so year-over-year growth stays a
   /// property of the year rather than something the UI has to look up.
+  @override
   final double? priorRevenue;
+  @override
   final double? netIncome;
+  @override
   final double? operatingCashFlow;
+  @override
   final double? capitalExpenditure;
 
   /// Long-term plus current debt, commercial paper and short-term borrowings.
+  @override
   final double? totalDebt;
+  @override
   final double? cash;
 
   /// Operating cash flow less capital expenditure.
+  @override
   double? get freeCashFlow {
     final operating = operatingCashFlow;
     final capex = capitalExpenditure;
@@ -40,6 +50,7 @@ class FiscalYearFigures extends Equatable {
 
   /// Total debt less cash. Negative means the company holds more cash than
   /// debt — a net cash position.
+  @override
   double? get netDebt {
     final debt = totalDebt;
     final held = cash;
@@ -49,12 +60,17 @@ class FiscalYearFigures extends Equatable {
 
   /// Year-over-year revenue growth as a percentage, or `null` when either
   /// year is missing or the base year is zero.
+  @override
   double? get revenueGrowthPercent {
     final current = revenue;
     final previous = priorRevenue;
     if (current == null || previous == null || previous == 0) return null;
     return (current - previous) / previous * 100;
   }
+
+  @override
+  String getPeriodLabel(AppLocalizations strings) =>
+      '${strings.labelFiscalYear}$fiscalYear';
 
   bool get isProfitable => (netIncome ?? 0) >= 0;
 

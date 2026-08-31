@@ -1,49 +1,37 @@
 import 'package:pickstock/l10n/localization_extensions.dart';
-import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
-import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Percentages are shown whole; a 1.4 GB download does not need decimals.
-const int _percentDigits = 0;
-
-/// Starts the bulk download, and reports how far along it is.
+/// Offers a refresh, but only once SEC has actually rebuilt the archive.
+///
+/// The archive changes every few days at most, so a button that is always
+/// there invites a pointless 1.4 GB download; this one appears when there is
+/// something new to fetch and says when it was published.
 class IngestButton extends StatelessWidget {
   const IngestButton({super.key});
 
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<IngestViewModel>();
+    if (!viewModel.isUpdateAvailable) return const SizedBox.shrink();
+
+    final publishedOn = viewModel.availableArchiveDate;
 
     return Tooltip(
-      tooltip: TooltipContainer(child: Text(context.strings.ingestSize)).call,
-      child: GhostButton(
+      tooltip: TooltipContainer(
+        child: Text(
+          publishedOn == null
+              ? context.strings.gateRefresh
+              : context.strings.updateAvailableOn(publishedOn),
+        ),
+      ).call,
+      child: PrimaryButton(
         size: ButtonSize.small,
-        onPressed: viewModel.isRunning ? null : viewModel.start,
-        leading: viewModel.isRunning
-            ? const CircularProgressIndicator(size: ThemeRepo.spaceMedium)
-            : const Icon(LucideIcons.download),
-        child: Text(_label(context, viewModel)),
+        onPressed: viewModel.start,
+        leading: const Icon(LucideIcons.refreshCw),
+        child: Text(context.strings.updateAvailable),
       ),
     );
-  }
-
-  String _label(BuildContext context, IngestViewModel viewModel) {
-    if (viewModel.hasFailed) return context.strings.ingestFailed;
-    return switch (viewModel.progress) {
-      IngestDownloading(:final fraction) => context.strings.ingestDownloading(
-        fraction == null
-            ? ''
-            : '${(fraction * 100).toStringAsFixed(_percentDigits)}%',
-      ),
-      IngestParsing(:final companiesRead) => context.strings.ingestParsing(
-        companiesRead,
-      ),
-      IngestDone(:final companyCount) => context.strings.ingestDone(
-        companyCount,
-      ),
-      null => context.strings.ingestStart,
-    };
   }
 }

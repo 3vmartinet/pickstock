@@ -1,6 +1,11 @@
+import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/period_figures.dart';
+import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+
+FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
 /// The four headline figures shown for the most recent fiscal year.
 ///
@@ -17,12 +22,21 @@ enum SnapshotMetric {
 
   final IconData icon;
 
-  String getLabel(AppLocalizations strings) => switch (this) {
-    SnapshotMetric.revenue => strings.labelRevenue,
-    SnapshotMetric.netIncome => strings.labelNetIncome,
-    SnapshotMetric.freeCashFlow => strings.labelFreeCashFlow,
-    SnapshotMetric.netCashPosition => strings.labelNetDebt,
-  };
+  /// The card's heading.
+  ///
+  /// The balance-sheet card names its own side of zero — `Net cash` or `Net
+  /// debt` — because a bare amount under a heading of `Net debt / (cash)` read
+  /// identically whether the company was owed money or owed it.
+  String getLabel(AppLocalizations strings, PeriodFigures figures) =>
+      switch (this) {
+        SnapshotMetric.revenue => strings.labelRevenue,
+        SnapshotMetric.netIncome => strings.labelNetIncome,
+        SnapshotMetric.freeCashFlow => strings.labelFreeCashFlow,
+        SnapshotMetric.netCashPosition => switch (figures.netDebt) {
+          final debt? when debt < 0 => strings.labelNetCashPosition,
+          _ => strings.labelNetDebtPosition,
+        },
+      };
 
   String getHint(AppLocalizations strings) => switch (this) {
     SnapshotMetric.revenue => strings.hintRevenue,
@@ -31,19 +45,24 @@ enum SnapshotMetric {
     SnapshotMetric.netCashPosition => strings.hintNetDebt,
   };
 
-  /// A short word placed under the figure where the number's sign alone would
-  /// not say what it means. Only the balance-sheet metric needs one.
-  String? getQualifier(AppLocalizations strings, FiscalYearFigures figures) {
+  /// Where the prior year stood, for the balance-sheet card.
+  ///
+  /// A percentage change is meaningless on a figure that crosses zero — net
+  /// debt turning into net cash is not "−140% growth" — so the comparison is
+  /// stated in words instead.
+  String? getPriorPosition(AppLocalizations strings, PeriodFigures? previous) {
     if (this != SnapshotMetric.netCashPosition) return null;
-    final netDebt = figures.netDebt;
+    final netDebt = previous?.netDebt;
     if (netDebt == null) return null;
+
+    final amount = _formatRepo.compactCurrencyMagnitude(netDebt);
     return netDebt < 0
-        ? strings.labelNetCashPosition
-        : strings.labelNetDebtPosition;
+        ? strings.priorNetCash(amount)
+        : strings.priorNetDebt(amount);
   }
 
-  /// Whether the headline figure should be shown without its sign, because a
-  /// [getQualifier] already says which side of zero it is on.
+  /// Whether the headline figure is shown without its sign, because
+  /// [getLabel] already names which side of zero it is on.
   bool get showsMagnitudeOnly => this == SnapshotMetric.netCashPosition;
 
   double? getValue(FiscalYearFigures figures) => switch (this) {

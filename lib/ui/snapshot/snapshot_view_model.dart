@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
+import 'package:pickstock/data/snapshot/history_period.dart';
+import 'package:pickstock/data/snapshot/period_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
@@ -61,6 +63,22 @@ class SnapshotViewModel extends ChangeNotifier {
   /// The year immediately before [index], for year-over-year comparisons.
   FiscalYearFigures? previousFiguresAt(int index) => figuresAt(index - 1);
 
+  HistoryPeriod _historyPeriod = HistoryPeriod.annual;
+
+  /// Annual by default: the sanity checks and highlights are annual, so the
+  /// history opens on the same cadence.
+  HistoryPeriod get historyPeriod => _historyPeriod;
+
+  /// Whether the filer reports anything quarterly. Where it does not, the
+  /// quarterly tab would open onto an empty table.
+  bool get hasQuarterlyHistory => snapshot?.quarters.isNotEmpty ?? false;
+
+  void selectHistoryPeriod(HistoryPeriod period) {
+    if (period == _historyPeriod) return;
+    _historyPeriod = period;
+    notifyListeners();
+  }
+
   bool _isHistoryNewestFirst = true;
 
   /// Which way the history section is ordered. Newest first by default: the
@@ -72,20 +90,26 @@ class SnapshotViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The reported years in the order the history section should show them.
+  /// The rows the history section should show, in the chosen cadence and order.
   ///
-  /// Only the history respects this; the highlight cards always compare the
-  /// latest year with the one before it, whichever way the table is sorted.
-  List<FiscalYearFigures> get historyYears {
-    final years = snapshot?.years ?? const <FiscalYearFigures>[];
-    return _isHistoryNewestFirst ? years.reversed.toList() : years;
+  /// Only the history respects these choices; the highlight cards always
+  /// compare the latest year with the one before it.
+  List<PeriodFigures> get historyRows {
+    final rows = switch (_historyPeriod) {
+      HistoryPeriod.annual => snapshot?.years ?? const <PeriodFigures>[],
+      HistoryPeriod.quarterly => snapshot?.quarters ?? const <PeriodFigures>[],
+    };
+    return _isHistoryNewestFirst ? rows.reversed.toList() : rows.toList();
   }
 
-  /// The figures at [index] of [historyYears].
-  FiscalYearFigures? historyFiguresAt(int index) {
-    final years = historyYears;
-    return index >= 0 && index < years.length ? years[index] : null;
+  /// The figures at [index] of [historyRows].
+  PeriodFigures? historyFiguresAt(int index) {
+    final rows = historyRows;
+    return index >= 0 && index < rows.length ? rows[index] : null;
   }
+
+  /// How many rows the history section shows.
+  int get historyRowCount => historyRows.length;
 
   /// Guards against a slow first request overwriting a newer one's result.
   int _requestGeneration = 0;

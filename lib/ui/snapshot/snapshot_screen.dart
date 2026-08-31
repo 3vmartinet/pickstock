@@ -1,16 +1,11 @@
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/widgets/ingest_button.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
-import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
-import 'package:pickstock/ui/snapshot/widgets/snapshot_failure_view.dart';
-import 'package:pickstock/ui/snapshot/widgets/snapshot_idle_view.dart';
-import 'package:pickstock/ui/snapshot/widgets/snapshot_loading_view.dart';
-import 'package:pickstock/ui/snapshot/widgets/snapshot_report.dart';
+import 'package:pickstock/ui/snapshot/widgets/snapshot_body.dart';
 import 'package:pickstock/ui/snapshot/widgets/ticker_search_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -28,7 +23,7 @@ class SnapshotScreen extends StatelessWidget {
     return Scaffold(
       loadingProgressIndeterminate: isLoading,
       headers: const [_SnapshotAppBar(), TickerSearchBar(), Divider()],
-      child: const _SnapshotBody(),
+      child: const SnapshotBody(),
     );
   }
 }
@@ -100,38 +95,3 @@ class _ThemeToggleButton extends StatelessWidget {
 }
 
 /// Renders whichever of the four screen states the view model is in.
-class _SnapshotBody extends StatelessWidget {
-  const _SnapshotBody();
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.select<SnapshotViewModel, SnapshotState>(
-      (viewModel) => viewModel.state,
-    );
-
-    final body = switch (state) {
-      SnapshotIdle() => const SnapshotIdleView(),
-      SnapshotLoading() => const SnapshotLoadingView(),
-      SnapshotFailed() => const SnapshotFailureView(),
-      SnapshotLoaded() => const SnapshotReport(),
-    };
-
-    return SingleChildScrollView(
-      padding: context.pagePadding,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: ThemeRepo.contentMaxWidth,
-          ),
-          // Keyed on the state's runtime type so switching states replays the
-          // entrance rather than morphing one layout into the next.
-          child: KeyedSubtree(
-            key: ValueKey(state.runtimeType),
-            child: body.animate().fadeIn(duration: ThemeRepo.entranceDuration),
-          ),
-        ),
-      ),
-    );
-  }
-}

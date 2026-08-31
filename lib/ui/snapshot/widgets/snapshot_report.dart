@@ -1,9 +1,11 @@
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_order_toggle.dart';
+import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_table.dart';
 import 'package:pickstock/ui/snapshot/widgets/metric_grid.dart';
 import 'package:pickstock/ui/snapshot/widgets/sanity_check_grid.dart';
@@ -48,6 +50,7 @@ class _Section extends StatelessWidget {
     required this.title,
     required this.child,
     this.trailing,
+    this.belowHeading,
   });
 
   final IconData icon;
@@ -56,6 +59,10 @@ class _Section extends StatelessWidget {
 
   /// Optional control aligned to the far end of the section heading.
   final Widget? trailing;
+
+  /// Optional control on its own row under the heading, for anything too wide
+  /// to sit beside the title.
+  final Widget? belowHeading;
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +80,7 @@ class _Section extends StatelessWidget {
               ?trailing,
             ],
           ),
+          ?belowHeading,
           child,
         ],
       ),
@@ -116,15 +124,24 @@ class _HistorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Titled from the data: how many years EDGAR holds varies by company.
-    final yearCount = context.select<SnapshotViewModel, int>(
-      (viewModel) => viewModel.reportedYearCount,
+    // Titled from the data: how many periods EDGAR holds varies by company.
+    final rowCount = context.select<SnapshotViewModel, int>(
+      (viewModel) => viewModel.historyRowCount,
+    );
+    final period = context.select<SnapshotViewModel, HistoryPeriod>(
+      (viewModel) => viewModel.historyPeriod,
     );
 
     return _Section(
       icon: LucideIcons.chartNoAxesColumn,
-      title: context.strings.sectionHistory(yearCount),
+      title: switch (period) {
+        HistoryPeriod.annual => context.strings.sectionHistory(rowCount),
+        HistoryPeriod.quarterly => context.strings.sectionQuarterHistory(
+          rowCount,
+        ),
+      },
       trailing: const HistoryOrderToggle(),
+      belowHeading: const HistoryPeriodTabs(),
       child: const HistoryTable(),
     );
   }
@@ -135,6 +152,11 @@ class _Footnotes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The quarterly caveat is only shown where it applies.
+    final isQuarterly = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.historyPeriod == HistoryPeriod.quarterly,
+    );
+
     return Padding(
       padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),
       child: Column(
@@ -142,6 +164,8 @@ class _Footnotes extends StatelessWidget {
         spacing: ThemeRepo.spaceXSmall,
         children: [
           Text(context.strings.footnoteNegatives).muted().xSmall(),
+          if (isQuarterly)
+            Text(context.strings.footnoteQuarters).muted().xSmall(),
           Text(context.strings.footnoteSource).muted().xSmall(),
         ],
       ),

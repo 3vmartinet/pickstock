@@ -1,72 +1,61 @@
-import 'dart:convert';
-
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
+import 'package:pickstock/repo/db/app_database.dart';
 
-/// A snapshot of SEC EDGAR's ticker directory, taken on 2026-08-30 from
-/// https://www.sec.gov/files/company_tickers.json.
-///
-/// Bundled rather than fetched: it is the same ~800 KB for every user, changes
-/// only as companies list and delist, and fetching it made the first lookup of
-/// a session wait on a download that the browser could not even make without a
-/// proxy. Refreshing it is a separate concern, not yet wired up.
-const String _directoryAsset = 'assets/sec/company_tickers.json';
-
-const String _tickerKey = 'ticker';
-const String _cikKey = 'cik_str';
-const String _titleKey = 'title';
-const int _cikDigits = 10;
-const String _cikPadding = '0';
+AppDatabase get _database => GetIt.I.get<AppDatabase>();
 
 /// Maps ticker symbols to the SEC filers behind them.
 ///
-/// The directory is parsed once and held for the life of the process; every
-/// lookup after that is a map read.
+/// Loaded from the database once per session and held in memory: filtering ten
+/// thousand symbols as the user types is a map read rather than a query per
+/// keystroke. The rows themselves are written by the bulk ingest — nothing is
+/// bundled with the app, so the list is as current as the last ingest.
 class TickerDirectoryRepo {
   Map<String, Company>? _companiesByTicker;
   List<Company>? _companiesByTickerOrder;
 
-  /// Whether [load] has already run.
-  bool get isLoaded => _companiesByTicker != null;
+  int _revision = 0;
+
+  /// Incremented on every [load]. Anything holding a derived list can compare
+  /// this to know whether an ingest has replaced the directory underneath it.
+  int get revision => _revision;
+
+  /// Whether [load] has run and found symbols.
+  bool get isLoaded => _companiesByTicker?.isNotEmpty ?? false;
 
   /// How many symbols the directory knows about.
   int get tickerCount => _companiesByTicker?.length ?? 0;
 
-  /// Every symbol, ordered alphabetically. Sorted once at load so browsing
-  /// never pays for it.
+  /// Every symbol, alphabetically. Sorted by the database, not here.
   List<Company> get allCompanies =>
       List.unmodifiable(_companiesByTickerOrder ?? const []);
 
-  /// Parses the bundled directory. Safe to call more than once; the second
-  /// call is a no-op.
+  /// Reads the directory out of the database, replacing anything held.
+  ///
+  /// Safe to call again after an ingest to pick up the new rows.
   Future<void> load() async {
-    if (_companiesByTicker != null) return;
+    final rows = await _database.allTickers();
+    final companiesByTicker = {
+      for (final row in rows)
+        row.symbol: Company(
+          ticker: row.symbol,
+          cik: row.cik,
+          name: row.name.isEmpty ? row.symbol : row.name,
+        ),
+    };
 
-    final payload = jsonDecode(
-      await rootBundle.loadString(_directoryAsset),
-    ) as Map<String, dynamic>;
-
-    final companiesByTicker = <String, Company>{};
-    for (final raw in payload.values) {
-      final entry = raw as Map<String, dynamic>;
-      // Tickers carry '-' and '.' as well as letters, e.g. BRK-B, and a filer
-      // often has several of them, so the ticker is the key, not the CIK.
-      final ticker = (entry[_tickerKey] as String).toUpperCase();
-      companiesByTicker[ticker] = Company(
-        ticker: ticker,
-        cik: entry[_cikKey].toString().padLeft(_cikDigits, _cikPadding),
-        name: entry[_titleKey] as String? ?? ticker,
-      );
-    }
-
+    _revision++;
     _companiesByTicker = companiesByTicker;
-    _companiesByTickerOrder = companiesByTicker.values.toList()
-      ..sort((a, b) => a.ticker.compareTo(b.ticker));
-    logInfo(() => 'Loaded ${companiesByTicker.length} tickers from the bundle');
+    _companiesByTickerOrder = [
+      for (final row in rows) companiesByTicker[row.symbol]!,
+    ];
+    logInfo(
+      () => 'Loaded ${companiesByTicker.length} tickers from the database',
+    );
   }
 
-  /// The filer trading under [ticker], or `null` if EDGAR lists no such symbol.
+  /// The filer trading under [ticker], or `null` if no such symbol is known.
   ///
   /// Throws a [StateError] if called before [load] completes.
   Company? lookup(String ticker) {

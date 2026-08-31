@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
-import 'package:pickstock/repo/format_repo.dart';
-import 'package:pickstock/repo/sec/mock_sec_repo.dart';
-import 'package:pickstock/repo/sec/sec_repo.dart';
-import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
-import 'package:pickstock/repo/theme_repo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+
+import 'support/test_directory.dart';
 
 const Size _desktopSize = Size(1440, 1200);
 
@@ -18,14 +15,7 @@ const Size _phoneSize = Size(420, 900);
 void main() {
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    // The search field resolves what is typed against the bundled directory.
-    final directory = TickerDirectoryRepo();
-    await directory.load();
-    GetIt.I
-      ..registerLazySingleton<ThemeRepo>(ThemeRepo.new)
-      ..registerLazySingleton<FormatRepo>(FormatRepo.new)
-      ..registerSingleton<TickerDirectoryRepo>(directory)
-      ..registerLazySingleton<SecRepo>(() => const MockSecRepo());
+    await registerTestDependencies();
   });
 
   tearDown(GetIt.I.reset);
@@ -164,6 +154,45 @@ void main() {
     expect(yOf('FY2025'), greaterThan(yOf('FY2023')));
   });
 
+  testWidgets('switches the history between annual and quarterly', (
+    tester,
+  ) async {
+    await _pumpApp(tester, _desktopSize);
+    await _search(tester, 'AAPL');
+
+    // Opens on annual, matching the highlights above it.
+    expect(find.text('FY2025'), findsWidgets);
+    expect(find.text('Q1 FY2025'), findsNothing);
+
+    await tester.tap(find.text('Quarterly'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Q1 FY2025'), findsOneWidget);
+    expect(find.text('Q4 FY2025'), findsOneWidget);
+    expect(find.text('Last 4 quarters'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Annual'));
+    await tester.pumpAndSettle();
+    expect(find.text('Q1 FY2025'), findsNothing);
+  });
+
+  testWidgets('the quarterly view sorts and reverses like the annual one', (
+    tester,
+  ) async {
+    await _pumpApp(tester, _desktopSize);
+    await _search(tester, 'AAPL');
+    await tester.tap(find.text('Quarterly'));
+    await tester.pumpAndSettle();
+
+    double yOf(String label) => tester.getTopLeft(find.text(label)).dy;
+    expect(yOf('Q4 FY2025'), lessThan(yOf('Q1 FY2025')));
+
+    await tester.tap(find.text('Newest first'));
+    await tester.pumpAndSettle();
+    expect(yOf('Q4 FY2025'), greaterThan(yOf('Q1 FY2025')));
+  });
+
   testWidgets('explains an unknown ticker instead of failing silently', (
     tester,
   ) async {
@@ -198,6 +227,8 @@ Future<void> _pumpSuggestions(WidgetTester tester) async {
 
 Future<void> _search(WidgetTester tester, String ticker) async {
   await tester.enterText(find.byType(TextField), ticker);
-  await tester.tap(find.text('Analyze'));
+  await tester.pump();
+  // No submit button any more: enter runs the lookup.
+  await tester.testTextInput.receiveAction(TextInputAction.search);
   await tester.pumpAndSettle();
 }

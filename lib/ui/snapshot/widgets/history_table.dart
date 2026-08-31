@@ -1,5 +1,5 @@
 import 'package:get_it/get_it.dart';
-import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/period_figures.dart';
 import 'package:pickstock/data/snapshot/history_column.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -25,7 +25,7 @@ class HistoryTable extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) =>
           constraints.maxWidth < ThemeRepo.historyTableMinWidth
-          ? const _YearCards()
+          ? const _PeriodCards()
           : const _WideTable(),
     );
   }
@@ -36,10 +36,10 @@ class _WideTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final years = context.select<SnapshotViewModel, List<FiscalYearFigures>>(
-      (viewModel) => viewModel.historyYears,
+    final rows = context.select<SnapshotViewModel, List<PeriodFigures>>(
+      (viewModel) => viewModel.historyRows,
     );
-    if (years.isEmpty) return const SizedBox.shrink();
+    if (rows.isEmpty) return const SizedBox.shrink();
 
     // Only reached at widths where every column fits, so the table lays out at
     // its natural width with no scrolling and no squeezing.
@@ -53,7 +53,7 @@ class _WideTable extends StatelessWidget {
                 _headingCell(context, column),
             ],
           ),
-          for (final figures in years)
+          for (final figures in rows)
             TableRow(
               cells: [
                 for (final column in HistoryColumn.values)
@@ -66,8 +66,8 @@ class _WideTable extends StatelessWidget {
   }
 
   TableCell _headingCell(BuildContext context, HistoryColumn column) {
-    if (column == HistoryColumn.fiscalYear) {
-      return const TableCell(child: _SortableYearHeading());
+    if (column == HistoryColumn.period) {
+      return const TableCell(child: _SortablePeriodHeading());
     }
     return TableCell(
       child: Container(
@@ -89,7 +89,7 @@ class _WideTable extends StatelessWidget {
   TableCell _valueCell(
     BuildContext context,
     HistoryColumn column,
-    FiscalYearFigures figures,
+    PeriodFigures figures,
   ) {
     final sentiment = column.getSentiment(figures);
     final text = Text(column.getCellText(context.strings, figures))
@@ -102,7 +102,7 @@ class _WideTable extends StatelessWidget {
         alignment: column.isNumeric
             ? Alignment.centerRight
             : Alignment.centerLeft,
-        child: column == HistoryColumn.fiscalYear
+        child: column == HistoryColumn.period
             ? text.semiBold()
             : sentiment == null
             ? text.mono()
@@ -115,33 +115,33 @@ class _WideTable extends StatelessWidget {
 }
 
 /// One card per fiscal year, for windows too narrow to hold the table.
-class _YearCards extends StatelessWidget {
-  const _YearCards();
+class _PeriodCards extends StatelessWidget {
+  const _PeriodCards();
 
   @override
   Widget build(BuildContext context) {
-    final yearCount = context.select<SnapshotViewModel, int>(
-      (viewModel) => viewModel.reportedYearCount,
+    final rowCount = context.select<SnapshotViewModel, int>(
+      (viewModel) => viewModel.historyRowCount,
     );
 
     return Column(
       spacing: ThemeRepo.spaceSmall,
       children: [
-        for (int index = 0; index < yearCount; index++) _YearCard(index),
+        for (int index = 0; index < rowCount; index++) _PeriodCard(index),
       ],
     );
   }
 }
 
-class _YearCard extends StatelessWidget {
-  const _YearCard(this.yearIndex);
+class _PeriodCard extends StatelessWidget {
+  const _PeriodCard(this.rowIndex);
 
-  final int yearIndex;
+  final int rowIndex;
 
   @override
   Widget build(BuildContext context) {
-    final figures = context.select<SnapshotViewModel, FiscalYearFigures?>(
-      (viewModel) => viewModel.historyFiguresAt(yearIndex),
+    final figures = context.select<SnapshotViewModel, PeriodFigures?>(
+      (viewModel) => viewModel.historyFiguresAt(rowIndex),
     );
     if (figures == null) return const SizedBox.shrink();
 
@@ -151,27 +151,27 @@ class _YearCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: ThemeRepo.spaceSmall,
         children: [
-          Text(HistoryColumn.fiscalYear.getCellText(context.strings, figures))
+          Text(HistoryColumn.period.getCellText(context.strings, figures))
               .semiBold(),
           for (final column in HistoryColumn.values)
-            if (column != HistoryColumn.fiscalYear)
-              _YearCardRow(column: column, yearIndex: yearIndex),
+            if (column != HistoryColumn.period)
+              _PeriodCardRow(column: column, rowIndex: rowIndex),
         ],
       ),
     );
   }
 }
 
-class _YearCardRow extends StatelessWidget {
-  const _YearCardRow({required this.column, required this.yearIndex});
+class _PeriodCardRow extends StatelessWidget {
+  const _PeriodCardRow({required this.column, required this.rowIndex});
 
   final HistoryColumn column;
-  final int yearIndex;
+  final int rowIndex;
 
   @override
   Widget build(BuildContext context) {
-    final figures = context.select<SnapshotViewModel, FiscalYearFigures?>(
-      (viewModel) => viewModel.historyFiguresAt(yearIndex),
+    final figures = context.select<SnapshotViewModel, PeriodFigures?>(
+      (viewModel) => viewModel.historyFiguresAt(rowIndex),
     );
     if (figures == null) return const SizedBox.shrink();
 
@@ -191,9 +191,9 @@ class _YearCardRow extends StatelessWidget {
   }
 }
 
-/// The `Year` column heading, which also sorts the table.
-class _SortableYearHeading extends StatelessWidget {
-  const _SortableYearHeading();
+/// The period column heading, which also sorts the table.
+class _SortablePeriodHeading extends StatelessWidget {
+  const _SortablePeriodHeading();
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +212,7 @@ class _SortableYearHeading extends StatelessWidget {
           trailing: Icon(
             isNewestFirst ? LucideIcons.arrowDown : LucideIcons.arrowUp,
           ).iconXSmall(),
-          child: Text(HistoryColumn.fiscalYear.getHeading(context.strings))
+          child: Text(HistoryColumn.period.getHeading(context.strings))
               .muted()
               .semiBold()
               .xSmall(),

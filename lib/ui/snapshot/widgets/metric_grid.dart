@@ -63,11 +63,20 @@ class _MetricLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final figures = context.select<SnapshotViewModel, FiscalYearFigures?>(
+      (viewModel) => viewModel.latestFigures,
+    );
+    if (figures == null) return const SizedBox.shrink();
+
     return Row(
       spacing: ThemeRepo.spaceXSmall,
       children: [
         Icon(metric.icon).iconXSmall().iconMutedForeground(),
-        Expanded(child: Text(metric.getLabel(context.strings)).muted().small()),
+        Expanded(
+          child: Text(metric.getLabel(context.strings, figures))
+              .muted()
+              .small(),
+        ),
         Tooltip(
           tooltip: TooltipContainer(
             child: Text(metric.getHint(context.strings)),
@@ -134,10 +143,15 @@ class _MetricChange extends StatelessWidget {
     if (years == null || years.isEmpty) return const SizedBox.shrink();
 
     final figures = years.last;
-    final qualifier = metric.getQualifier(context.strings, figures);
-    if (qualifier != null) return Text(qualifier).muted().xSmall();
-
     final previous = years.length > 1 ? years[years.length - 2] : null;
+
+    // The balance-sheet card compares in words: a figure that crosses zero has
+    // no sensible percentage change.
+    final priorPosition = metric.getPriorPosition(context.strings, previous);
+    if (priorPosition != null) {
+      return Text(priorPosition).muted().xSmall();
+    }
+
     final change = metric.getChangePercent(figures, previous);
     if (change == null || previous == null) {
       return const SizedBox(height: ThemeRepo.spaceMedium);

@@ -1,25 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
-import 'package:pickstock/repo/format_repo.dart';
-import 'package:pickstock/repo/sec/mock_sec_repo.dart';
-import 'package:pickstock/repo/sec/sec_repo.dart';
-import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
-import 'package:pickstock/repo/theme_repo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'support/test_directory.dart';
+
 const Size _desktopSize = Size(1440, 1200);
+
+/// Below the master-detail breakpoint, so picking a company navigates back.
+const Size _narrowSize = Size(820, 1200);
 
 void main() {
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    final directory = TickerDirectoryRepo();
-    await directory.load();
-    GetIt.I
-      ..registerLazySingleton<ThemeRepo>(ThemeRepo.new)
-      ..registerLazySingleton<FormatRepo>(FormatRepo.new)
-      ..registerSingleton<TickerDirectoryRepo>(directory)
-      ..registerLazySingleton<SecRepo>(() => const MockSecRepo());
+    await registerTestDependencies();
   });
 
   tearDown(GetIt.I.reset);
@@ -31,8 +25,11 @@ void main() {
 
     expect(find.text('All tickers'), findsOneWidget);
     // Counts are grouped, not bare digits.
-    expect(find.text('10,391 symbols filed with SEC EDGAR'), findsOneWidget);
-    expect(find.text('10,391 matches'), findsOneWidget);
+    expect(
+      find.text('${testTickers.length} symbols filed with SEC EDGAR'),
+      findsOneWidget,
+    );
+    expect(find.text('${testTickers.length} matches'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).last, 'BRK-');
     await tester.pumpAndSettle();
@@ -68,7 +65,7 @@ void main() {
   testWidgets('picking a symbol returns to the report and looks it up', (
     tester,
   ) async {
-    await _openBrowser(tester);
+    await _openBrowser(tester, size: _narrowSize);
 
     await tester.enterText(find.byType(TextField).last, 'AAPL');
     await tester.pumpAndSettle();
@@ -84,9 +81,12 @@ void main() {
   });
 }
 
-Future<void> _openBrowser(WidgetTester tester) async {
+Future<void> _openBrowser(
+  WidgetTester tester, {
+  Size size = _desktopSize,
+}) async {
   tester.view
-    ..physicalSize = _desktopSize
+    ..physicalSize = size
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(const PickStockApp());

@@ -26,15 +26,10 @@ class TickerSearchBar extends StatelessWidget {
       alignment: Alignment.center,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: ThemeRepo.contentMaxWidth),
-        // Flexible rather than Expanded: the field should stop growing at its
-        // own maximum on a wide window instead of being stretched to fill it.
-        child: const Row(
-          spacing: ThemeRepo.spaceSmall,
-          children: [
-            Flexible(child: _TickerField()),
-            _AnalyzeButton(),
-          ],
-        ),
+        // Aligned left rather than stretched: the field stops at its own
+        // maximum on a wide window. There is no submit button — enter, or a
+        // suggestion, runs the lookup.
+        child: const Row(children: [Flexible(child: _TickerField())]),
       ),
     );
   }
@@ -73,27 +68,6 @@ class _TickerField extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AnalyzeButton extends StatelessWidget {
-  const _AnalyzeButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final isLoading = context.select<SnapshotViewModel, bool>(
-      (viewModel) => viewModel.isLoading,
-    );
-
-    return PrimaryButton(
-      onPressed: isLoading
-          ? null
-          : () => context.read<SnapshotViewModel>().submitTypedTicker(),
-      leading: isLoading
-          ? const CircularProgressIndicator(size: ThemeRepo.spaceMedium)
-          : const Icon(LucideIcons.arrowRight),
-      child: Text(context.strings.searchAction),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/app_view_model.dart';
+import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:provider/provider.dart';
@@ -22,6 +23,10 @@ class PickStockApp extends StatelessWidget {
         // Above the router: browsing the directory and coming back must not
         // discard the report already on screen.
         ChangeNotifierProvider(create: (_) => SnapshotViewModel()),
+        // Lazily built, so it reads the directory only once the ingest gate
+        // has let the app through — and kept alive afterwards so returning to
+        // the list restores its ordering, filter and scroll position.
+        ChangeNotifierProvider(create: (_) => BrowseViewModel()),
       ],
       child: const _PickStockAppView(),
     );

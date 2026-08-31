@@ -106,41 +106,209 @@ abstract class AppLocalizations {
   /// **'Financial health snapshots from SEC EDGAR'**
   String get appSubtitle;
 
-  /// No description provided for @ingestStart.
+  /// No description provided for @stageDirectoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ticker directory'**
+  String get stageDirectoryLabel;
+
+  /// No description provided for @stageDirectoryDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Symbols and company names'**
+  String get stageDirectoryDetail;
+
+  /// No description provided for @stageSectorsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Industry codes'**
+  String get stageSectorsLabel;
+
+  /// No description provided for @stageSectorsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'A sector for each filer, about 60 MB a quarter'**
+  String get stageSectorsDetail;
+
+  /// No description provided for @ingestDataSets.
+  ///
+  /// In en, this message translates to:
+  /// **'{read} of {total} data sets'**
+  String ingestDataSets(int read, int total);
+
+  /// No description provided for @stageDownloadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC bulk archive'**
+  String get stageDownloadLabel;
+
+  /// No description provided for @stageDownloadDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'About 1.4 GB, downloaded once'**
+  String get stageDownloadDetail;
+
+  /// No description provided for @stageLoadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Local database'**
+  String get stageLoadLabel;
+
+  /// No description provided for @stageLoadDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading filings for every company'**
+  String get stageLoadDetail;
+
+  /// No description provided for @ingestPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your data'**
+  String get ingestPreparing;
+
+  /// No description provided for @ingestBytesOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{received} of {total}'**
+  String ingestBytesOfTotal(String received, String total);
+
+  /// No description provided for @ingestRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate}/s'**
+  String ingestRate(String rate);
+
+  /// No description provided for @ingestRateCompanies.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} companies/s'**
+  String ingestRateCompanies(int rate);
+
+  /// No description provided for @ingestRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} left'**
+  String ingestRemaining(String duration);
+
+  /// No description provided for @ingestCompaniesOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{loaded} of {total} companies'**
+  String ingestCompaniesOfTotal(int loaded, int total);
+
+  /// No description provided for @durationMinutesSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m {seconds}s'**
+  String durationMinutesSeconds(int minutes, int seconds);
+
+  /// No description provided for @durationSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String durationSeconds(int seconds);
+
+  /// No description provided for @gateChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking local data…'**
+  String get gateChecking;
+
+  /// No description provided for @gateRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial data required'**
+  String get gateRequiredTitle;
+
+  /// No description provided for @gateRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'PickStock reads ten years of filings from a database on this machine. Download SEC\'s bulk archive once — about 1.4 GB — and everything after that works offline.'**
+  String get gateRequiredBody;
+
+  /// No description provided for @gateStart.
   ///
   /// In en, this message translates to:
   /// **'Download SEC data'**
-  String get ingestStart;
+  String get gateStart;
 
-  /// No description provided for @ingestDownloading.
+  /// No description provided for @gateFailedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Downloading… {percent}'**
-  String ingestDownloading(String percent);
+  /// **'Download failed'**
+  String get gateFailedTitle;
 
-  /// No description provided for @ingestParsing.
+  /// No description provided for @gateFailedBody.
   ///
   /// In en, this message translates to:
-  /// **'Loading {count} companies…'**
-  String ingestParsing(int count);
+  /// **'The archive could not be fetched. Check your connection and try again.'**
+  String get gateFailedBody;
 
-  /// No description provided for @ingestDone.
+  /// No description provided for @gateRetry.
   ///
   /// In en, this message translates to:
-  /// **'{count} companies loaded'**
-  String ingestDone(int count);
+  /// **'Try again'**
+  String get gateRetry;
 
-  /// No description provided for @ingestFailed.
+  /// No description provided for @gateRefresh.
   ///
   /// In en, this message translates to:
-  /// **'Download failed — try again'**
-  String get ingestFailed;
+  /// **'Refresh data'**
+  String get gateRefresh;
 
-  /// No description provided for @ingestSize.
+  /// No description provided for @updateAvailable.
   ///
   /// In en, this message translates to:
-  /// **'One 1.4 GB download from SEC, then everything is local.'**
-  String get ingestSize;
+  /// **'Update available'**
+  String get updateAvailable;
+
+  /// No description provided for @updateAvailableOn.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC rebuilt the archive on {date}. Download it to refresh your figures.'**
+  String updateAvailableOn(DateTime date);
+
+  /// No description provided for @ingestStageDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching the ticker directory…'**
+  String get ingestStageDirectory;
+
+  /// No description provided for @ingestStageDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the archive… {percent}'**
+  String ingestStageDownload(String percent);
+
+  /// No description provided for @ingestStageDownloadSized.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the archive… {received} of {total}'**
+  String ingestStageDownloadSized(String received, String total);
+
+  /// No description provided for @ingestStageLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading filings into the database… {count} of {total} companies'**
+  String ingestStageLoad(int count, int total);
+
+  /// No description provided for @ingestStageFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Finishing up…'**
+  String get ingestStageFinishing;
+
+  /// No description provided for @ingestStageLoadHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading 20,000 filings takes a few minutes.'**
+  String get ingestStageLoadHint;
+
+  /// No description provided for @ingestWarnLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'This takes a few minutes. Leave the app open.'**
+  String get ingestWarnLeave;
 
   /// No description provided for @toggleTheme.
   ///
@@ -153,12 +321,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search by symbol or company name'**
   String get searchPlaceholder;
-
-  /// No description provided for @searchAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Analyze'**
-  String get searchAction;
 
   /// No description provided for @searchExamples.
   ///
@@ -183,6 +345,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Browse all tickers'**
   String get browseOpen;
+
+  /// No description provided for @sortByName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (A–Z)'**
+  String get sortByName;
+
+  /// No description provided for @sortRevenueOneYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue growth, 1 year'**
+  String get sortRevenueOneYear;
+
+  /// No description provided for @sortRevenueYears.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue growth, {years}-year annualised'**
+  String sortRevenueYears(int years);
+
+  /// No description provided for @sortFreeCashFlowOneYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Free cash flow growth, 1 year'**
+  String get sortFreeCashFlowOneYear;
+
+  /// No description provided for @browseSortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get browseSortLabel;
+
+  /// No description provided for @sectorTechnology.
+  ///
+  /// In en, this message translates to:
+  /// **'Tech'**
+  String get sectorTechnology;
+
+  /// No description provided for @sectorHealthcare.
+  ///
+  /// In en, this message translates to:
+  /// **'Pharma & health'**
+  String get sectorHealthcare;
+
+  /// No description provided for @sectorFinancials.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get sectorFinancials;
+
+  /// No description provided for @sectorRealEstate.
+  ///
+  /// In en, this message translates to:
+  /// **'Real estate'**
+  String get sectorRealEstate;
+
+  /// No description provided for @sectorEnergy.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy'**
+  String get sectorEnergy;
+
+  /// No description provided for @sectorUtilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Utilities'**
+  String get sectorUtilities;
+
+  /// No description provided for @sectorIndustrials.
+  ///
+  /// In en, this message translates to:
+  /// **'Industrials'**
+  String get sectorIndustrials;
+
+  /// No description provided for @sectorAutomotive.
+  ///
+  /// In en, this message translates to:
+  /// **'Automotive'**
+  String get sectorAutomotive;
+
+  /// No description provided for @sectorMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials'**
+  String get sectorMaterials;
+
+  /// No description provided for @sectorConsumer.
+  ///
+  /// In en, this message translates to:
+  /// **'Consumer'**
+  String get sectorConsumer;
+
+  /// No description provided for @sectorCommunications.
+  ///
+  /// In en, this message translates to:
+  /// **'Media & telecom'**
+  String get sectorCommunications;
+
+  /// No description provided for @sectorTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'Transport'**
+  String get sectorTransport;
+
+  /// No description provided for @sectorAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get sectorAll;
+
+  /// No description provided for @browseNoFigure.
+  ///
+  /// In en, this message translates to:
+  /// **'—'**
+  String get browseNoFigure;
 
   /// No description provided for @browseFilterPlaceholder.
   ///
@@ -292,6 +568,12 @@ abstract class AppLocalizations {
   /// **'FY{year} highlights'**
   String sectionHighlights(String year);
 
+  /// No description provided for @sectionQuarterHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{One quarter} other{Last {count} quarters}}'**
+  String sectionQuarterHistory(int count);
+
   /// No description provided for @sectionHistory.
   ///
   /// In en, this message translates to:
@@ -388,11 +670,29 @@ abstract class AppLocalizations {
   /// **'FY'**
   String get labelFiscalYear;
 
-  /// No description provided for @labelYear.
+  /// No description provided for @labelPeriod.
   ///
   /// In en, this message translates to:
-  /// **'Year'**
-  String get labelYear;
+  /// **'Period'**
+  String get labelPeriod;
+
+  /// No description provided for @labelQuarterOfYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Q{quarter} FY{year}'**
+  String labelQuarterOfYear(int quarter, int year);
+
+  /// No description provided for @periodAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'Annual'**
+  String get periodAnnual;
+
+  /// No description provided for @periodQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly'**
+  String get periodQuarterly;
 
   /// No description provided for @sortByYear.
   ///
@@ -463,7 +763,7 @@ abstract class AppLocalizations {
   /// No description provided for @labelNetDebt.
   ///
   /// In en, this message translates to:
-  /// **'Net debt / (cash)'**
+  /// **'Net debt'**
   String get labelNetDebt;
 
   /// No description provided for @labelCik.
@@ -483,6 +783,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Net debt'**
   String get labelNetDebtPosition;
+
+  /// No description provided for @priorNetDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'was net debt of {amount}'**
+  String priorNetDebt(String amount);
+
+  /// No description provided for @priorNetCash.
+  ///
+  /// In en, this message translates to:
+  /// **'was net cash of {amount}'**
+  String priorNetCash(String amount);
 
   /// No description provided for @labelNetCashPosition.
   ///
@@ -511,7 +823,7 @@ abstract class AppLocalizations {
   /// No description provided for @hintNetDebt.
   ///
   /// In en, this message translates to:
-  /// **'Total borrowings minus cash. Negative means the company holds more cash than debt.'**
+  /// **'Total borrowings minus cash. A negative figure is a net cash position: the company holds more cash than debt.'**
   String get hintNetDebt;
 
   /// No description provided for @deltaVersusPriorYear.
@@ -523,14 +835,20 @@ abstract class AppLocalizations {
   /// No description provided for @footnoteNegatives.
   ///
   /// In en, this message translates to:
-  /// **'Values in parentheses are negative — a net cash position.'**
+  /// **'Net debt is negative when a company holds more cash than it owes.'**
   String get footnoteNegatives;
 
   /// No description provided for @footnoteSource.
   ///
   /// In en, this message translates to:
-  /// **'Source: SEC EDGAR XBRL company facts, 10-K filings only. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.'**
+  /// **'Source: SEC EDGAR XBRL company facts. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.'**
   String get footnoteSource;
+
+  /// No description provided for @footnoteQuarters.
+  ///
+  /// In en, this message translates to:
+  /// **'Fourth-quarter income and cash-flow figures are derived by subtracting the first three quarters from the full year; balance-sheet figures are as filed.'**
+  String get footnoteQuarters;
 
   /// No description provided for @unitMillionsSuffix.
   ///

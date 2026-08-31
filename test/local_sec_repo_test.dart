@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/local_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
-import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
+
+import 'support/test_directory.dart';
 
 const String _appleCik = '0000320193';
 
@@ -14,12 +14,7 @@ void main() {
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    database = AppDatabase.forTesting(NativeDatabase.memory());
-    final directory = TickerDirectoryRepo();
-    await directory.load();
-    GetIt.I
-      ..registerSingleton<AppDatabase>(database)
-      ..registerSingleton<TickerDirectoryRepo>(directory);
+    database = await registerTestDependencies();
   });
 
   tearDown(() async {
@@ -47,6 +42,7 @@ void main() {
   }
 
   test('says the database is empty before any ingest', () async {
+    await database.clearFinancials();
     await expectLater(
       const LocalSecRepo().fetchSnapshot('AAPL'),
       throwsA(

@@ -10,7 +10,7 @@ import 'package:pickstock/repo/theme_repo.dart';
 
 /// Run with `--dart-define=PICKSTOCK_MOCK_DATA=true` to drive the UI from the
 /// canned fixture instead of the live EDGAR API.
-const bool _useMockData = bool.fromEnvironment('PICKSTOCK_MOCK_DATA');
+const bool usesMockData = bool.fromEnvironment('PICKSTOCK_MOCK_DATA');
 
 /// The one place every dependency is wired up.
 abstract final class DependenciesRepo {
@@ -22,7 +22,7 @@ abstract final class DependenciesRepo {
       ..registerLazySingleton<AppDatabase>(AppDatabase.new)
       ..registerLazySingleton<BulkIngestRepo>(BulkIngestRepo.new)
       ..registerLazySingleton<SecRepo>(
-        () => _useMockData ? const MockSecRepo() : const LocalSecRepo(),
+        () => usesMockData ? const MockSecRepo() : const LocalSecRepo(),
       );
   }
 }

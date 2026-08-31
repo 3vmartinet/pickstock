@@ -23,6 +23,13 @@ extension ResponsiveExtensions on BuildContext {
   /// Wide enough for side-by-side headline blocks and a full-width table.
   bool get isExpanded => breakpoint.index >= Breakpoint.expanded.index;
 
+  /// Wide enough to show the ticker list and a company's report side by side.
+  ///
+  /// Below this the list takes the whole window and picking a company returns
+  /// to the report, because splitting the width leaves neither pane usable.
+  bool get showsMasterDetail =>
+      MediaQuery.sizeOf(this).width >= ThemeRepo.masterDetailMinWidth;
+
   /// Gutter around every page-level section, tightened on narrow windows.
   EdgeInsets get pagePadding => EdgeInsets.symmetric(
     horizontal: isCompact ? ThemeRepo.spaceMedium : ThemeRepo.spaceXLarge,
