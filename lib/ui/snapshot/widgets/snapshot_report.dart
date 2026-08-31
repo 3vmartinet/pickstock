@@ -1,17 +1,27 @@
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
+import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
+import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
+import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_order_toggle.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_table.dart';
 import 'package:pickstock/ui/snapshot/widgets/metric_grid.dart';
+import 'package:pickstock/ui/snapshot/widgets/napkin_math.dart';
 import 'package:pickstock/ui/snapshot/widgets/sanity_check_grid.dart';
+import 'package:pickstock/ui/snapshot/widgets/share_price_field.dart';
+import 'package:pickstock/ui/snapshot/widgets/valuation_grid.dart';
+import 'package:pickstock/ui/snapshot/widgets/valuation_verdict_card.dart';
 import 'package:pickstock/ui/widgets/section_header.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+
+FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
 /// The whole report for a loaded snapshot, top to bottom.
 class SnapshotReport extends StatelessWidget {
@@ -28,6 +38,8 @@ class SnapshotReport extends StatelessWidget {
                 CompanyHeader(),
                 _SanityCheckSection(),
                 _HighlightsSection(),
+                _ValuationSection(),
+                _ExpectationsSection(),
                 _HistorySection(),
                 _Footnotes(),
               ]
@@ -119,6 +131,100 @@ class _HighlightsSection extends StatelessWidget {
   }
 }
 
+/// Judges the entered price against the filings.
+///
+/// It sits under the highlights because it only makes sense once the figures it
+/// divides are on screen, and above the history because it is a verdict on the
+/// present rather than a record of the past.
+class _ValuationSection extends StatelessWidget {
+  const _ValuationSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return _Section(
+      icon: LucideIcons.scale,
+      title: context.strings.sectionValuation,
+      trailing: const SharePriceField(),
+      child: const _ValuationContent(),
+    );
+  }
+}
+
+class _ValuationContent extends StatelessWidget {
+  const _ValuationContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final canBeValued = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.canBeValued,
+    );
+    if (!canBeValued) {
+      return Text(context.strings.valuationNoShareCount).muted().small();
+    }
+
+    final hasPrice = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.pricePerShare != null,
+    );
+    if (!hasPrice) {
+      return Text(context.strings.valuationIdle).muted().small();
+    }
+
+    // The verdict and its ratios on the left, the worked example on the right,
+    // so a reader can follow the arithmetic beside the answer it produced —
+    // and below it instead where the pane is too narrow to split.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const cards = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: ThemeRepo.spaceMedium,
+          children: [ValuationVerdictCard(), ValuationGrid()],
+        );
+
+        if (constraints.maxWidth < ThemeRepo.napkinSideBySideMinWidth) {
+          return const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: ThemeRepo.spaceMedium,
+            children: [cards, NapkinMath()],
+          );
+        }
+
+        return const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: ThemeRepo.spaceMedium,
+          children: [
+            Expanded(flex: ThemeRepo.valuationCardsFlex, child: cards),
+            Expanded(flex: ThemeRepo.napkinFlex, child: NapkinMath()),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// What the price is asking of the company, and whether the company has ever
+/// done it.
+///
+/// Separate from the valuation above because it answers a different question:
+/// not "is this multiple high" but "what would have to be true for this price
+/// to be right, and has it been true before".
+class _ExpectationsSection extends StatelessWidget {
+  const _ExpectationsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final hasExpectation = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.growthExpectation != null,
+    );
+    if (!hasExpectation) return const SizedBox.shrink();
+
+    return _Section(
+      icon: LucideIcons.target,
+      title: context.strings.sectionExpectations,
+      child: const ExpectationCard(),
+    );
+  }
+}
+
 class _HistorySection extends StatelessWidget {
   const _HistorySection();
 
@@ -156,6 +262,9 @@ class _Footnotes extends StatelessWidget {
     final isQuarterly = context.select<SnapshotViewModel, bool>(
       (viewModel) => viewModel.historyPeriod == HistoryPeriod.quarterly,
     );
+    final valuation = context.select<SnapshotViewModel, Valuation?>(
+      (viewModel) => viewModel.valuation,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),
@@ -164,6 +273,18 @@ class _Footnotes extends StatelessWidget {
         spacing: ThemeRepo.spaceXSmall,
         children: [
           Text(context.strings.footnoteNegatives).muted().xSmall(),
+          if (valuation != null) ...[
+            Text(context.strings.footnotePriceSource).muted().xSmall(),
+            Text(context.strings.footnoteExpectations).muted().xSmall(),
+          ],
+          if (valuation?.basis case final basis?)
+            Text(
+              context.strings.footnoteValuation(
+                _formatRepo.ratio(valuation!.lowMultiple),
+                _formatRepo.ratio(valuation.highMultiple),
+                basis.getLabel(context.strings),
+              ),
+            ).muted().xSmall(),
           if (isQuarterly)
             Text(context.strings.footnoteQuarters).muted().xSmall(),
           Text(context.strings.footnoteSource).muted().xSmall(),

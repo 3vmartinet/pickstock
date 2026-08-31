@@ -3,6 +3,8 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/watchlist/widgets/add_to_watchlist_button.dart';
+import 'package:pickstock/ui/watchlist/widgets/watchlist_star.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -14,12 +16,19 @@ class CompanyHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       padding: context.cardPadding,
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: ThemeRepo.spaceMedium,
         children: [
-          Expanded(child: _CompanyIdentity()),
-          _CoverageBadge(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: ThemeRepo.spaceMedium,
+            children: [
+              Expanded(child: _CompanyIdentity()),
+              _CoverageBadge(),
+            ],
+          ),
+          _FollowRow(),
         ],
       ),
     );
@@ -48,6 +57,27 @@ class _CompanyIdentity extends StatelessWidget {
           ],
         ),
         Text(context.strings.labelCik(company.cik)).muted().xSmall(),
+      ],
+    );
+  }
+}
+
+/// Following the company: one tap for the starred list, a menu for the rest.
+class _FollowRow extends StatelessWidget {
+  const _FollowRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final cik = context.select<SnapshotViewModel, String?>(
+      (viewModel) => viewModel.snapshot?.company.cik,
+    );
+    if (cik == null) return const SizedBox.shrink();
+
+    return Row(
+      spacing: ThemeRepo.spaceSmall,
+      children: [
+        WatchlistStar(cik: cik),
+        AddToWatchlistButton(cik: cik),
       ],
     );
   }

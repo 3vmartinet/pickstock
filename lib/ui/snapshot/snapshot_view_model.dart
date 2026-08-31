@@ -2,35 +2,36 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
-import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/period_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/quote/quote.dart';
+import 'package:pickstock/data/valuation/growth_expectation.dart';
+import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
+import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
-import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
-TickerDirectoryRepo get _tickerDirectoryRepo =>
-    GetIt.I.get<TickerDirectoryRepo>();
+PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
+QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
+
+/// How old a stored quote may be before opening a company refetches it.
+///
+/// Long enough that clicking between companies does not spend the per-minute
+/// budget, short enough that a price on screen is one a person would still act
+/// on.
+const Duration quoteFreshness = Duration(minutes: 15);
 
 /// Tickers offered as a starting point on the empty screen.
 const List<String> suggestedTickers = ['AAPL', 'MSFT', 'NVDA', 'KO', 'F'];
 
 const int _maxRecentTickers = 6;
 
-/// How many type-ahead rows fit under the field without covering the report.
-const int _maxSuggestions = 8;
-
-/// Separates the symbol from the company name in a suggestion row. Chosen
-/// because no EDGAR company name contains it.
-const String suggestionSeparator = '  ·  ';
-
 class SnapshotViewModel extends ChangeNotifier {
-  final TextEditingController tickerController = TextEditingController();
-
   SnapshotState _state = const SnapshotIdle();
   SnapshotState get state => _state;
 
@@ -111,69 +112,174 @@ class SnapshotViewModel extends ChangeNotifier {
   /// How many rows the history section shows.
   int get historyRowCount => historyRows.length;
 
+  /// The price field's text, owned here so it survives the report being
+  /// rebuilt and is restored when a company is opened again.
+  final TextEditingController priceController = TextEditingController();
+
+  Quote? _quote;
+
+  /// The price on screen and where it came from, or `null` while none is known.
+  Quote? get quote => _quote;
+
+  /// The price the valuation is struck at, or `null` while the field is empty
+  /// or holds something that is not a price.
+  double? get pricePerShare => _quote?.pricePerShare;
+
+  bool _isQuoting = false;
+
+  /// Whether a quote is in flight, so the field can show it is working.
+  bool get isQuoting => _isQuoting;
+
+  QuoteFailure? _quoteFailure;
+
+  /// Why the last quote attempt came back empty-handed, or `null` if it did
+  /// not. Kept so the report can say what happened rather than leaving the
+  /// field mysteriously blank.
+  QuoteFailure? get quoteFailure => _quoteFailure;
+
+  /// Whether quotes are available at all: without a key the price is typed in,
+  /// and no refresh control is offered.
+  bool get canFetchQuotes => _quoteRepo.isConfigured;
+
+  /// The valuation of the loaded company at [pricePerShare], or `null` while
+  /// there is no snapshot or no price to value it at.
+  Valuation? get valuation {
+    final current = snapshot;
+    final price = pricePerShare;
+    if (current == null || price == null || price <= 0) return null;
+    return Valuation(snapshot: current, pricePerShare: price);
+  }
+
+  /// What the entered price is asking of the company, set against what the
+  /// company has actually produced.
+  GrowthExpectation? get growthExpectation {
+    final current = snapshot;
+    final capitalisation = valuation?.marketCap;
+    if (current == null || capitalisation == null) return null;
+    return GrowthExpectation.of(current, capitalisation);
+  }
+
+  /// Whether a per-share value can be derived at all: without a share count
+  /// there is nothing to divide the business by.
+  bool get canBeValued {
+    final current = snapshot;
+    if (current == null) return false;
+    return (current.company.sharesOutstanding ??
+            current.latest.dilutedShares) !=
+        null;
+  }
+
+  /// Takes the price as typed, keeping it whether or not it parses so the field
+  /// never fights the user mid-entry.
+  ///
+  /// A typed price overrides a quote: the user may well know something the
+  /// provider does not, or simply want to ask "what if it were this".
+  Future<void> enterPrice(String text) async {
+    final price = _parsePrice(text);
+    if (price == pricePerShare) return;
+    _quote = price == null ? null : Quote.entered(price);
+    _quoteFailure = null;
+    notifyListeners();
+
+    final cik = snapshot?.company.cik;
+    if (cik == null) return;
+    final entered = _quote;
+    if (entered == null) {
+      await _priceRepo.clear(cik);
+    } else {
+      await _priceRepo.save(cik, entered);
+    }
+  }
+
+  /// Accepts what a person actually types: a currency symbol, thin spaces, and
+  /// a comma where a decimal point belongs.
+  static double? _parsePrice(String text) {
+    final cleaned = text
+        .replaceAll(RegExp(r'[^0-9.,]'), '')
+        .replaceAll(',', '.');
+    if (cleaned.isEmpty) return null;
+    final price = double.tryParse(cleaned);
+    return price == null || price <= 0 ? null : price;
+  }
+
+  /// Puts the last known price back on screen, then fetches a fresh quote if
+  /// the stored one is stale and quotes are available.
+  ///
+  /// The stored price goes up first on purpose: the report is readable
+  /// immediately, offline, and stays readable if the quote never arrives.
+  Future<void> _restorePrice(String cik, int generation) async {
+    final stored = await _priceRepo.priceFor(cik);
+    // A newer search may have landed while the read was in flight; its own
+    // price is the one that belongs on screen.
+    if (generation != _requestGeneration) return;
+    _showPrice(stored);
+    _quoteFailure = null;
+    notifyListeners();
+
+    if (!_isStale(stored)) return;
+    await _fetchQuote(generation);
+  }
+
+  /// Asks the provider for a price, from the refresh control.
+  Future<void> refreshQuote() => _fetchQuote(_requestGeneration);
+
+  Future<void> _fetchQuote(int generation) async {
+    final current = snapshot;
+    if (current == null || !canFetchQuotes || _isQuoting) return;
+
+    _isQuoting = true;
+    _quoteFailure = null;
+    notifyListeners();
+
+    try {
+      final quoted = await _quoteRepo.quoteFor(current.company.ticker);
+      if (generation != _requestGeneration) return;
+      _showPrice(quoted);
+      await _priceRepo.save(current.company.cik, quoted);
+    } on QuoteException catch (error) {
+      if (generation != _requestGeneration) return;
+      logWarning(() => 'Quote for ${current.company.ticker} failed: $error');
+      // The stored price stays on screen: a failed refresh is not a reason to
+      // throw away the last price known.
+      _quoteFailure = error.failure;
+    } finally {
+      if (generation == _requestGeneration) {
+        _isQuoting = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// A stored price is refetched when it is absent, older than
+  /// [quoteFreshness], or was typed rather than quoted — a real quote beats a
+  /// guess, and the user can always type over it again.
+  bool _isStale(Quote? stored) {
+    if (!canFetchQuotes) return false;
+    if (stored == null || !stored.isQuoted) return true;
+    return DateTime.now().difference(stored.asOf) > quoteFreshness;
+  }
+
+  void _showPrice(Quote? price) {
+    _quote = price;
+    priceController.text = price == null ? '' : _priceText(price.pricePerShare);
+  }
+
+  /// Trailing zeros are dropped: `182.4` reads better than `182.40` in a field
+  /// the user is about to edit.
+  static String _priceText(double price) {
+    final text = price.toStringAsFixed(2);
+    return text.endsWith('0') ? text.substring(0, text.length - 1) : text;
+  }
+
   /// Guards against a slow first request overwriting a newer one's result.
   int _requestGeneration = 0;
-
-  List<Company> _suggestions = const [];
-
-  /// Rows for the type-ahead under the field, best match first. Rebuilt only
-  /// when the query changes, so the list keeps its identity between keystrokes
-  /// and `context.select` does not rebuild the field for unrelated updates.
-  List<String> _suggestionLabels = const [];
-  List<String> get suggestionLabels => _suggestionLabels;
-
-  /// Recomputes the type-ahead for what is currently typed.
-  void onQueryChanged(String query) {
-    final typed = query.trim();
-    _suggestions = typed.isEmpty
-        ? const []
-        : _tickerDirectoryRepo.search(typed, limit: _maxSuggestions);
-    _suggestionLabels = [
-      for (final company in _suggestions)
-        '${company.ticker}$suggestionSeparator${company.name}',
-    ];
-    notifyListeners();
-  }
-
-  /// Accepts a suggestion row, returning the symbol that should replace the
-  /// text in the field.
-  ///
-  /// The lookup is scheduled rather than awaited because this is called while
-  /// the autocomplete is applying its own text edit.
-  String acceptSuggestion(String label) {
-    final ticker = label.split(suggestionSeparator).first;
-    _clearSuggestions();
-    scheduleMicrotask(() => search(ticker));
-    return ticker;
-  }
-
-  /// Looks up whatever is currently typed, which may be a symbol or the start
-  /// of a company name.
-  ///
-  /// A name is resolved to the best-matching symbol rather than sent to EDGAR
-  /// as-is, so pressing enter on `berkshire` opens BRK-A instead of failing.
-  Future<void> submitTypedTicker() {
-    final typed = tickerController.text.trim();
-    if (typed.isEmpty) return Future<void>.value();
-
-    final exactSymbol = _tickerDirectoryRepo.lookup(typed);
-    if (exactSymbol != null) return search(exactSymbol.ticker);
-
-    final best = _tickerDirectoryRepo.search(typed, limit: 1);
-    return search(best.isEmpty ? typed : best.first.ticker);
-  }
 
   /// Looks up [ticker], syncing the text field so the two never disagree.
   Future<void> search(String ticker) async {
     final symbol = ticker.trim().toUpperCase();
     if (symbol.isEmpty) return;
 
-    if (tickerController.text != symbol) {
-      tickerController.text = symbol;
-    }
-
     final generation = ++_requestGeneration;
-    _clearSuggestions();
     _setState(SnapshotLoading(symbol));
 
     try {
@@ -181,6 +287,7 @@ class SnapshotViewModel extends ChangeNotifier {
       if (generation != _requestGeneration) return;
       _rememberTicker(symbol);
       _setState(SnapshotLoaded(snapshot));
+      await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {
       if (generation != _requestGeneration) return;
       logWarning(() => 'Snapshot for $symbol failed: $error');
@@ -203,11 +310,6 @@ class SnapshotViewModel extends ChangeNotifier {
     }
   }
 
-  void _clearSuggestions() {
-    _suggestions = const [];
-    _suggestionLabels = const [];
-  }
-
   void _setState(SnapshotState state) {
     _state = state;
     notifyListeners();
@@ -215,7 +317,7 @@ class SnapshotViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    tickerController.dispose();
+    priceController.dispose();
     super.dispose();
   }
 }

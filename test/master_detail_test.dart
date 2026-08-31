@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/ui/browse/widgets/ticker_grid.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/test_directory.dart';
@@ -25,14 +26,13 @@ void main() {
     await GetIt.I.reset();
   });
 
+  /// The list is the app's main screen, so there is nothing to open.
   Future<void> openBrowser(WidgetTester tester, Size size) async {
     tester.view
       ..physicalSize = size
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const PickStockApp());
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(LucideIcons.list));
     await tester.pumpAndSettle();
   }
 
@@ -42,7 +42,7 @@ void main() {
     await openBrowser(tester, _wideSize);
 
     // Both panes at once: the list, and the report's own empty state.
-    expect(find.text('All tickers'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
     expect(find.text('Check a company before you invest'), findsOneWidget);
   });
 
@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Still on the list, now with Apple's report beside it.
-    expect(find.text('All tickers'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
     expect(find.text('FY2025 highlights'), findsOneWidget);
   });
 
@@ -72,7 +72,63 @@ void main() {
 
     expect(find.text('CIK 0001045810'), findsOneWidget);
     expect(find.text('CIK 0000320193'), findsNothing);
-    expect(find.text('All tickers'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
+  });
+
+  testWidgets('the list pane can be dragged wider to fit more columns', (
+    tester,
+  ) async {
+    await openBrowser(tester, _wideSize);
+
+    int columns() {
+      final tiles = find.descendant(
+        of: find.byType(GridView),
+        matching: find.byType(Button),
+      );
+      final top = tester.getRect(tiles.at(0)).top;
+      var count = 0;
+      for (var i = 0; i < tester.widgetList(tiles).length; i++) {
+        if (tester.getRect(tiles.at(i)).top == top) count++;
+      }
+      return count;
+    }
+
+    final before = tester.getRect(find.byType(TickerGrid)).width;
+    final columnsBefore = columns();
+
+    // Drag the divider to the right.
+    final pane = tester.getRect(find.byType(TickerGrid));
+    await tester.dragFrom(
+      Offset(pane.right + 2, pane.center.dy),
+      const Offset(300, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.getRect(find.byType(TickerGrid)).width, greaterThan(before));
+    expect(columns(), greaterThan(columnsBefore));
+    // The report is still beside it.
+    expect(find.text('PickStock'), findsOneWidget);
+  });
+
+  testWidgets('tiles are twice as wide as tall, with the figure on the right', (
+    tester,
+  ) async {
+    await openBrowser(tester, _wideSize);
+
+    final tile = find
+        .descendant(of: find.byType(GridView), matching: find.byType(Button))
+        .at(0);
+    final rect = tester.getRect(tile);
+    expect(rect.width / rect.height, closeTo(2, 0.01));
+
+    // The ranked figure sits to the right of the symbol.
+    final symbol = tester.getRect(
+      find.descendant(of: tile, matching: find.text('AAPL')),
+    );
+    final figure = tester.getRect(
+      find.descendant(of: tile, matching: find.textContaining(r'$')),
+    );
+    expect(figure.left, greaterThan(symbol.right));
   });
 
   testWidgets('a narrow window keeps one pane and navigates back', (
@@ -87,7 +143,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Left the list for the report.
-    expect(find.text('All tickers'), findsNothing);
+    expect(find.text('PickStock'), findsNothing);
     expect(find.text('FY2025 highlights'), findsOneWidget);
   });
 }

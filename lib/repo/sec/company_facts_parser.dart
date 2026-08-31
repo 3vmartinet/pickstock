@@ -5,7 +5,6 @@ import 'package:pickstock/data/xbrl/xbrl_metric.dart';
 const String _factsKey = 'facts';
 const String _usGaapKey = 'us-gaap';
 const String _unitsKey = 'units';
-const String _usdKey = 'USD';
 const String _formKey = 'form';
 const String _fiscalYearKey = 'fy';
 const String _startKey = 'start';
@@ -13,6 +12,12 @@ const String _endKey = 'end';
 const String _valueKey = 'val';
 const String _accessionKey = 'accn';
 const String _entityNameKey = 'entityName';
+const String _deiKey = 'dei';
+
+/// The cover-page share count, filed as of the filing date rather than the
+/// period end — which makes it the right multiplier for a market value today.
+const String _sharesOutstandingTag = 'EntityCommonStockSharesOutstanding';
+const String _sharesOutstandingFallbackTag = 'CommonStockSharesOutstanding';
 const String _annualForm = '10-K';
 const String _quarterlyForm = '10-Q';
 const String _fiscalPeriodKey = 'fp';
@@ -41,6 +46,40 @@ abstract final class CompanyFactsParser {
   static String? entityName(Map<String, dynamic> facts) =>
       facts[_entityNameKey] as String?;
 
+  /// The newest share count on the cover of a filing, or `null` if none is
+  /// filed.
+  ///
+  /// Taken from the `dei` namespace, which is where the cover-page figure
+  /// lives; the us-gaap balance-sheet count stands in when it is absent.
+  static double? latestSharesOutstanding(Map<String, dynamic> facts) {
+    final candidates = [
+      facts[_factsKey]?[_deiKey]?[_sharesOutstandingTag],
+      facts[_factsKey]?[_usGaapKey]?[_sharesOutstandingFallbackTag],
+    ];
+
+    for (final candidate in candidates) {
+      final units =
+          (candidate as Map<String, dynamic>?)?[_unitsKey]?[XbrlUnit.shares.key]
+              as List<dynamic>?;
+      if (units == null) continue;
+
+      double? newest;
+      String? newestEnd;
+      for (final raw in units) {
+        final fact = raw as Map<String, dynamic>;
+        final end = fact[_endKey] as String?;
+        final value = fact[_valueKey] as num?;
+        if (end == null || value == null) continue;
+        if (newestEnd == null || end.compareTo(newestEnd) > 0) {
+          newestEnd = end;
+          newest = value.toDouble();
+        }
+      }
+      if (newest != null) return newest;
+    }
+    return null;
+  }
+
   /// Every fiscal quarter the payload covers, oldest first.
   ///
   /// Quarters come from 10-Qs and, for the fourth, from the 10-K. Cash-flow
@@ -68,8 +107,8 @@ abstract final class CompanyFactsParser {
           operatingCashFlow: seriesByMetric[XbrlMetric.operatingCashFlow]![key],
           capitalExpenditure:
               seriesByMetric[XbrlMetric.capitalExpenditure]![key],
-          totalDebt: _totalDebtFor(key, seriesByMetric),
-          cash: seriesByMetric[XbrlMetric.cash]![key],
+          totalDebt: _sumFor(XbrlMetric.debtComponents, key, seriesByMetric),
+          cash: _sumFor(XbrlMetric.cashComponents, key, seriesByMetric),
         ),
     ];
   }
@@ -106,15 +145,18 @@ abstract final class CompanyFactsParser {
     }
   }
 
-  static double? _totalDebtFor(
+  /// Adds up [components] for one quarter, or `null` where the filer reported
+  /// none of them — which is not the same as reporting zero.
+  static double? _sumFor(
+    List<XbrlMetric> components,
     QuarterKey key,
     Map<XbrlMetric, Map<QuarterKey, double>> seriesByMetric,
   ) {
-    final hasBalanceSheet = XbrlMetric.debtComponents.any(
+    final hasAny = components.any(
       (metric) => seriesByMetric[metric]!.containsKey(key),
     );
-    if (!hasBalanceSheet) return null;
-    return XbrlMetric.debtComponents.fold<double>(
+    if (!hasAny) return null;
+    return components.fold<double>(
       0,
       (sum, metric) => sum + (seriesByMetric[metric]![key] ?? 0),
     );
@@ -128,7 +170,12 @@ abstract final class CompanyFactsParser {
     final combined = <QuarterKey, double>{};
     for (final tag in metric.tags.reversed) {
       combined.addAll(
-        _quarterSeriesForTag(facts, tag, isInstant: metric.isInstant),
+        _quarterSeriesForTag(
+          facts,
+          tag,
+          isInstant: metric.isInstant,
+          unit: metric.unit,
+        ),
       );
     }
     return combined;
@@ -144,9 +191,10 @@ abstract final class CompanyFactsParser {
     Map<String, dynamic> facts,
     String tag, {
     required bool isInstant,
+    XbrlUnit unit = XbrlUnit.usd,
   }) {
     final usGaap = facts[_factsKey]?[_usGaapKey] as Map<String, dynamic>?;
-    final units = usGaap?[tag]?[_unitsKey]?[_usdKey] as List<dynamic>?;
+    final units = usGaap?[tag]?[_unitsKey]?[unit.key] as List<dynamic>?;
     if (units == null) return const {};
 
     final factsByFiling = <String, List<Map<String, dynamic>>>{};
@@ -231,15 +279,18 @@ abstract final class CompanyFactsParser {
     // Total debt is only meaningful when the company reports at least one
     // balance-sheet component for the year; without any, a `0` total would
     // read as "no debt" when the truth is "not reported".
-    final hasBalanceSheet = XbrlMetric.debtComponents.any(
-      (metric) => seriesByMetric[metric]!.containsKey(year),
-    );
-    final totalDebt = hasBalanceSheet
-        ? XbrlMetric.debtComponents.fold<double>(
-            0,
-            (sum, metric) => sum + (valueOf(metric) ?? 0),
-          )
-        : null;
+    /// Adds up a group of balance-sheet lines, or `null` where the filer
+    /// reported none of them.
+    double? sumOf(List<XbrlMetric> components) {
+      final hasAny = components.any(
+        (metric) => seriesByMetric[metric]!.containsKey(year),
+      );
+      if (!hasAny) return null;
+      return components.fold<double>(
+        0,
+        (sum, metric) => sum + (valueOf(metric) ?? 0),
+      );
+    }
 
     return FiscalYearFigures(
       fiscalYear: year,
@@ -248,8 +299,13 @@ abstract final class CompanyFactsParser {
       netIncome: valueOf(XbrlMetric.netIncome),
       operatingCashFlow: valueOf(XbrlMetric.operatingCashFlow),
       capitalExpenditure: valueOf(XbrlMetric.capitalExpenditure),
-      totalDebt: totalDebt,
-      cash: valueOf(XbrlMetric.cash),
+      totalDebt: sumOf(XbrlMetric.debtComponents),
+      cash: sumOf(XbrlMetric.cashComponents),
+      dilutedShares: valueOf(XbrlMetric.dilutedShares),
+      operatingIncome: valueOf(XbrlMetric.operatingIncome),
+      depreciationAmortisation: valueOf(XbrlMetric.depreciationAmortisation),
+      totalAssets: valueOf(XbrlMetric.totalAssets),
+      shareholdersEquity: valueOf(XbrlMetric.shareholdersEquity),
     );
   }
 
@@ -261,7 +317,12 @@ abstract final class CompanyFactsParser {
     final combined = <int, double>{};
     for (final tag in metric.tags.reversed) {
       combined.addAll(
-        _annualSeriesForTag(facts, tag, isInstant: metric.isInstant),
+        _annualSeriesForTag(
+          facts,
+          tag,
+          isInstant: metric.isInstant,
+          unit: metric.unit,
+        ),
       );
     }
     return combined;
@@ -280,9 +341,10 @@ abstract final class CompanyFactsParser {
     Map<String, dynamic> facts,
     String tag, {
     required bool isInstant,
+    XbrlUnit unit = XbrlUnit.usd,
   }) {
     final usGaap = facts[_factsKey]?[_usGaapKey] as Map<String, dynamic>?;
-    final units = usGaap?[tag]?[_unitsKey]?[_usdKey] as List<dynamic>?;
+    final units = usGaap?[tag]?[_unitsKey]?[unit.key] as List<dynamic>?;
     if (units == null) return const {};
 
     final factsByFiling = <String, List<Map<String, dynamic>>>{};

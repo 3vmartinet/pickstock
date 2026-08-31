@@ -6,6 +6,7 @@ import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -27,6 +28,9 @@ class PickStockApp extends StatelessWidget {
         // has let the app through — and kept alive afterwards so returning to
         // the list restores its ordering, filter and scroll position.
         ChangeNotifierProvider(create: (_) => BrowseViewModel()),
+        // Also above the router: a company starred from its own screen has to
+        // be starred on the list the moment you go back to it.
+        ChangeNotifierProvider(create: (_) => WatchlistViewModel()),
       ],
       child: const _PickStockAppView(),
     );
@@ -49,7 +53,7 @@ class _PickStockAppView extends StatelessWidget {
       themeMode: themeMode,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      initialRoute: AppRoute.snapshot.path,
+      initialRoute: AppRoute.home.path,
       routes: AppRoute.routes,
     );
   }

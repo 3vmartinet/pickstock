@@ -50,8 +50,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> openBrowser(WidgetTester tester) async {
-    await tester.tap(find.byIcon(LucideIcons.list));
+  /// Back from a company's report to the list.
+  Future<void> returnToList(WidgetTester tester) async {
+    await tester.tap(find.byIcon(LucideIcons.arrowLeft));
     await tester.pumpAndSettle();
   }
 
@@ -59,7 +60,6 @@ void main() {
     tester,
   ) async {
     await openApp(tester);
-    await openBrowser(tester);
 
     await tester.tap(find.text('Name (A–Z)'));
     await tester.pumpAndSettle();
@@ -70,9 +70,9 @@ void main() {
     // Into a company's report and straight back.
     await tester.tap(find.text('NVIDIA CORP'));
     await tester.pumpAndSettle();
-    expect(find.text('All tickers'), findsNothing);
+    expect(find.text('PickStock'), findsNothing);
 
-    await openBrowser(tester);
+    await returnToList(tester);
 
     // Still ranked by growth, not reset to the default ordering.
     expect(find.text('Revenue growth, 1 year'), findsOneWidget);
@@ -81,7 +81,6 @@ void main() {
 
   testWidgets('the filter survives too', (tester) async {
     await openApp(tester);
-    await openBrowser(tester);
 
     await tester.enterText(find.byType(TextField).last, 'BRK');
     await tester.pumpAndSettle();
@@ -89,7 +88,7 @@ void main() {
 
     await tester.tap(find.text('BERKSHIRE HATHAWAY INC').first);
     await tester.pumpAndSettle();
-    await openBrowser(tester);
+    await returnToList(tester);
 
     expect(find.text('2 matches'), findsOneWidget);
   });
@@ -109,7 +108,6 @@ void main() {
     await GetIt.I.get<TickerDirectoryRepo>().load();
 
     await openApp(tester);
-    await openBrowser(tester);
 
     final grid = find.byType(GridView);
     await tester.drag(grid, const Offset(0, -200));
@@ -122,9 +120,12 @@ void main() {
     // can fall in the gap between tiles.
     await tester.tap(_visibleTile(tester));
     await tester.pumpAndSettle();
-    expect(find.text('All tickers'), findsNothing);
+    // The grid is gone, so we are on the company's own screen. (Its app bar
+    // falls back to the app title for a filler symbol with no report, so the
+    // title is not a reliable marker here.)
+    expect(find.byType(GridView), findsNothing);
 
-    await openBrowser(tester);
+    await returnToList(tester);
 
     // Same scroll position, not back at the top.
     expect(

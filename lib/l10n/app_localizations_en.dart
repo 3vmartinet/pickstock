@@ -13,13 +13,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'PickStock';
 
   @override
-  String get appSubtitle => 'Financial health snapshots from SEC EDGAR';
-
-  @override
   String get stageDirectoryLabel => 'Ticker directory';
 
   @override
   String get stageDirectoryDetail => 'Symbols and company names';
+
+  @override
+  String get statDownloaded => 'Downloaded';
+
+  @override
+  String get statLoaded => 'Companies read';
+
+  @override
+  String get statDataSets => 'Data sets';
+
+  @override
+  String get statSpeed => 'Speed';
+
+  @override
+  String get statRemaining => 'Remaining';
+
+  @override
+  String get statPending => '—';
 
   @override
   String get stageSectorsLabel => 'Industry codes';
@@ -30,7 +45,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ingestDataSets(int read, int total) {
-    return '$read of $total data sets';
+    return '$read / $total';
   }
 
   @override
@@ -50,7 +65,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String ingestBytesOfTotal(String received, String total) {
-    return '$received of $total';
+    return '$received / $total';
   }
 
   @override
@@ -65,12 +80,12 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     final String rateString = rateNumberFormat.format(rate);
 
-    return '$rateString companies/s';
+    return '$rateString/s';
   }
 
   @override
   String ingestRemaining(String duration) {
-    return '$duration left';
+    return '$duration';
   }
 
   @override
@@ -82,7 +97,7 @@ class AppLocalizationsEn extends AppLocalizations {
         intl.NumberFormat.decimalPattern(localeName);
     final String totalString = totalNumberFormat.format(total);
 
-    return '$loadedString of $totalString companies';
+    return '$loadedString / $totalString';
   }
 
   @override
@@ -133,51 +148,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get ingestStageDirectory => 'Fetching the ticker directory…';
-
-  @override
-  String ingestStageDownload(String percent) {
-    return 'Downloading the archive… $percent';
-  }
-
-  @override
-  String ingestStageDownloadSized(String received, String total) {
-    return 'Downloading the archive… $received of $total';
-  }
-
-  @override
-  String ingestStageLoad(int count, int total) {
-    final intl.NumberFormat countNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String countString = countNumberFormat.format(count);
-    final intl.NumberFormat totalNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String totalString = totalNumberFormat.format(total);
-
-    return 'Loading filings into the database… $countString of $totalString companies';
-  }
-
-  @override
-  String get ingestStageFinishing => 'Finishing up…';
-
-  @override
-  String get ingestStageLoadHint =>
-      'Reading 20,000 filings takes a few minutes.';
-
-  @override
   String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
 
   @override
   String get toggleTheme => 'Toggle light / dark theme';
-
-  @override
-  String get searchPlaceholder => 'Search by symbol or company name';
-
-  @override
-  String get searchExamples => 'Try one of these';
-
-  @override
-  String get browseTitle => 'All tickers';
 
   @override
   String browseSubtitle(int count) {
@@ -195,9 +169,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get browseOpen => 'Browse all tickers';
-
-  @override
   String get sortByName => 'Name (A–Z)';
 
   @override
@@ -210,9 +181,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sortFreeCashFlowOneYear => 'Free cash flow growth, 1 year';
-
-  @override
-  String get browseSortLabel => 'Sort';
 
   @override
   String get sectorTechnology => 'Tech';
@@ -284,19 +252,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get browseBack => 'Back to the report';
+  String get backToList => 'Back to the list';
+
+  @override
+  String get idleShortcuts => 'Or start with one of these';
 
   @override
   String get idleTitle => 'Check a company before you invest';
 
   @override
   String get idleBody =>
-      'Type a ticker symbol or a company name to pull the last three fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from the company\'s own 10-K filings.';
-
-  @override
-  String loadingResolving(String ticker) {
-    return 'Looking up $ticker in the SEC ticker registry…';
-  }
+      'Pick a company from the list to pull ten fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from its own 10-K filings.';
 
   @override
   String loadingFetching(String ticker) {
@@ -454,12 +420,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelFreeCashFlow => 'Free cash flow';
 
   @override
-  String get labelOperatingCashFlow => 'Operating cash flow';
-
-  @override
-  String get labelCapitalExpenditure => 'Capital expenditure';
-
-  @override
   String get labelTotalDebt => 'Total debt';
 
   @override
@@ -507,7 +467,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hintNetDebt =>
-      'Total borrowings minus cash. A negative figure is a net cash position: the company holds more cash than debt.';
+      'Total borrowings minus cash, equivalents and short-term investments. A negative figure is a net cash position: the company holds more than it owes. Short-term investments count because treasuries and commercial paper settle a debt as readily as cash — Microsoft keeps three quarters of its money there.';
 
   @override
   String deltaVersusPriorYear(String year) {
@@ -515,8 +475,469 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sectionValuation => 'Valuation';
+
+  @override
+  String get labelSharePrice => 'Share price';
+
+  @override
+  String get hintSharePrice =>
+      'The price one share trades at. Quoted from Finnhub where a key is configured, and yours to type over either way — everything else in this report comes from the filings.';
+
+  @override
+  String get placeholderSharePrice => '0.00';
+
+  @override
+  String get valuationIdle =>
+      'Enter the current share price to see how it compares with what the filings say the business earns.';
+
+  @override
+  String get footnotePriceSource =>
+      'Prices come from Finnhub and are cached until they go stale; typing over one replaces it. Everything else is from the filings.';
+
+  @override
+  String get valuationNoShareCount =>
+      'No share count is on file for this company, so its value cannot be split per share.';
+
+  @override
+  String quoteLive(String time) {
+    return 'Live · $time';
+  }
+
+  @override
+  String quoteStale(String time) {
+    return 'Last quote · $time';
+  }
+
+  @override
+  String get quoteEntered => 'Your price';
+
+  @override
+  String get quoteFetching => 'Fetching the price…';
+
+  @override
+  String get quoteRefresh => 'Fetch the current price';
+
+  @override
+  String get quoteNotConfigured =>
+      'No quote service is configured, so the price is yours to enter.';
+
+  @override
+  String get quoteNoCoverage =>
+      'No quote for this symbol — enter a price to value it.';
+
+  @override
+  String get quoteRateLimited =>
+      'The minute\'s quote allowance is spent. Try again shortly.';
+
+  @override
+  String get quoteNetwork => 'Could not reach the quote service.';
+
+  @override
+  String get quoteService => 'The quote service refused the request.';
+
+  @override
+  String get verdictUndervalued => 'Undervalued';
+
+  @override
+  String get verdictFairlyValued => 'Fairly valued';
+
+  @override
+  String get verdictOvervalued => 'Overvalued';
+
+  @override
+  String get verdictNotValuable => 'Cannot be valued';
+
+  @override
+  String get detailUndervalued =>
+      'The price is below the range these earnings support.';
+
+  @override
+  String get detailFairlyValued =>
+      'The price sits inside the range these earnings support.';
+
+  @override
+  String get detailOvervalued =>
+      'The price is above the range these earnings support.';
+
+  @override
+  String get detailNotValuable =>
+      'The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.';
+
+  @override
+  String get labelFairValueRange => 'Fair range';
+
+  @override
+  String get labelUpside => 'To mid-range';
+
+  @override
+  String get labelMarketCap => 'Market value';
+
+  @override
+  String get labelEnterpriseValue => 'Enterprise value';
+
+  @override
+  String get labelEarningsPerShare => 'Earnings per share';
+
+  @override
+  String fairValueRange(String low, String high) {
+    return '$low – $high';
+  }
+
+  @override
+  String valuationBasisLine(
+    String low,
+    String high,
+    String basis,
+    String amount,
+    String shares,
+  ) {
+    return '$low× to $high× $basis of $amount, less net debt, over $shares shares';
+  }
+
+  @override
+  String valuationGrowthPremium(String points, String growth) {
+    return 'Includes $points points of multiple for $growth annual revenue growth.';
+  }
+
+  @override
+  String get valuationNoGrowthPremium =>
+      'No growth premium: revenue is not growing on these filings.';
+
+  @override
+  String get basisFreeCashFlow => 'free cash flow';
+
+  @override
+  String get basisEarnings => 'net income';
+
+  @override
+  String get sectionExpectations => 'What the price is asking';
+
+  @override
+  String get expectationRequired => 'Growth the price requires';
+
+  @override
+  String expectationDelivered(int years) {
+    return 'Growth delivered over $years years';
+  }
+
+  @override
+  String expectationPerYear(String percent) {
+    return '$percent a year';
+  }
+
+  @override
+  String expectationBasis(String amount, String margin) {
+    return 'Discounting $amount a year — this company\'s median free cash flow margin of $margin on its latest revenue — over ten years, fading to 2.5%.';
+  }
+
+  @override
+  String expectationNormalised(String reported, String gap) {
+    return 'Its latest reported free cash flow was $reported, $gap against that, so the year as filed is not used on its own.';
+  }
+
+  @override
+  String get expectationSensitivity =>
+      'Required growth by the return a buyer wants';
+
+  @override
+  String get expectationWorth => 'Worth a share if it repeats its record';
+
+  @override
+  String expectationRate(String percent) {
+    return '$percent return';
+  }
+
+  @override
+  String get verdictBelowRecord => 'Asking less than it has delivered';
+
+  @override
+  String get verdictInLineWithRecord => 'Asking about what it has delivered';
+
+  @override
+  String get verdictBeyondRecord => 'Asking more than it has ever delivered';
+
+  @override
+  String get verdictExpectationUnknown =>
+      'Not enough history to judge the price';
+
+  @override
+  String get detailBelowRecord =>
+      'Even a buyer wanting an 11% return needs less growth than this company has managed. Either the market doubts the record repeats, or it has not noticed it.';
+
+  @override
+  String get detailInLineWithRecord =>
+      'The growth the price requires sits inside what the company has actually produced, so the price is a reasonable reading of the record rather than a bet against it.';
+
+  @override
+  String get detailBeyondRecord =>
+      'Even a buyer content with a 7% return needs more growth than this company has ever produced. That does not make the price wrong, but it does mean the case for it is not in the filings.';
+
+  @override
+  String get detailExpectationUnknown =>
+      'Too few years on file, or no positive cash flow to discount.';
+
+  @override
+  String get footnoteExpectations =>
+      'A discounted cash flow run backwards: the price is taken as given and the growth it implies is solved for, so the guess belongs to the market rather than to PickStock. The figure moves a long way with the return a buyer wants, which is why the whole band is shown.';
+
+  @override
+  String get watchlistAll => 'All companies';
+
+  @override
+  String get watchlistFilterLabel => 'List';
+
+  @override
+  String watchlistCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count companies',
+      one: '1 company',
+      zero: 'empty',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get watchlistManage => 'Manage lists';
+
+  @override
+  String get watchlistNew => 'New list';
+
+  @override
+  String get watchlistEdit => 'Edit list';
+
+  @override
+  String get watchlistDelete => 'Delete list';
+
+  @override
+  String watchlistDeleteConfirm(String name) {
+    return 'Delete “$name”? The companies in it are not affected.';
+  }
+
+  @override
+  String get watchlistNamePlaceholder => 'Semiconductors, Dividend payers…';
+
+  @override
+  String get watchlistNameLabel => 'Name';
+
+  @override
+  String get watchlistColourLabel => 'Colour';
+
+  @override
+  String get watchlistSave => 'Save';
+
+  @override
+  String get watchlistCancel => 'Cancel';
+
+  @override
+  String get watchlistCreate => 'Create';
+
+  @override
+  String get watchlistDefaultLocked => 'The starred list cannot be deleted.';
+
+  @override
+  String get watchlistEmptyTitle => 'No lists yet';
+
+  @override
+  String get watchlistEmptyBody =>
+      'Star a company, or make a list to group the ones you are watching.';
+
+  @override
+  String get watchlistNoMatchesTitle => 'Nothing in this list';
+
+  @override
+  String watchlistNoMatchesBody(String name) {
+    return 'Open a company and add it to “$name”.';
+  }
+
+  @override
+  String get watchlistStarAdd => 'Add to favourites';
+
+  @override
+  String get watchlistStarRemove => 'Remove from favourites';
+
+  @override
+  String get watchlistAddTo => 'Add to a list';
+
+  @override
+  String watchlistInLists(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'In $count lists',
+      one: 'In 1 list',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get watchlistNotInAny => 'Not in any list';
+
+  @override
+  String get napkinTitle => 'How this was worked out';
+
+  @override
+  String get napkinSubtitle =>
+      'The whole calculation, in the order it happens.';
+
+  @override
+  String get napkinStep1Title => 'Buying the whole company';
+
+  @override
+  String napkinStep1Body(String price, String shares, String marketCap) {
+    return 'A share costs $price. There are $shares of them, so buying every share costs $marketCap. That is what the market says the company is worth.';
+  }
+
+  @override
+  String get napkinStep2Title => 'What you get for it';
+
+  @override
+  String napkinStep2Body(String revenue, String freeCashFlow) {
+    return 'Last year the company collected $revenue and, after every bill including new equipment, kept $freeCashFlow. That leftover is the money the owners could actually take out.';
+  }
+
+  @override
+  String get napkinStep3TitleDebt => 'You also inherit the debts';
+
+  @override
+  String get napkinStep3TitleCash => 'You also get the cash pile';
+
+  @override
+  String napkinStep3BodyDebt(String netDebt, String enterpriseValue) {
+    return 'It owes $netDebt more than it holds. Buy the company and you owe that too, so the real cost is $enterpriseValue.';
+  }
+
+  @override
+  String napkinStep3BodyCash(String netCash, String enterpriseValue) {
+    return 'It holds $netCash more than it owes. That cash comes with the company, so the real cost is only $enterpriseValue.';
+  }
+
+  @override
+  String get napkinStep4Title => 'How many years of cash is that?';
+
+  @override
+  String napkinStep4Body(
+    String enterpriseValue,
+    String freeCashFlow,
+    String years,
+  ) {
+    return '$enterpriseValue ÷ $freeCashFlow a year = $years years to earn the purchase price back, if nothing ever grows.';
+  }
+
+  @override
+  String get napkinStep5Title => 'How many years is fair?';
+
+  @override
+  String get napkinStep5BodyFlat =>
+      'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.';
+
+  @override
+  String napkinStep5BodyGrowing(
+    String growth,
+    String premium,
+    String low,
+    String high,
+  ) {
+    return 'A business going nowhere is worth roughly 12 to 18 years of its cash. This one grows $growth a year, which buys it another $premium years: $low to $high.';
+  }
+
+  @override
+  String get napkinStep6Title => 'So what is a share worth?';
+
+  @override
+  String napkinStep6Body(
+    String low,
+    String high,
+    String basis,
+    String valueLow,
+    String valueHigh,
+    String shares,
+    String rangeLow,
+    String rangeHigh,
+  ) {
+    return '$low to $high years of $basis is $valueLow to $valueHigh. Settle the debts, divide by $shares shares, and one share is worth $rangeLow to $rangeHigh.';
+  }
+
+  @override
+  String get napkinStep7Title => 'And the answer';
+
+  @override
+  String napkinStep7BodyUnder(String price, String rangeLow, String rangeHigh) {
+    return 'You are paying $price, below the $rangeLow–$rangeHigh the earnings support. That is the cheap side.';
+  }
+
+  @override
+  String napkinStep7BodyFair(String price, String rangeLow, String rangeHigh) {
+    return 'You are paying $price, inside the $rangeLow–$rangeHigh the earnings support. That is a normal price.';
+  }
+
+  @override
+  String napkinStep7BodyOver(String price, String rangeLow, String rangeHigh) {
+    return 'You are paying $price, above the $rangeLow–$rangeHigh the earnings support. You are paying for growth that has not happened yet.';
+  }
+
+  @override
+  String get napkinCaveatTitle => 'Worth knowing';
+
+  @override
+  String napkinCaveatBuilding(String ratio) {
+    return 'It spent $ratio× more on equipment than wore out, so last year\'s leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.';
+  }
+
+  @override
+  String napkinCaveatMargin(String points) {
+    return 'Its profit margin is $points points below its own ten-year normal, so the sales growth above is being won at a lower profit.';
+  }
+
+  @override
+  String get napkinCaveatEarnings =>
+      'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.';
+
+  @override
+  String get labelPriceEarnings => 'P/E';
+
+  @override
+  String get labelEnterpriseValueToFreeCashFlow => 'EV/FCF';
+
+  @override
+  String get labelFreeCashFlowYield => 'FCF yield';
+
+  @override
+  String get labelGrowthAdjusted => 'PEG';
+
+  @override
+  String get labelPriceToSales => 'P/S';
+
+  @override
+  String get hintPriceEarnings =>
+      'Price divided by earnings per share: years of current profit the price costs. Blank at a loss, where the ratio means nothing.';
+
+  @override
+  String get hintEnterpriseValueToFreeCashFlow =>
+      'Enterprise value over free cash flow. Unlike P/E it counts debt, so a company that borrowed to buy its earnings looks dearer.';
+
+  @override
+  String get hintFreeCashFlowYield =>
+      'Free cash flow as a percentage of market value — what an owner earns at this price before any growth. Higher is cheaper.';
+
+  @override
+  String get hintGrowthAdjusted =>
+      'The earnings multiple divided by the annual revenue growth rate. Under 1 means the growth more than covers the multiple.';
+
+  @override
+  String get hintPriceToSales =>
+      'Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.';
+
+  @override
+  String footnoteValuation(String low, String high, String basis) {
+    return 'The fair range is a heuristic: $low–$high times the latest year\'s $basis, widened for revenue growth, less net debt. It is a frame for the price, not a target.';
+  }
+
+  @override
   String get footnoteNegatives =>
-      'Net debt is negative when a company holds more cash than it owes.';
+      'Cash includes short-term investments. Net debt is negative when a company holds more of it than it owes.';
 
   @override
   String get footnoteSource =>
@@ -525,7 +946,4 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get footnoteQuarters =>
       'Fourth-quarter income and cash-flow figures are derived by subtracting the first three quarters from the full year; balance-sheet figures are as filed.';
-
-  @override
-  String get unitMillionsSuffix => 'M';
 }

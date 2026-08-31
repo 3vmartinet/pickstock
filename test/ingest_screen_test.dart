@@ -113,7 +113,7 @@ void main() {
       const IngestLoading(companiesLoaded: 4300, totalCompanies: 20290),
     );
 
-    expect(find.text('4,300 of 20,290 companies'), findsOneWidget);
+    expect(find.text('4,300 / 20,290'), findsOneWidget);
     // All three stages are always listed, so the wait is bounded.
     expect(find.text('Ticker directory'), findsOneWidget);
     expect(find.text('SEC bulk archive'), findsOneWidget);
@@ -133,8 +133,13 @@ void main() {
       remaining: const Duration(minutes: 1, seconds: 20),
     );
 
+    // Each figure sits under a heading that does not move as it changes.
+    expect(find.text('Downloaded'), findsOneWidget);
+    expect(find.text('400 MB / 1.31 GB'), findsOneWidget);
+    expect(find.text('Speed'), findsOneWidget);
     expect(find.text('12 MB/s'), findsOneWidget);
-    expect(find.text('1m 20s left'), findsOneWidget);
+    expect(find.text('Remaining'), findsOneWidget);
+    expect(find.text('1m 20s'), findsOneWidget);
   });
 
   testWidgets('says seconds alone when under a minute', (tester) async {
@@ -145,8 +150,9 @@ void main() {
       remaining: const Duration(seconds: 11),
     );
 
-    expect(find.text('11s left'), findsOneWidget);
-    expect(find.text('120 companies/s'), findsOneWidget);
+    expect(find.text('11s'), findsOneWidget);
+    expect(find.text('120/s'), findsOneWidget);
+    expect(find.text('Companies read'), findsOneWidget);
   });
 
   testWidgets('omits throughput until there is enough to average', (
@@ -157,8 +163,55 @@ void main() {
       const IngestDownloading(receivedBytes: 1024, totalBytes: 1407685214),
     );
 
+    // The headings are there from the start; the values they will carry are
+    // placeheld, so nothing shifts when the first measurement lands.
+    expect(find.text('Speed'), findsOneWidget);
+    expect(find.text('Remaining'), findsOneWidget);
     expect(find.textContaining('/s'), findsNothing);
-    expect(find.textContaining('left'), findsNothing);
+    expect(find.text('—'), findsNWidgets(2));
+  });
+
+  testWidgets('the headings hold position as the values change', (
+    tester,
+  ) async {
+    // The point of the layout: three numbers changing at once used to shove
+    // each other sideways, which is what made the line unreadable.
+    List<double> headingLefts() => [
+      'Downloaded',
+      'Speed',
+      'Remaining',
+    ].map((label) => tester.getRect(find.text(label)).left).toList();
+
+    await pumpAt(
+      tester,
+      const IngestDownloading(
+        receivedBytes: 9 * 1048576,
+        totalBytes: 1407685214,
+      ),
+    );
+    final beforeAnyMeasurement = headingLefts();
+
+    await pumpAt(
+      tester,
+      const IngestDownloading(
+        receivedBytes: 412 * 1048576,
+        totalBytes: 1407685214,
+      ),
+      rate: 13 * 1048576,
+      remaining: const Duration(minutes: 1, seconds: 14),
+    );
+    expect(headingLefts(), beforeAnyMeasurement);
+
+    await pumpAt(
+      tester,
+      const IngestDownloading(
+        receivedBytes: 1300 * 1048576,
+        totalBytes: 1407685214,
+      ),
+      rate: 9 * 1048576,
+      remaining: const Duration(seconds: 8),
+    );
+    expect(headingLefts(), beforeAnyMeasurement);
   });
 
   testWidgets('shows the amount downloaded at human scale', (tester) async {
@@ -169,6 +222,6 @@ void main() {
         totalBytes: 1407685214,
       ),
     );
-    expect(find.text('412 MB of 1.31 GB'), findsOneWidget);
+    expect(find.text('412 MB / 1.31 GB'), findsOneWidget);
   });
 }

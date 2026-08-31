@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/browse_sort.dart';
@@ -133,8 +136,37 @@ class BrowseViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Set<String>? _watchlistMembers;
+
+  /// Which list the grid is narrowed to, as the set of CIKs in it, or `null`
+  /// for the whole directory.
+  ///
+  /// Pushed in by the watchlist view model rather than read from it: the two
+  /// are siblings, and a browse model that reached into another would have to
+  /// know when it changed.
+  void applyWatchlist(Set<String>? members) {
+    if (const SetEquality<String>().equals(_watchlistMembers, members)) return;
+    _watchlistMembers = members;
+    _reorder();
+    // Deferred: this is pushed in from a build, and notifying listeners while
+    // the tree is building rebuilds widgets that have already been laid out
+    // this frame.
+    scheduleMicrotask(notifyListeners);
+  }
+
+  /// Whether the grid is narrowed to a list that happens to be empty, as
+  /// opposed to a search that found nothing.
+  bool get isEmptyWatchlist => _watchlistMembers?.isEmpty ?? false;
+
   void _reorder() {
     var matches = _tickerDirectoryRepo.search(_query);
+
+    final members = _watchlistMembers;
+    if (members != null) {
+      matches = matches
+          .where((company) => members.contains(company.cik))
+          .toList();
+    }
 
     final sector = _sector;
     if (sector != null) {

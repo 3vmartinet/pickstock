@@ -5,7 +5,9 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/test_directory.dart';
 
-const Size _desktopSize = Size(1440, 1200);
+/// Wide enough that the report pane beside the list still clears the history
+/// table's minimum: the list takes 420px of it.
+const Size _desktopSize = Size(1600, 1200);
 
 /// Wide enough that the old layout used the eight-column table, narrow enough
 /// that it had to squeeze it — which wrapped figures mid-number.
@@ -27,12 +29,13 @@ void main() {
 
     await _search(tester, 'AAPL');
 
-    expect(find.text('Apple Inc.'), findsOneWidget);
+    // Once in the list, once in the report beside it.
+    expect(find.text('Apple Inc.'), findsWidgets);
     expect(find.text('CIK 0000320193'), findsOneWidget);
     // Sanity checks, answered from the fixture's FY2025 figures.
     expect(find.text('Growing +6.4% year over year'), findsOneWidget);
     expect(find.text('Net income of \$112B'), findsOneWidget);
-    expect(find.text('Net debt of \$62.7B'), findsOneWidget);
+    expect(find.text('Net debt of \$44B'), findsOneWidget);
     // The history table, in millions as the console report had it.
     expect(find.text('416,161'), findsOneWidget);
     // Fiscal years read as years, not as compacted numbers.
@@ -71,7 +74,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('suggests matches for a symbol as it is typed', (tester) async {
+  testWidgets('narrows the list to a symbol as it is typed', (tester) async {
     await _pumpApp(tester, _desktopSize);
 
     // The field used to cap at five characters and strip '-', which turned
@@ -83,7 +86,7 @@ void main() {
     expect(find.textContaining('BERKSHIRE HATHAWAY INC'), findsOneWidget);
   });
 
-  testWidgets('suggests matches for a company name too', (tester) async {
+  testWidgets('narrows the list by company name too', (tester) async {
     await _pumpApp(tester, _desktopSize);
 
     await tester.enterText(find.byType(TextField), 'apple inc');
@@ -92,17 +95,15 @@ void main() {
     expect(find.textContaining('AAPL'), findsWidgets);
   });
 
-  testWidgets('picking a suggestion runs that lookup', (tester) async {
+  testWidgets('enter opens whatever is at the top of the list', (tester) async {
     await _pumpApp(tester, _desktopSize);
 
     await tester.enterText(find.byType(TextField), 'apple inc');
     await _pumpSuggestions(tester);
-    await tester.tap(find.text('AAPL  ·  Apple Inc.'));
+    await tester.testTextInput.receiveAction(TextInputAction.search);
     await _pumpSuggestions(tester);
 
     expect(find.text('FY2025 highlights'), findsOneWidget);
-    // The field is left holding the symbol, not the name that was typed.
-    expect(find.text('AAPL'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -193,18 +194,21 @@ void main() {
     expect(yOf('Q4 FY2025'), greaterThan(yOf('Q1 FY2025')));
   });
 
-  testWidgets('explains an unknown ticker instead of failing silently', (
+  testWidgets('says so when nothing matches, leaving the report alone', (
     tester,
   ) async {
     await _pumpApp(tester, _desktopSize);
-    await _search(tester, 'ZZZZ');
 
-    expect(find.text('Could not build a snapshot'), findsOneWidget);
-    expect(
-      find.text('No SEC filer matches the ticker "ZZZZ".'),
-      findsOneWidget,
-    );
-    expect(find.text('Try again'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'ZZZZ');
+    await _pumpSuggestions(tester);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await _pumpSuggestions(tester);
+
+    // No company to open, so the list reports the miss and the detail pane
+    // keeps its empty state rather than showing a lookup failure.
+    expect(find.text('No matching symbols'), findsOneWidget);
+    expect(find.text('Check a company before you invest'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 
@@ -217,8 +221,8 @@ Future<void> _pumpApp(WidgetTester tester, Size size) async {
   await tester.pumpAndSettle();
 }
 
-/// The suggestion popover keeps scheduling frames while it is open, so
-/// `pumpAndSettle` never returns; pump a fixed span instead.
+/// The list filters as you type; pump a fixed span rather than settling, since
+/// the report's entrance animations repeat.
 Future<void> _pumpSuggestions(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(seconds: 2));
@@ -226,9 +230,10 @@ Future<void> _pumpSuggestions(WidgetTester tester) async {
 }
 
 Future<void> _search(WidgetTester tester, String ticker) async {
+  // The filter above the list is the search field: typing narrows the list and
+  // enter opens whatever is at the top of it.
   await tester.enterText(find.byType(TextField), ticker);
   await tester.pump();
-  // No submit button any more: enter runs the lookup.
   await tester.testTextInput.receiveAction(TextInputAction.search);
   await tester.pumpAndSettle();
 }

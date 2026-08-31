@@ -16,6 +16,9 @@ enum SicSector {
     icon: LucideIcons.pill,
     ranges: [(2830, 2836), (3826, 3829), (3840, 3851), (8000, 8099)],
   ),
+  // Lab and measuring instruments split across two sectors: 3826-3829 are
+  // analytical and medical, so they sit with healthcare above; 3812-3825 are
+  // navigation, industrial and electrical instruments and belong here.
   financials(
     icon: LucideIcons.landmark,
     ranges: [(6000, 6199), (6200, 6299), (6300, 6499)],
@@ -34,13 +37,23 @@ enum SicSector {
       (3580, 3599),
       (3700, 3710),
       (3712, 3799),
+      (3812, 3825),
+      (8111, 8111),
       (8700, 8799),
+      (8900, 8999),
     ],
   ),
-  automotive(icon: LucideIcons.car, ranges: [(3711, 3711), (5500, 5599)]),
+  automotive(
+    icon: LucideIcons.car,
+    ranges: [(3711, 3711), (5500, 5599), (7500, 7599)],
+  ),
+  // Agriculture, forestry and fishing lead the SIC table at 0100-0999 and are
+  // grouped with mining and chemicals as the sectors that pull things out of
+  // the ground.
   materials(
     icon: LucideIcons.pickaxe,
     ranges: [
+      (100, 999),
       (1000, 1199),
       (1400, 1499),
       (2600, 2699),
@@ -55,16 +68,25 @@ enum SicSector {
       (2000, 2199),
       (2200, 2599),
       (3000, 3199),
+      // Photographic gear, watches, jewellery, toys and sporting goods: the
+      // 3852-3899 block, which sits between medical devices and the 3900s.
+      (3852, 3899),
       (3900, 3999),
       (5000, 5499),
       (5600, 5999),
       (7000, 7099),
+      (7200, 7299),
+      (7600, 7699),
       (7900, 7999),
+      (8200, 8299),
+      (8351, 8351),
     ],
   ),
+  // 7800-7899 is motion pictures, which is media rather than the amusement
+  // and recreation of 7900-7999 next door.
   communications(
     icon: LucideIcons.radioTower,
-    ranges: [(2700, 2799), (4800, 4899)],
+    ranges: [(2700, 2799), (4800, 4899), (7800, 7899)],
   ),
   transport(icon: LucideIcons.truck, ranges: [(4000, 4599), (4700, 4799)]);
 

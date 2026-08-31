@@ -56,10 +56,12 @@ class IngestedCompany {
     required this.name,
     required this.years,
     required this.quarters,
+    this.sharesOutstanding,
   });
 
   final String cik;
   final String name;
+  final double? sharesOutstanding;
   final List<FiscalYearFigures> years;
   final List<FiscalQuarterFigures> quarters;
 }
@@ -101,6 +103,7 @@ List<IngestedCompany> parseArchiveSlice(
           name: CompanyFactsParser.entityName(facts) ?? cik,
           years: years,
           quarters: CompanyFactsParser.parseQuarters(facts),
+          sharesOutstanding: CompanyFactsParser.latestSharesOutstanding(facts),
         ),
       );
     }
@@ -519,6 +522,7 @@ class BulkIngestRepo {
             cik: company.cik,
             name: company.name,
             sic: Value(sicByCik[company.cik]),
+            sharesOutstanding: Value(company.sharesOutstanding),
           ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalYears, [
@@ -533,6 +537,11 @@ class BulkIngestRepo {
               capitalExpenditure: Value(year.capitalExpenditure),
               totalDebt: Value(year.totalDebt),
               cash: Value(year.cash),
+              dilutedShares: Value(year.dilutedShares),
+              operatingIncome: Value(year.operatingIncome),
+              depreciationAmortisation: Value(year.depreciationAmortisation),
+              totalAssets: Value(year.totalAssets),
+              shareholdersEquity: Value(year.shareholdersEquity),
             ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalQuarters, [

@@ -16,6 +16,11 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     this.capitalExpenditure,
     this.totalDebt,
     this.cash,
+    this.dilutedShares,
+    this.operatingIncome,
+    this.depreciationAmortisation,
+    this.totalAssets,
+    this.shareholdersEquity,
   });
 
   final int fiscalYear;
@@ -38,6 +43,48 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
   final double? totalDebt;
   @override
   final double? cash;
+
+  /// Diluted shares for the year — the divisor earnings per share is struck
+  /// against, so per-share figures line up with what the company reports.
+  final double? dilutedShares;
+
+  /// Profit from the business before interest, tax and one-offs.
+  final double? operatingIncome;
+
+  /// Depreciation and amortisation for the year.
+  final double? depreciationAmortisation;
+
+  final double? totalAssets;
+  final double? shareholdersEquity;
+
+  /// Operating profit as a percentage of revenue. The line that says whether
+  /// growth is being bought or earned.
+  double? get operatingMarginPercent {
+    final profit = operatingIncome;
+    final sales = revenue;
+    if (profit == null || sales == null || sales <= 0) return null;
+    return profit / sales * 100;
+  }
+
+  /// Capital spending against the depreciation it has to cover.
+  ///
+  /// Around 1 means the company is replacing what wears out. Well above it
+  /// means it is building — which depresses free cash flow now for capacity
+  /// later, and is the difference between Microsoft's capex and a decline.
+  double? get capexToDepreciation {
+    final capex = capitalExpenditure;
+    final depreciation = depreciationAmortisation;
+    if (capex == null || depreciation == null || depreciation <= 0) return null;
+    return capex / depreciation;
+  }
+
+  /// Net income against the owners' capital.
+  double? get returnOnEquityPercent {
+    final profit = netIncome;
+    final equity = shareholdersEquity;
+    if (profit == null || equity == null || equity <= 0) return null;
+    return profit / equity * 100;
+  }
 
   /// Operating cash flow less capital expenditure.
   @override
@@ -86,5 +133,10 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     capitalExpenditure,
     totalDebt,
     cash,
+    dilutedShares,
+    operatingIncome,
+    depreciationAmortisation,
+    totalAssets,
+    shareholdersEquity,
   ];
 }

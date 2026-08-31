@@ -16,11 +16,56 @@ class ThemeRepo {
   static const double spaceXLarge = 32;
   static const double spaceXXLarge = 48;
 
+  /// The inset every page-level row starts at, horizontally and vertically.
+  /// Read through `context.pageGutter`, which is where the reasoning lives.
+  static const double pageGutter = spaceMedium;
+
   // Layout.
   static const double contentMaxWidth = 1180;
   static const double searchFieldMaxWidth = 420;
   static const double metricCardMinWidth = 240;
   static const double checkCardMinWidth = 260;
+
+  /// Narrow enough that the five valuation ratios fit one row on a wide
+  /// window and two on a split pane.
+  static const double ratioCardMinWidth = 132;
+
+  /// A price field only ever holds a handful of digits.
+  static const double priceFieldWidth = 168;
+
+  /// The coloured dot marking a list, on a chip or a tile.
+  static const double watchlistDotSize = 8;
+
+  /// A swatch in the colour picker, big enough to tap.
+  static const double watchlistSwatchSize = 28;
+  static const double watchlistSwatchRing = 2;
+
+  /// A form dialog wide enough for a name field without stretching to the
+  /// window.
+  static const double dialogWidth = 340;
+
+  /// The list popover, sized so a dozen lists scroll rather than fill the
+  /// screen.
+  static const double watchlistPopupWidth = 280;
+  static const double watchlistPopupMaxHeight = 360;
+
+  /// How many list dots a tile shows before it stops.
+  static const int watchlistDotsPerTile = 3;
+
+  /// The numbered bullet beside each step of the worked example.
+  static const double napkinStepSize = 22;
+
+  /// The verdict and ratios take a little more room than the explanation
+  /// beside them, which is mostly text and reads better narrow.
+  static const int valuationCardsFlex = 3;
+  static const int napkinFlex = 2;
+
+  /// Below this the valuation cards and the worked example stack instead of
+  /// sitting side by side; two narrow columns are worse than one wide one.
+  static const double napkinSideBySideMinWidth = 900;
+
+  /// A spinner sized to sit inside a button without changing its height.
+  static const double inlineSpinnerSize = 14;
 
   /// The narrowest the eight-column history table can be before its figures
   /// start wrapping mid-number. Below this the report shows one card per
@@ -29,7 +74,12 @@ class ThemeRepo {
 
   // The browsable ticker directory.
   static const double masterDetailMinWidth = 1000;
-  static const double masterListWidth = 400;
+
+  /// The list pane starts here and can be dragged wider to fit more columns.
+  /// The maximum leaves the report enough width to stay readable.
+  static const double masterListWidth = 420;
+  static const double masterListMinWidth = 260;
+  static const double masterListMaxWidth = 900;
   // The ingest gate.
   static const double progressRingSize = 148;
   static const double progressRingStroke = 8;
@@ -44,10 +94,22 @@ class ThemeRepo {
   static const double sortSelectMaxWidth = 280;
   static const double sortPopupMaxHeight = 320;
 
-  /// Square tiles, sized so a company name gets a few readable lines and a
-  /// wide window still fits several columns.
-  static const double tickerTileMaxWidth = 190;
-  static const int tickerNameMaxLines = 3;
+  /// The sort popup is sized to its longest option — "Revenue growth, 10-year
+  /// annualised" — rather than to the button, which wrapped every option over
+  /// three lines.
+  static const double sortPopupMinWidth = 300;
+
+  /// Tiles are twice as wide as tall: the symbol and name stack on the left
+  /// with the ranked figure on the right, which packs far more of them into a
+  /// pane than a square does.
+  static const double tickerTileMaxWidth = 240;
+  static const double tickerTileAspectRatio = 2;
+  static const int tickerNameMaxLines = 2;
+
+  /// The app bar's vertical padding. Setting the gutter means setting both
+  /// sides — `padding` takes one value — so this replaces shadcn's off-scale
+  /// 19.5 with the nearest step on ours.
+  static const double appBarVerticalPadding = spaceMedium;
 
   static const EdgeInsets cardPadding = EdgeInsets.all(spaceLarge);
   static const EdgeInsets compactCardPadding = EdgeInsets.all(spaceMedium);
@@ -72,6 +134,33 @@ class ThemeRepo {
     colorScheme: ColorSchemes.darkSlate,
     radius: _radius,
   );
+
+  /// The palette a watchlist's indicator is picked from.
+  ///
+  /// Stored by index rather than by value, so a list keeps its identity when
+  /// the theme changes and the dark variant can differ from the light one.
+  /// Eight is enough to tell lists apart at a glance and few enough to fit one
+  /// row of swatches.
+  List<Color> watchlistPalette(ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+    return [
+      isDark ? Colors.amber.shade400 : Colors.amber.shade600,
+      isDark ? Colors.sky.shade400 : Colors.sky.shade600,
+      isDark ? Colors.emerald.shade400 : Colors.emerald.shade600,
+      isDark ? Colors.rose.shade400 : Colors.rose.shade600,
+      isDark ? Colors.violet.shade400 : Colors.violet.shade600,
+      isDark ? Colors.orange.shade400 : Colors.orange.shade600,
+      isDark ? Colors.teal.shade400 : Colors.teal.shade600,
+      isDark ? Colors.fuchsia.shade400 : Colors.fuchsia.shade600,
+    ];
+  }
+
+  /// The colour for [index], wrapping rather than throwing: a palette that
+  /// shrinks should not strand a list the user already made.
+  Color watchlistColour(ThemeData theme, int index) {
+    final palette = watchlistPalette(theme);
+    return palette[index % palette.length];
+  }
 
   /// Colour for a figure that is good news: growth, profit, net cash.
   Color positive(ThemeData theme) => theme.brightness == Brightness.dark

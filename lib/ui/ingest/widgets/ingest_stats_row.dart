@@ -12,10 +12,23 @@ FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 /// Below a minute, seconds alone read better than `0m 42s`.
 const int _secondsPerMinute = 60;
 
+/// One labelled figure: a heading that never moves over a value that does.
+class _Stat {
+  const _Stat({required this.label, required this.value});
+
+  final String label;
+
+  /// `null` renders a placeholder, so a value that only appears once there is
+  /// enough to measure does not shift the row when it arrives.
+  final String? value;
+}
+
 /// What the current stage has got through, how fast, and how much longer.
 ///
-/// The three read together: without the rate a long wait looks stalled, and
-/// without the estimate there is no way to judge whether to keep waiting.
+/// One line of three changing numbers separated by dots was unreadable — with
+/// nothing static to anchor on, every value moved sideways whenever any of
+/// them changed. Each figure now has its own column with a fixed heading, so
+/// the labels hold still and only the digits underneath them move.
 class IngestStatsRow extends StatelessWidget {
   const IngestStatsRow({super.key, required this.progress});
 
@@ -23,67 +36,115 @@ class IngestStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<IngestViewModel>();
-    final parts = [
-      ?_amount(context),
-      ?_rate(context, viewModel.ratePerSecond),
-      ?_remaining(context, viewModel.estimatedRemaining),
-    ];
-    if (parts.isEmpty) return const SizedBox.shrink();
+    final stats = _statsFor(context, context.watch<IngestViewModel>());
+    if (stats.isEmpty) return const SizedBox.shrink();
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: ThemeRepo.spaceSmall,
-      runSpacing: ThemeRepo.spaceXSmall,
-      children: [for (final part in parts) Text(part).muted().xSmall().mono()],
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Equal columns, so a widening value cannot push its neighbours along.
+        for (final stat in stats) Expanded(child: _StatColumn(stat: stat)),
+      ],
     );
   }
 
-  /// How much of this stage is done, in whatever unit the stage counts in.
-  String? _amount(BuildContext context) => switch (progress) {
-    IngestDownloading(:final receivedBytes, :final totalBytes) =>
-      totalBytes == null
-          ? _formatRepo.bytes(receivedBytes)
-          : context.strings.ingestBytesOfTotal(
-              _formatRepo.bytes(receivedBytes),
-              _formatRepo.bytes(totalBytes),
-            ),
-    IngestLoading(:final companiesLoaded, :final totalCompanies) =>
-      context.strings.ingestCompaniesOfTotal(companiesLoaded, totalCompanies),
-    IngestFetchingSectors(:final quartersRead) =>
-      context.strings.ingestDataSets(quartersRead, sectorQuarters),
-    _ => null,
-  };
+  /// The figures worth showing for the running stage.
+  ///
+  /// A stage keeps the same set throughout, so the row's shape is settled the
+  /// moment it appears.
+  List<_Stat> _statsFor(BuildContext context, IngestViewModel viewModel) {
+    final strings = context.strings;
 
-  /// Bytes per second while downloading; companies per second while loading.
-  String? _rate(BuildContext context, double? rate) {
-    if (rate == null) return null;
     return switch (progress) {
-      IngestDownloading() => context.strings.ingestRate(
-        _formatRepo.bytes(rate),
-      ),
-      IngestLoading() => context.strings.ingestRateCompanies(rate.round()),
-      _ => null,
+      IngestFetchingDirectory() => const [],
+      IngestFetchingSectors(:final quartersRead) => [
+        _Stat(
+          label: strings.statDataSets,
+          value: strings.ingestDataSets(quartersRead, sectorQuarters),
+        ),
+      ],
+      IngestDownloading(:final receivedBytes, :final totalBytes) => [
+        _Stat(
+          label: strings.statDownloaded,
+          value: totalBytes == null
+              ? _formatRepo.bytes(receivedBytes)
+              : strings.ingestBytesOfTotal(
+                  _formatRepo.bytes(receivedBytes),
+                  _formatRepo.bytes(totalBytes),
+                ),
+        ),
+        _Stat(label: strings.statSpeed, value: _bytesRate(context, viewModel)),
+        _Stat(
+          label: strings.statRemaining,
+          value: _remaining(context, viewModel),
+        ),
+      ],
+      IngestLoading(:final companiesLoaded, :final totalCompanies) => [
+        _Stat(
+          label: strings.statLoaded,
+          value: strings.ingestCompaniesOfTotal(
+            companiesLoaded,
+            totalCompanies,
+          ),
+        ),
+        _Stat(label: strings.statSpeed, value: _countRate(context, viewModel)),
+        _Stat(
+          label: strings.statRemaining,
+          value: _remaining(context, viewModel),
+        ),
+      ],
+      IngestDone() => const [],
     };
   }
 
-  String? _remaining(BuildContext context, Duration? remaining) {
-    if (remaining == null ||
-        progress is IngestFetchingDirectory ||
-        progress is IngestFetchingSectors) {
-      return null;
-    }
-    return context.strings.ingestRemaining(_readable(context, remaining));
+  String? _bytesRate(BuildContext context, IngestViewModel viewModel) {
+    final rate = viewModel.ratePerSecond;
+    return rate == null
+        ? null
+        : context.strings.ingestRate(_formatRepo.bytes(rate));
   }
 
-  String _readable(BuildContext context, Duration duration) {
-    final seconds = duration.inSeconds;
-    if (seconds < _secondsPerMinute) {
-      return context.strings.durationSeconds(seconds);
-    }
-    return context.strings.durationMinutesSeconds(
-      duration.inMinutes,
-      seconds % _secondsPerMinute,
+  String? _countRate(BuildContext context, IngestViewModel viewModel) {
+    final rate = viewModel.ratePerSecond;
+    return rate == null
+        ? null
+        : context.strings.ingestRateCompanies(rate.round());
+  }
+
+  String? _remaining(BuildContext context, IngestViewModel viewModel) {
+    final remaining = viewModel.estimatedRemaining;
+    if (remaining == null) return null;
+
+    final seconds = remaining.inSeconds;
+    return context.strings.ingestRemaining(
+      seconds < _secondsPerMinute
+          ? context.strings.durationSeconds(seconds)
+          : context.strings.durationMinutesSeconds(
+              remaining.inMinutes,
+              seconds % _secondsPerMinute,
+            ),
+    );
+  }
+}
+
+class _StatColumn extends StatelessWidget {
+  const _StatColumn({required this.stat});
+
+  final _Stat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      spacing: ThemeRepo.spaceXSmall,
+      children: [
+        Text(stat.label).muted().xSmall().singleLine().textCenter(),
+        // Monospaced so the digits keep their columns as they tick over.
+        Text(stat.value ?? context.strings.statPending)
+            .mono()
+            .small()
+            .singleLine()
+            .textCenter(),
+      ],
     );
   }
 }

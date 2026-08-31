@@ -50,6 +50,25 @@ Map<String, dynamic> _facts(String name, {required int fy, required num val}) =>
       },
     };
 
+/// A quarterly financial statement data set, shaped like SEC's: a tab-separated
+/// `sub.txt` whose columns include `cik` and `sic`.
+List<int> _sectorDataSetBytes(Map<int, int> sicByCik) {
+  final rows = <String>[
+    ['adsh', 'cik', 'name', 'sic', 'countryba'].join('\t'),
+    for (final entry in sicByCik.entries)
+      [
+        '0000-00-000',
+        '${entry.key}',
+        'Filer',
+        '${entry.value}',
+        'US',
+      ].join('\t'),
+  ];
+  final archive = Archive()
+    ..add(ArchiveFile.bytes('sub.txt', utf8.encode(rows.join('\n'))));
+  return ZipEncoder().encode(archive);
+}
+
 /// Builds a zip shaped like SEC's: one `CIK##########.json` per filer.
 List<int> _archiveBytes(Map<String, Map<String, dynamic>> filesByName) {
   final archive = Archive();
@@ -68,11 +87,13 @@ Future<void> _settleCleanup() =>
 void main() {
   late AppDatabase database;
   late Directory workingDirectory;
+  var sectorsServed = 0;
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     database = AppDatabase.forTesting(NativeDatabase.memory());
     workingDirectory = await Directory.systemTemp.createTemp('pickstock-test');
+    sectorsServed = 0;
     GetIt.I.registerSingleton<AppDatabase>(database);
   });
 
@@ -200,6 +221,63 @@ void main() {
       progress.indexWhere((p) => p is IngestDownloading),
       greaterThan(progress.indexWhere((p) => p is IngestFetchingDirectory)),
     );
+  });
+
+  test('records an industry code for each filer it can classify', () async {
+    final archive = _archiveBytes({
+      'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      'CIK0001045810.json': _facts('NVIDIA CORP', fy: 2025, val: 200),
+    });
+    // Apple is 3571, NVIDIA 3674; the third filer is not in the archive.
+    final sectors = _sectorDataSetBytes({
+      320193: 3571,
+      1045810: 3674,
+      99: 1234,
+    });
+
+    final repo = BulkIngestRepo(
+      workingDirectory: workingDirectory,
+      client: MockClient((request) async {
+        final url = request.url.toString();
+        if (url.contains('financial-statement-data-sets')) {
+          // Only the first probe hits, as in practice.
+          return sectorsServed++ == 0
+              ? http.Response.bytes(sectors, 200)
+              : http.Response('', 404);
+        }
+        if (url == tickerDirectoryUrl) {
+          return http.Response(
+            jsonEncode({
+              '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+            }),
+            200,
+          );
+        }
+        return http.Response.bytes(archive, 200);
+      }),
+    );
+
+    final progress = await repo.ingest().toList();
+
+    // The stage is reported, so the gate can show it.
+    expect(progress.whereType<IngestFetchingSectors>(), isNotEmpty);
+    // CIKs arrive unpadded in the data set and padded in the archive.
+    expect((await database.companyFor('0000320193'))!.sic, 3571);
+    expect((await database.companyFor('0001045810'))!.sic, 3674);
+    expect(await database.sicByCik(), hasLength(2));
+  });
+
+  test('still ingests when no sector data set can be fetched', () async {
+    // Sectors are a nice-to-have; the figures are not.
+    final progress = await repoServing(
+      _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      }),
+    ).ingest().toList();
+
+    expect(progress.last, isA<IngestDone>());
+    expect((await database.companyFor('0000320193'))!.sic, isNull);
+    expect(await database.sicByCik(), isEmpty);
   });
 
   test('reports loading progress as a fraction of the archive', () async {

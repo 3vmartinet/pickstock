@@ -2,6 +2,7 @@ import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
+import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -23,7 +24,15 @@ class SectorFilterRow extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: ThemeRepo.spaceMedium),
+      // The filter above already ends on a full gutter, so the chips take
+      // none at the top and the same gutter below: even space either side of
+      // the row, and the divider is no longer sitting on them.
+      padding: EdgeInsets.fromLTRB(
+        context.pageGutter,
+        0,
+        context.pageGutter,
+        ThemeRepo.spaceMedium,
+      ),
       child: Row(
         spacing: ThemeRepo.spaceSmall,
         children: [

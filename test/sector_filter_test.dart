@@ -73,8 +73,6 @@ void main() {
 
     await tester.pumpWidget(const PickStockApp());
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(LucideIcons.list));
-    await tester.pumpAndSettle();
 
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Tech'), findsOneWidget);
@@ -99,8 +97,6 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const PickStockApp());
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(LucideIcons.list));
     await tester.pumpAndSettle();
 
     expect(find.text('Tech'), findsNothing);

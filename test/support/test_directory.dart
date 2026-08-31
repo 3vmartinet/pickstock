@@ -9,6 +9,10 @@ import 'package:drift/native.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/format_repo.dart';
+import 'package:pickstock/data/quote/quote.dart';
+import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
@@ -87,10 +91,40 @@ BulkIngestRepo _fakeIngestRepo({required bool withUpdate}) => BulkIngestRepo(
   }),
 );
 
+/// A quote source for tests: unconfigured by default, so the price is typed in
+/// exactly as it is in a build with no API key.
+class FakeQuoteRepo implements QuoteRepo {
+  FakeQuoteRepo({this.isConfigured = false, this.price, this.failure});
+
+  @override
+  bool isConfigured;
+
+  /// What the next quote returns, if [failure] is not set.
+  double? price;
+
+  /// What the next quote throws instead of answering.
+  QuoteFailure? failure;
+
+  /// Symbols asked for, newest last, so tests can assert the provider is asked
+  /// with its own spelling of a symbol.
+  final List<String> requested = [];
+
+  @override
+  Future<Quote> quoteFor(String ticker) async {
+    requested.add(ticker);
+    final thrown = failure;
+    if (thrown != null) throw QuoteException(thrown);
+    final quoted = price;
+    if (quoted == null) throw const QuoteException(QuoteFailure.noCoverage);
+    return Quote(pricePerShare: quoted, asOf: DateTime.now(), isQuoted: true);
+  }
+}
+
 Future<AppDatabase> registerTestDependencies({
   bool withIngest = true,
   bool withFinancials = false,
   bool withUpdateAvailable = false,
+  QuoteRepo? quoteRepo,
 }) async {
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
@@ -141,8 +175,18 @@ Future<AppDatabase> registerTestDependencies({
     ..registerLazySingleton<BulkIngestRepo>(
       () => _fakeIngestRepo(withUpdate: withUpdateAvailable),
     )
-    ..registerLazySingleton<SecRepo>(() => const MockSecRepo());
+    ..registerLazySingleton<SecRepo>(() => const MockSecRepo())
+    // The real implementation, against the in-memory database: remembering a
+    // price is a round trip through drift and is worth exercising as one.
+    ..registerLazySingleton<PriceRepo>(() => const LocalPriceRepo())
+    ..registerSingleton<QuoteRepo>(quoteRepo ?? FakeQuoteRepo())
+    // The real implementation against the in-memory database: a list is a
+    // couple of tables and a cascade, all of which is worth exercising.
+    ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new);
 
   if (withIngest) await directory.load();
+  // Opens the database and runs `beforeOpen`, so the seeded list exists before
+  // the first widget builds rather than arriving mid-test.
+  await database.allWatchlists();
   return database;
 }

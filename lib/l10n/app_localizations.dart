@@ -100,12 +100,6 @@ abstract class AppLocalizations {
   /// **'PickStock'**
   String get appTitle;
 
-  /// No description provided for @appSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Financial health snapshots from SEC EDGAR'**
-  String get appSubtitle;
-
   /// No description provided for @stageDirectoryLabel.
   ///
   /// In en, this message translates to:
@@ -117,6 +111,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Symbols and company names'**
   String get stageDirectoryDetail;
+
+  /// No description provided for @statDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded'**
+  String get statDownloaded;
+
+  /// No description provided for @statLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Companies read'**
+  String get statLoaded;
+
+  /// No description provided for @statDataSets.
+  ///
+  /// In en, this message translates to:
+  /// **'Data sets'**
+  String get statDataSets;
+
+  /// No description provided for @statSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get statSpeed;
+
+  /// No description provided for @statRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get statRemaining;
+
+  /// No description provided for @statPending.
+  ///
+  /// In en, this message translates to:
+  /// **'—'**
+  String get statPending;
 
   /// No description provided for @stageSectorsLabel.
   ///
@@ -133,7 +163,7 @@ abstract class AppLocalizations {
   /// No description provided for @ingestDataSets.
   ///
   /// In en, this message translates to:
-  /// **'{read} of {total} data sets'**
+  /// **'{read} / {total}'**
   String ingestDataSets(int read, int total);
 
   /// No description provided for @stageDownloadLabel.
@@ -169,7 +199,7 @@ abstract class AppLocalizations {
   /// No description provided for @ingestBytesOfTotal.
   ///
   /// In en, this message translates to:
-  /// **'{received} of {total}'**
+  /// **'{received} / {total}'**
   String ingestBytesOfTotal(String received, String total);
 
   /// No description provided for @ingestRate.
@@ -181,19 +211,19 @@ abstract class AppLocalizations {
   /// No description provided for @ingestRateCompanies.
   ///
   /// In en, this message translates to:
-  /// **'{rate} companies/s'**
+  /// **'{rate}/s'**
   String ingestRateCompanies(int rate);
 
   /// No description provided for @ingestRemaining.
   ///
   /// In en, this message translates to:
-  /// **'{duration} left'**
+  /// **'{duration}'**
   String ingestRemaining(String duration);
 
   /// No description provided for @ingestCompaniesOfTotal.
   ///
   /// In en, this message translates to:
-  /// **'{loaded} of {total} companies'**
+  /// **'{loaded} / {total}'**
   String ingestCompaniesOfTotal(int loaded, int total);
 
   /// No description provided for @durationMinutesSeconds.
@@ -268,42 +298,6 @@ abstract class AppLocalizations {
   /// **'SEC rebuilt the archive on {date}. Download it to refresh your figures.'**
   String updateAvailableOn(DateTime date);
 
-  /// No description provided for @ingestStageDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Fetching the ticker directory…'**
-  String get ingestStageDirectory;
-
-  /// No description provided for @ingestStageDownload.
-  ///
-  /// In en, this message translates to:
-  /// **'Downloading the archive… {percent}'**
-  String ingestStageDownload(String percent);
-
-  /// No description provided for @ingestStageDownloadSized.
-  ///
-  /// In en, this message translates to:
-  /// **'Downloading the archive… {received} of {total}'**
-  String ingestStageDownloadSized(String received, String total);
-
-  /// No description provided for @ingestStageLoad.
-  ///
-  /// In en, this message translates to:
-  /// **'Loading filings into the database… {count} of {total} companies'**
-  String ingestStageLoad(int count, int total);
-
-  /// No description provided for @ingestStageFinishing.
-  ///
-  /// In en, this message translates to:
-  /// **'Finishing up…'**
-  String get ingestStageFinishing;
-
-  /// No description provided for @ingestStageLoadHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Reading 20,000 filings takes a few minutes.'**
-  String get ingestStageLoadHint;
-
   /// No description provided for @ingestWarnLeave.
   ///
   /// In en, this message translates to:
@@ -316,35 +310,11 @@ abstract class AppLocalizations {
   /// **'Toggle light / dark theme'**
   String get toggleTheme;
 
-  /// No description provided for @searchPlaceholder.
-  ///
-  /// In en, this message translates to:
-  /// **'Search by symbol or company name'**
-  String get searchPlaceholder;
-
-  /// No description provided for @searchExamples.
-  ///
-  /// In en, this message translates to:
-  /// **'Try one of these'**
-  String get searchExamples;
-
-  /// No description provided for @browseTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'All tickers'**
-  String get browseTitle;
-
   /// No description provided for @browseSubtitle.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 symbol} other{{count} symbols}} filed with SEC EDGAR'**
   String browseSubtitle(int count);
-
-  /// No description provided for @browseOpen.
-  ///
-  /// In en, this message translates to:
-  /// **'Browse all tickers'**
-  String get browseOpen;
 
   /// No description provided for @sortByName.
   ///
@@ -369,12 +339,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Free cash flow growth, 1 year'**
   String get sortFreeCashFlowOneYear;
-
-  /// No description provided for @browseSortLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Sort'**
-  String get browseSortLabel;
 
   /// No description provided for @sectorTechnology.
   ///
@@ -484,11 +448,17 @@ abstract class AppLocalizations {
   /// **'Nothing in EDGAR\'s directory matches \"{query}\".'**
   String browseEmptyBody(String query);
 
-  /// No description provided for @browseBack.
+  /// No description provided for @backToList.
   ///
   /// In en, this message translates to:
-  /// **'Back to the report'**
-  String get browseBack;
+  /// **'Back to the list'**
+  String get backToList;
+
+  /// No description provided for @idleShortcuts.
+  ///
+  /// In en, this message translates to:
+  /// **'Or start with one of these'**
+  String get idleShortcuts;
 
   /// No description provided for @idleTitle.
   ///
@@ -499,14 +469,8 @@ abstract class AppLocalizations {
   /// No description provided for @idleBody.
   ///
   /// In en, this message translates to:
-  /// **'Type a ticker symbol or a company name to pull the last three fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from the company\'s own 10-K filings.'**
+  /// **'Pick a company from the list to pull ten fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from its own 10-K filings.'**
   String get idleBody;
-
-  /// No description provided for @loadingResolving.
-  ///
-  /// In en, this message translates to:
-  /// **'Looking up {ticker} in the SEC ticker registry…'**
-  String loadingResolving(String ticker);
 
   /// No description provided for @loadingFetching.
   ///
@@ -736,18 +700,6 @@ abstract class AppLocalizations {
   /// **'Free cash flow'**
   String get labelFreeCashFlow;
 
-  /// No description provided for @labelOperatingCashFlow.
-  ///
-  /// In en, this message translates to:
-  /// **'Operating cash flow'**
-  String get labelOperatingCashFlow;
-
-  /// No description provided for @labelCapitalExpenditure.
-  ///
-  /// In en, this message translates to:
-  /// **'Capital expenditure'**
-  String get labelCapitalExpenditure;
-
   /// No description provided for @labelTotalDebt.
   ///
   /// In en, this message translates to:
@@ -823,7 +775,7 @@ abstract class AppLocalizations {
   /// No description provided for @hintNetDebt.
   ///
   /// In en, this message translates to:
-  /// **'Total borrowings minus cash. A negative figure is a net cash position: the company holds more cash than debt.'**
+  /// **'Total borrowings minus cash, equivalents and short-term investments. A negative figure is a net cash position: the company holds more than it owes. Short-term investments count because treasuries and commercial paper settle a debt as readily as cash — Microsoft keeps three quarters of its money there.'**
   String get hintNetDebt;
 
   /// No description provided for @deltaVersusPriorYear.
@@ -832,10 +784,718 @@ abstract class AppLocalizations {
   /// **'vs FY{year}'**
   String deltaVersusPriorYear(String year);
 
+  /// No description provided for @sectionValuation.
+  ///
+  /// In en, this message translates to:
+  /// **'Valuation'**
+  String get sectionValuation;
+
+  /// No description provided for @labelSharePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Share price'**
+  String get labelSharePrice;
+
+  /// No description provided for @hintSharePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'The price one share trades at. Quoted from Finnhub where a key is configured, and yours to type over either way — everything else in this report comes from the filings.'**
+  String get hintSharePrice;
+
+  /// No description provided for @placeholderSharePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'0.00'**
+  String get placeholderSharePrice;
+
+  /// No description provided for @valuationIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the current share price to see how it compares with what the filings say the business earns.'**
+  String get valuationIdle;
+
+  /// No description provided for @footnotePriceSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Prices come from Finnhub and are cached until they go stale; typing over one replaces it. Everything else is from the filings.'**
+  String get footnotePriceSource;
+
+  /// No description provided for @valuationNoShareCount.
+  ///
+  /// In en, this message translates to:
+  /// **'No share count is on file for this company, so its value cannot be split per share.'**
+  String get valuationNoShareCount;
+
+  /// No description provided for @quoteLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live · {time}'**
+  String quoteLive(String time);
+
+  /// No description provided for @quoteStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Last quote · {time}'**
+  String quoteStale(String time);
+
+  /// No description provided for @quoteEntered.
+  ///
+  /// In en, this message translates to:
+  /// **'Your price'**
+  String get quoteEntered;
+
+  /// No description provided for @quoteFetching.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching the price…'**
+  String get quoteFetching;
+
+  /// No description provided for @quoteRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch the current price'**
+  String get quoteRefresh;
+
+  /// No description provided for @quoteNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'No quote service is configured, so the price is yours to enter.'**
+  String get quoteNotConfigured;
+
+  /// No description provided for @quoteNoCoverage.
+  ///
+  /// In en, this message translates to:
+  /// **'No quote for this symbol — enter a price to value it.'**
+  String get quoteNoCoverage;
+
+  /// No description provided for @quoteRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'The minute\'s quote allowance is spent. Try again shortly.'**
+  String get quoteRateLimited;
+
+  /// No description provided for @quoteNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not reach the quote service.'**
+  String get quoteNetwork;
+
+  /// No description provided for @quoteService.
+  ///
+  /// In en, this message translates to:
+  /// **'The quote service refused the request.'**
+  String get quoteService;
+
+  /// No description provided for @verdictUndervalued.
+  ///
+  /// In en, this message translates to:
+  /// **'Undervalued'**
+  String get verdictUndervalued;
+
+  /// No description provided for @verdictFairlyValued.
+  ///
+  /// In en, this message translates to:
+  /// **'Fairly valued'**
+  String get verdictFairlyValued;
+
+  /// No description provided for @verdictOvervalued.
+  ///
+  /// In en, this message translates to:
+  /// **'Overvalued'**
+  String get verdictOvervalued;
+
+  /// No description provided for @verdictNotValuable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot be valued'**
+  String get verdictNotValuable;
+
+  /// No description provided for @detailUndervalued.
+  ///
+  /// In en, this message translates to:
+  /// **'The price is below the range these earnings support.'**
+  String get detailUndervalued;
+
+  /// No description provided for @detailFairlyValued.
+  ///
+  /// In en, this message translates to:
+  /// **'The price sits inside the range these earnings support.'**
+  String get detailFairlyValued;
+
+  /// No description provided for @detailOvervalued.
+  ///
+  /// In en, this message translates to:
+  /// **'The price is above the range these earnings support.'**
+  String get detailOvervalued;
+
+  /// No description provided for @detailNotValuable.
+  ///
+  /// In en, this message translates to:
+  /// **'The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.'**
+  String get detailNotValuable;
+
+  /// No description provided for @labelFairValueRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair range'**
+  String get labelFairValueRange;
+
+  /// No description provided for @labelUpside.
+  ///
+  /// In en, this message translates to:
+  /// **'To mid-range'**
+  String get labelUpside;
+
+  /// No description provided for @labelMarketCap.
+  ///
+  /// In en, this message translates to:
+  /// **'Market value'**
+  String get labelMarketCap;
+
+  /// No description provided for @labelEnterpriseValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Enterprise value'**
+  String get labelEnterpriseValue;
+
+  /// No description provided for @labelEarningsPerShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Earnings per share'**
+  String get labelEarningsPerShare;
+
+  /// No description provided for @fairValueRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{low} – {high}'**
+  String fairValueRange(String low, String high);
+
+  /// No description provided for @valuationBasisLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{low}× to {high}× {basis} of {amount}, less net debt, over {shares} shares'**
+  String valuationBasisLine(
+    String low,
+    String high,
+    String basis,
+    String amount,
+    String shares,
+  );
+
+  /// No description provided for @valuationGrowthPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Includes {points} points of multiple for {growth} annual revenue growth.'**
+  String valuationGrowthPremium(String points, String growth);
+
+  /// No description provided for @valuationNoGrowthPremium.
+  ///
+  /// In en, this message translates to:
+  /// **'No growth premium: revenue is not growing on these filings.'**
+  String get valuationNoGrowthPremium;
+
+  /// No description provided for @basisFreeCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'free cash flow'**
+  String get basisFreeCashFlow;
+
+  /// No description provided for @basisEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'net income'**
+  String get basisEarnings;
+
+  /// No description provided for @sectionExpectations.
+  ///
+  /// In en, this message translates to:
+  /// **'What the price is asking'**
+  String get sectionExpectations;
+
+  /// No description provided for @expectationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth the price requires'**
+  String get expectationRequired;
+
+  /// No description provided for @expectationDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth delivered over {years} years'**
+  String expectationDelivered(int years);
+
+  /// No description provided for @expectationPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} a year'**
+  String expectationPerYear(String percent);
+
+  /// No description provided for @expectationBasis.
+  ///
+  /// In en, this message translates to:
+  /// **'Discounting {amount} a year — this company\'s median free cash flow margin of {margin} on its latest revenue — over ten years, fading to 2.5%.'**
+  String expectationBasis(String amount, String margin);
+
+  /// No description provided for @expectationNormalised.
+  ///
+  /// In en, this message translates to:
+  /// **'Its latest reported free cash flow was {reported}, {gap} against that, so the year as filed is not used on its own.'**
+  String expectationNormalised(String reported, String gap);
+
+  /// No description provided for @expectationSensitivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Required growth by the return a buyer wants'**
+  String get expectationSensitivity;
+
+  /// No description provided for @expectationWorth.
+  ///
+  /// In en, this message translates to:
+  /// **'Worth a share if it repeats its record'**
+  String get expectationWorth;
+
+  /// No description provided for @expectationRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} return'**
+  String expectationRate(String percent);
+
+  /// No description provided for @verdictBelowRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking less than it has delivered'**
+  String get verdictBelowRecord;
+
+  /// No description provided for @verdictInLineWithRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking about what it has delivered'**
+  String get verdictInLineWithRecord;
+
+  /// No description provided for @verdictBeyondRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Asking more than it has ever delivered'**
+  String get verdictBeyondRecord;
+
+  /// No description provided for @verdictExpectationUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough history to judge the price'**
+  String get verdictExpectationUnknown;
+
+  /// No description provided for @detailBelowRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Even a buyer wanting an 11% return needs less growth than this company has managed. Either the market doubts the record repeats, or it has not noticed it.'**
+  String get detailBelowRecord;
+
+  /// No description provided for @detailInLineWithRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'The growth the price requires sits inside what the company has actually produced, so the price is a reasonable reading of the record rather than a bet against it.'**
+  String get detailInLineWithRecord;
+
+  /// No description provided for @detailBeyondRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Even a buyer content with a 7% return needs more growth than this company has ever produced. That does not make the price wrong, but it does mean the case for it is not in the filings.'**
+  String get detailBeyondRecord;
+
+  /// No description provided for @detailExpectationUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Too few years on file, or no positive cash flow to discount.'**
+  String get detailExpectationUnknown;
+
+  /// No description provided for @footnoteExpectations.
+  ///
+  /// In en, this message translates to:
+  /// **'A discounted cash flow run backwards: the price is taken as given and the growth it implies is solved for, so the guess belongs to the market rather than to PickStock. The figure moves a long way with the return a buyer wants, which is why the whole band is shown.'**
+  String get footnoteExpectations;
+
+  /// No description provided for @watchlistAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All companies'**
+  String get watchlistAll;
+
+  /// No description provided for @watchlistFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'List'**
+  String get watchlistFilterLabel;
+
+  /// No description provided for @watchlistCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{empty} =1{1 company} other{{count} companies}}'**
+  String watchlistCount(int count);
+
+  /// No description provided for @watchlistManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage lists'**
+  String get watchlistManage;
+
+  /// No description provided for @watchlistNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New list'**
+  String get watchlistNew;
+
+  /// No description provided for @watchlistEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit list'**
+  String get watchlistEdit;
+
+  /// No description provided for @watchlistDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete list'**
+  String get watchlistDelete;
+
+  /// No description provided for @watchlistDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”? The companies in it are not affected.'**
+  String watchlistDeleteConfirm(String name);
+
+  /// No description provided for @watchlistNamePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Semiconductors, Dividend payers…'**
+  String get watchlistNamePlaceholder;
+
+  /// No description provided for @watchlistNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get watchlistNameLabel;
+
+  /// No description provided for @watchlistColourLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour'**
+  String get watchlistColourLabel;
+
+  /// No description provided for @watchlistSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get watchlistSave;
+
+  /// No description provided for @watchlistCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get watchlistCancel;
+
+  /// No description provided for @watchlistCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get watchlistCreate;
+
+  /// No description provided for @watchlistDefaultLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'The starred list cannot be deleted.'**
+  String get watchlistDefaultLocked;
+
+  /// No description provided for @watchlistEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No lists yet'**
+  String get watchlistEmptyTitle;
+
+  /// No description provided for @watchlistEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Star a company, or make a list to group the ones you are watching.'**
+  String get watchlistEmptyBody;
+
+  /// No description provided for @watchlistNoMatchesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in this list'**
+  String get watchlistNoMatchesTitle;
+
+  /// No description provided for @watchlistNoMatchesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a company and add it to “{name}”.'**
+  String watchlistNoMatchesBody(String name);
+
+  /// No description provided for @watchlistStarAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favourites'**
+  String get watchlistStarAdd;
+
+  /// No description provided for @watchlistStarRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from favourites'**
+  String get watchlistStarRemove;
+
+  /// No description provided for @watchlistAddTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to a list'**
+  String get watchlistAddTo;
+
+  /// No description provided for @watchlistInLists.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{In 1 list} other{In {count} lists}}'**
+  String watchlistInLists(int count);
+
+  /// No description provided for @watchlistNotInAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Not in any list'**
+  String get watchlistNotInAny;
+
+  /// No description provided for @napkinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How this was worked out'**
+  String get napkinTitle;
+
+  /// No description provided for @napkinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The whole calculation, in the order it happens.'**
+  String get napkinSubtitle;
+
+  /// No description provided for @napkinStep1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Buying the whole company'**
+  String get napkinStep1Title;
+
+  /// No description provided for @napkinStep1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'A share costs {price}. There are {shares} of them, so buying every share costs {marketCap}. That is what the market says the company is worth.'**
+  String napkinStep1Body(String price, String shares, String marketCap);
+
+  /// No description provided for @napkinStep2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'What you get for it'**
+  String get napkinStep2Title;
+
+  /// No description provided for @napkinStep2Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Last year the company collected {revenue} and, after every bill including new equipment, kept {freeCashFlow}. That leftover is the money the owners could actually take out.'**
+  String napkinStep2Body(String revenue, String freeCashFlow);
+
+  /// No description provided for @napkinStep3TitleDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'You also inherit the debts'**
+  String get napkinStep3TitleDebt;
+
+  /// No description provided for @napkinStep3TitleCash.
+  ///
+  /// In en, this message translates to:
+  /// **'You also get the cash pile'**
+  String get napkinStep3TitleCash;
+
+  /// No description provided for @napkinStep3BodyDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'It owes {netDebt} more than it holds. Buy the company and you owe that too, so the real cost is {enterpriseValue}.'**
+  String napkinStep3BodyDebt(String netDebt, String enterpriseValue);
+
+  /// No description provided for @napkinStep3BodyCash.
+  ///
+  /// In en, this message translates to:
+  /// **'It holds {netCash} more than it owes. That cash comes with the company, so the real cost is only {enterpriseValue}.'**
+  String napkinStep3BodyCash(String netCash, String enterpriseValue);
+
+  /// No description provided for @napkinStep4Title.
+  ///
+  /// In en, this message translates to:
+  /// **'How many years of cash is that?'**
+  String get napkinStep4Title;
+
+  /// No description provided for @napkinStep4Body.
+  ///
+  /// In en, this message translates to:
+  /// **'{enterpriseValue} ÷ {freeCashFlow} a year = {years} years to earn the purchase price back, if nothing ever grows.'**
+  String napkinStep4Body(
+    String enterpriseValue,
+    String freeCashFlow,
+    String years,
+  );
+
+  /// No description provided for @napkinStep5Title.
+  ///
+  /// In en, this message translates to:
+  /// **'How many years is fair?'**
+  String get napkinStep5Title;
+
+  /// No description provided for @napkinStep5BodyFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.'**
+  String get napkinStep5BodyFlat;
+
+  /// No description provided for @napkinStep5BodyGrowing.
+  ///
+  /// In en, this message translates to:
+  /// **'A business going nowhere is worth roughly 12 to 18 years of its cash. This one grows {growth} a year, which buys it another {premium} years: {low} to {high}.'**
+  String napkinStep5BodyGrowing(
+    String growth,
+    String premium,
+    String low,
+    String high,
+  );
+
+  /// No description provided for @napkinStep6Title.
+  ///
+  /// In en, this message translates to:
+  /// **'So what is a share worth?'**
+  String get napkinStep6Title;
+
+  /// No description provided for @napkinStep6Body.
+  ///
+  /// In en, this message translates to:
+  /// **'{low} to {high} years of {basis} is {valueLow} to {valueHigh}. Settle the debts, divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.'**
+  String napkinStep6Body(
+    String low,
+    String high,
+    String basis,
+    String valueLow,
+    String valueHigh,
+    String shares,
+    String rangeLow,
+    String rangeHigh,
+  );
+
+  /// No description provided for @napkinStep7Title.
+  ///
+  /// In en, this message translates to:
+  /// **'And the answer'**
+  String get napkinStep7Title;
+
+  /// No description provided for @napkinStep7BodyUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'You are paying {price}, below the {rangeLow}–{rangeHigh} the earnings support. That is the cheap side.'**
+  String napkinStep7BodyUnder(String price, String rangeLow, String rangeHigh);
+
+  /// No description provided for @napkinStep7BodyFair.
+  ///
+  /// In en, this message translates to:
+  /// **'You are paying {price}, inside the {rangeLow}–{rangeHigh} the earnings support. That is a normal price.'**
+  String napkinStep7BodyFair(String price, String rangeLow, String rangeHigh);
+
+  /// No description provided for @napkinStep7BodyOver.
+  ///
+  /// In en, this message translates to:
+  /// **'You are paying {price}, above the {rangeLow}–{rangeHigh} the earnings support. You are paying for growth that has not happened yet.'**
+  String napkinStep7BodyOver(String price, String rangeLow, String rangeHigh);
+
+  /// No description provided for @napkinCaveatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Worth knowing'**
+  String get napkinCaveatTitle;
+
+  /// No description provided for @napkinCaveatBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'It spent {ratio}× more on equipment than wore out, so last year\'s leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.'**
+  String napkinCaveatBuilding(String ratio);
+
+  /// No description provided for @napkinCaveatMargin.
+  ///
+  /// In en, this message translates to:
+  /// **'Its profit margin is {points} points below its own ten-year normal, so the sales growth above is being won at a lower profit.'**
+  String napkinCaveatMargin(String points);
+
+  /// No description provided for @napkinCaveatEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.'**
+  String get napkinCaveatEarnings;
+
+  /// No description provided for @labelPriceEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'P/E'**
+  String get labelPriceEarnings;
+
+  /// No description provided for @labelEnterpriseValueToFreeCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'EV/FCF'**
+  String get labelEnterpriseValueToFreeCashFlow;
+
+  /// No description provided for @labelFreeCashFlowYield.
+  ///
+  /// In en, this message translates to:
+  /// **'FCF yield'**
+  String get labelFreeCashFlowYield;
+
+  /// No description provided for @labelGrowthAdjusted.
+  ///
+  /// In en, this message translates to:
+  /// **'PEG'**
+  String get labelGrowthAdjusted;
+
+  /// No description provided for @labelPriceToSales.
+  ///
+  /// In en, this message translates to:
+  /// **'P/S'**
+  String get labelPriceToSales;
+
+  /// No description provided for @hintPriceEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'Price divided by earnings per share: years of current profit the price costs. Blank at a loss, where the ratio means nothing.'**
+  String get hintPriceEarnings;
+
+  /// No description provided for @hintEnterpriseValueToFreeCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Enterprise value over free cash flow. Unlike P/E it counts debt, so a company that borrowed to buy its earnings looks dearer.'**
+  String get hintEnterpriseValueToFreeCashFlow;
+
+  /// No description provided for @hintFreeCashFlowYield.
+  ///
+  /// In en, this message translates to:
+  /// **'Free cash flow as a percentage of market value — what an owner earns at this price before any growth. Higher is cheaper.'**
+  String get hintFreeCashFlowYield;
+
+  /// No description provided for @hintGrowthAdjusted.
+  ///
+  /// In en, this message translates to:
+  /// **'The earnings multiple divided by the annual revenue growth rate. Under 1 means the growth more than covers the multiple.'**
+  String get hintGrowthAdjusted;
+
+  /// No description provided for @hintPriceToSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.'**
+  String get hintPriceToSales;
+
+  /// No description provided for @footnoteValuation.
+  ///
+  /// In en, this message translates to:
+  /// **'The fair range is a heuristic: {low}–{high} times the latest year\'s {basis}, widened for revenue growth, less net debt. It is a frame for the price, not a target.'**
+  String footnoteValuation(String low, String high, String basis);
+
   /// No description provided for @footnoteNegatives.
   ///
   /// In en, this message translates to:
-  /// **'Net debt is negative when a company holds more cash than it owes.'**
+  /// **'Cash includes short-term investments. Net debt is negative when a company holds more of it than it owes.'**
   String get footnoteNegatives;
 
   /// No description provided for @footnoteSource.
@@ -849,12 +1509,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fourth-quarter income and cash-flow figures are derived by subtracting the first three quarters from the full year; balance-sheet figures are as filed.'**
   String get footnoteQuarters;
-
-  /// No description provided for @unitMillionsSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **'M'**
-  String get unitMillionsSuffix;
 }
 
 class _AppLocalizationsDelegate

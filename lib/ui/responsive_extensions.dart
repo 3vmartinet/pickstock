@@ -30,11 +30,17 @@ extension ResponsiveExtensions on BuildContext {
   bool get showsMasterDetail =>
       MediaQuery.sizeOf(this).width >= ThemeRepo.masterDetailMinWidth;
 
-  /// Gutter around every page-level section, tightened on narrow windows.
-  EdgeInsets get pagePadding => EdgeInsets.symmetric(
-    horizontal: isCompact ? ThemeRepo.spaceMedium : ThemeRepo.spaceXLarge,
-    vertical: isCompact ? ThemeRepo.spaceMedium : ThemeRepo.spaceLarge,
-  );
+  /// The inset every page-level row starts at, on all four sides.
+  ///
+  /// One value for the app bar, the filter, the sector chips and the grid:
+  /// each row setting its own inset left four different left edges down the
+  /// screen, which read as sloppy however carefully each one was chosen. The
+  /// same value vertically, so a divider has equal air above and below it and
+  /// the margin around the content is even rather than twice as wide as tall.
+  double get pageGutter => ThemeRepo.pageGutter;
+
+  /// Gutter around every page-level section.
+  EdgeInsets get pagePadding => const EdgeInsets.all(ThemeRepo.pageGutter);
 
   /// Padding inside a card, tightened on narrow windows.
   EdgeInsets get cardPadding =>

@@ -23,7 +23,7 @@ void main() {
   ) async {
     await _openBrowser(tester);
 
-    expect(find.text('All tickers'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
     // Counts are grouped, not bare digits.
     expect(
       find.text('${testTickers.length} symbols filed with SEC EDGAR'),
@@ -73,9 +73,9 @@ void main() {
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
 
-    // Back on the report, with the picked symbol fetched.
-    expect(find.text('All tickers'), findsNothing);
-    expect(find.text('Apple Inc.'), findsOneWidget);
+    // On the company's own screen, with the picked symbol fetched.
+    expect(find.text('PickStock'), findsNothing);
+    expect(find.text('Apple Inc.'), findsWidgets);
     expect(find.text('FY2025 highlights'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -90,7 +90,5 @@ Future<void> _openBrowser(
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(const PickStockApp());
-  await tester.pumpAndSettle();
-  await tester.tap(find.byIcon(LucideIcons.list));
   await tester.pumpAndSettle();
 }

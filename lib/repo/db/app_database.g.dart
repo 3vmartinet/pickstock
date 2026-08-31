@@ -36,8 +36,20 @@ class $CompaniesTable extends Companies
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sharesOutstandingMeta = const VerificationMeta(
+    'sharesOutstanding',
+  );
   @override
-  List<GeneratedColumn> get $columns => [cik, name, sic];
+  late final GeneratedColumn<double> sharesOutstanding =
+      GeneratedColumn<double>(
+        'shares_outstanding',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [cik, name, sic, sharesOutstanding];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -72,6 +84,15 @@ class $CompaniesTable extends Companies
         sic.isAcceptableOrUnknown(data['sic']!, _sicMeta),
       );
     }
+    if (data.containsKey('shares_outstanding')) {
+      context.handle(
+        _sharesOutstandingMeta,
+        sharesOutstanding.isAcceptableOrUnknown(
+          data['shares_outstanding']!,
+          _sharesOutstandingMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -93,6 +114,10 @@ class $CompaniesTable extends Companies
         DriftSqlType.int,
         data['${effectivePrefix}sic'],
       ),
+      sharesOutstanding: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}shares_outstanding'],
+      ),
     );
   }
 
@@ -110,7 +135,15 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
   /// Standard Industrial Classification code, which is how SEC categorises a
   /// filer. Null where no dataset covering the company was found.
   final int? sic;
-  const CompanyRow({required this.cik, required this.name, this.sic});
+
+  /// Shares on the cover of the newest filing, for a market value.
+  final double? sharesOutstanding;
+  const CompanyRow({
+    required this.cik,
+    required this.name,
+    this.sic,
+    this.sharesOutstanding,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -118,6 +151,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || sic != null) {
       map['sic'] = Variable<int>(sic);
+    }
+    if (!nullToAbsent || sharesOutstanding != null) {
+      map['shares_outstanding'] = Variable<double>(sharesOutstanding);
     }
     return map;
   }
@@ -127,6 +163,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       cik: Value(cik),
       name: Value(name),
       sic: sic == null && nullToAbsent ? const Value.absent() : Value(sic),
+      sharesOutstanding: sharesOutstanding == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharesOutstanding),
     );
   }
 
@@ -139,6 +178,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       cik: serializer.fromJson<String>(json['cik']),
       name: serializer.fromJson<String>(json['name']),
       sic: serializer.fromJson<int?>(json['sic']),
+      sharesOutstanding: serializer.fromJson<double?>(
+        json['sharesOutstanding'],
+      ),
     );
   }
   @override
@@ -148,6 +190,7 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       'cik': serializer.toJson<String>(cik),
       'name': serializer.toJson<String>(name),
       'sic': serializer.toJson<int?>(sic),
+      'sharesOutstanding': serializer.toJson<double?>(sharesOutstanding),
     };
   }
 
@@ -155,16 +198,23 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
     String? cik,
     String? name,
     Value<int?> sic = const Value.absent(),
+    Value<double?> sharesOutstanding = const Value.absent(),
   }) => CompanyRow(
     cik: cik ?? this.cik,
     name: name ?? this.name,
     sic: sic.present ? sic.value : this.sic,
+    sharesOutstanding: sharesOutstanding.present
+        ? sharesOutstanding.value
+        : this.sharesOutstanding,
   );
   CompanyRow copyWithCompanion(CompaniesCompanion data) {
     return CompanyRow(
       cik: data.cik.present ? data.cik.value : this.cik,
       name: data.name.present ? data.name.value : this.name,
       sic: data.sic.present ? data.sic.value : this.sic,
+      sharesOutstanding: data.sharesOutstanding.present
+          ? data.sharesOutstanding.value
+          : this.sharesOutstanding,
     );
   }
 
@@ -173,37 +223,42 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
     return (StringBuffer('CompanyRow(')
           ..write('cik: $cik, ')
           ..write('name: $name, ')
-          ..write('sic: $sic')
+          ..write('sic: $sic, ')
+          ..write('sharesOutstanding: $sharesOutstanding')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(cik, name, sic);
+  int get hashCode => Object.hash(cik, name, sic, sharesOutstanding);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CompanyRow &&
           other.cik == this.cik &&
           other.name == this.name &&
-          other.sic == this.sic);
+          other.sic == this.sic &&
+          other.sharesOutstanding == this.sharesOutstanding);
 }
 
 class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
   final Value<String> cik;
   final Value<String> name;
   final Value<int?> sic;
+  final Value<double?> sharesOutstanding;
   final Value<int> rowid;
   const CompaniesCompanion({
     this.cik = const Value.absent(),
     this.name = const Value.absent(),
     this.sic = const Value.absent(),
+    this.sharesOutstanding = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CompaniesCompanion.insert({
     required String cik,
     required String name,
     this.sic = const Value.absent(),
+    this.sharesOutstanding = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        name = Value(name);
@@ -211,12 +266,14 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     Expression<String>? cik,
     Expression<String>? name,
     Expression<int>? sic,
+    Expression<double>? sharesOutstanding,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (cik != null) 'cik': cik,
       if (name != null) 'name': name,
       if (sic != null) 'sic': sic,
+      if (sharesOutstanding != null) 'shares_outstanding': sharesOutstanding,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -225,12 +282,14 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     Value<String>? cik,
     Value<String>? name,
     Value<int?>? sic,
+    Value<double?>? sharesOutstanding,
     Value<int>? rowid,
   }) {
     return CompaniesCompanion(
       cik: cik ?? this.cik,
       name: name ?? this.name,
       sic: sic ?? this.sic,
+      sharesOutstanding: sharesOutstanding ?? this.sharesOutstanding,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -247,6 +306,9 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     if (sic.present) {
       map['sic'] = Variable<int>(sic.value);
     }
+    if (sharesOutstanding.present) {
+      map['shares_outstanding'] = Variable<double>(sharesOutstanding.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -259,6 +321,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
           ..write('cik: $cik, ')
           ..write('name: $name, ')
           ..write('sic: $sic, ')
+          ..write('sharesOutstanding: $sharesOutstanding, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -617,6 +680,61 @@ class $FiscalYearsTable extends FiscalYears
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _dilutedSharesMeta = const VerificationMeta(
+    'dilutedShares',
+  );
+  @override
+  late final GeneratedColumn<double> dilutedShares = GeneratedColumn<double>(
+    'diluted_shares',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _operatingIncomeMeta = const VerificationMeta(
+    'operatingIncome',
+  );
+  @override
+  late final GeneratedColumn<double> operatingIncome = GeneratedColumn<double>(
+    'operating_income',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _depreciationAmortisationMeta =
+      const VerificationMeta('depreciationAmortisation');
+  @override
+  late final GeneratedColumn<double> depreciationAmortisation =
+      GeneratedColumn<double>(
+        'depreciation_amortisation',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _totalAssetsMeta = const VerificationMeta(
+    'totalAssets',
+  );
+  @override
+  late final GeneratedColumn<double> totalAssets = GeneratedColumn<double>(
+    'total_assets',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shareholdersEquityMeta =
+      const VerificationMeta('shareholdersEquity');
+  @override
+  late final GeneratedColumn<double> shareholdersEquity =
+      GeneratedColumn<double>(
+        'shareholders_equity',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     cik,
@@ -627,6 +745,11 @@ class $FiscalYearsTable extends FiscalYears
     capitalExpenditure,
     totalDebt,
     cash,
+    dilutedShares,
+    operatingIncome,
+    depreciationAmortisation,
+    totalAssets,
+    shareholdersEquity,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -698,6 +821,51 @@ class $FiscalYearsTable extends FiscalYears
         cash.isAcceptableOrUnknown(data['cash']!, _cashMeta),
       );
     }
+    if (data.containsKey('diluted_shares')) {
+      context.handle(
+        _dilutedSharesMeta,
+        dilutedShares.isAcceptableOrUnknown(
+          data['diluted_shares']!,
+          _dilutedSharesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('operating_income')) {
+      context.handle(
+        _operatingIncomeMeta,
+        operatingIncome.isAcceptableOrUnknown(
+          data['operating_income']!,
+          _operatingIncomeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('depreciation_amortisation')) {
+      context.handle(
+        _depreciationAmortisationMeta,
+        depreciationAmortisation.isAcceptableOrUnknown(
+          data['depreciation_amortisation']!,
+          _depreciationAmortisationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_assets')) {
+      context.handle(
+        _totalAssetsMeta,
+        totalAssets.isAcceptableOrUnknown(
+          data['total_assets']!,
+          _totalAssetsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shareholders_equity')) {
+      context.handle(
+        _shareholdersEquityMeta,
+        shareholdersEquity.isAcceptableOrUnknown(
+          data['shareholders_equity']!,
+          _shareholdersEquityMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -739,6 +907,26 @@ class $FiscalYearsTable extends FiscalYears
         DriftSqlType.double,
         data['${effectivePrefix}cash'],
       ),
+      dilutedShares: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}diluted_shares'],
+      ),
+      operatingIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}operating_income'],
+      ),
+      depreciationAmortisation: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}depreciation_amortisation'],
+      ),
+      totalAssets: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_assets'],
+      ),
+      shareholdersEquity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}shareholders_equity'],
+      ),
     );
   }
 
@@ -757,6 +945,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
   final double? capitalExpenditure;
   final double? totalDebt;
   final double? cash;
+  final double? dilutedShares;
+  final double? operatingIncome;
+  final double? depreciationAmortisation;
+  final double? totalAssets;
+  final double? shareholdersEquity;
   const FiscalYearRow({
     required this.cik,
     required this.fiscalYear,
@@ -766,6 +959,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     this.capitalExpenditure,
     this.totalDebt,
     this.cash,
+    this.dilutedShares,
+    this.operatingIncome,
+    this.depreciationAmortisation,
+    this.totalAssets,
+    this.shareholdersEquity,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -790,6 +988,23 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     if (!nullToAbsent || cash != null) {
       map['cash'] = Variable<double>(cash);
     }
+    if (!nullToAbsent || dilutedShares != null) {
+      map['diluted_shares'] = Variable<double>(dilutedShares);
+    }
+    if (!nullToAbsent || operatingIncome != null) {
+      map['operating_income'] = Variable<double>(operatingIncome);
+    }
+    if (!nullToAbsent || depreciationAmortisation != null) {
+      map['depreciation_amortisation'] = Variable<double>(
+        depreciationAmortisation,
+      );
+    }
+    if (!nullToAbsent || totalAssets != null) {
+      map['total_assets'] = Variable<double>(totalAssets);
+    }
+    if (!nullToAbsent || shareholdersEquity != null) {
+      map['shareholders_equity'] = Variable<double>(shareholdersEquity);
+    }
     return map;
   }
 
@@ -813,6 +1028,21 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ? const Value.absent()
           : Value(totalDebt),
       cash: cash == null && nullToAbsent ? const Value.absent() : Value(cash),
+      dilutedShares: dilutedShares == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dilutedShares),
+      operatingIncome: operatingIncome == null && nullToAbsent
+          ? const Value.absent()
+          : Value(operatingIncome),
+      depreciationAmortisation: depreciationAmortisation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(depreciationAmortisation),
+      totalAssets: totalAssets == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalAssets),
+      shareholdersEquity: shareholdersEquity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shareholdersEquity),
     );
   }
 
@@ -834,6 +1064,15 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       ),
       totalDebt: serializer.fromJson<double?>(json['totalDebt']),
       cash: serializer.fromJson<double?>(json['cash']),
+      dilutedShares: serializer.fromJson<double?>(json['dilutedShares']),
+      operatingIncome: serializer.fromJson<double?>(json['operatingIncome']),
+      depreciationAmortisation: serializer.fromJson<double?>(
+        json['depreciationAmortisation'],
+      ),
+      totalAssets: serializer.fromJson<double?>(json['totalAssets']),
+      shareholdersEquity: serializer.fromJson<double?>(
+        json['shareholdersEquity'],
+      ),
     );
   }
   @override
@@ -848,6 +1087,13 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       'capitalExpenditure': serializer.toJson<double?>(capitalExpenditure),
       'totalDebt': serializer.toJson<double?>(totalDebt),
       'cash': serializer.toJson<double?>(cash),
+      'dilutedShares': serializer.toJson<double?>(dilutedShares),
+      'operatingIncome': serializer.toJson<double?>(operatingIncome),
+      'depreciationAmortisation': serializer.toJson<double?>(
+        depreciationAmortisation,
+      ),
+      'totalAssets': serializer.toJson<double?>(totalAssets),
+      'shareholdersEquity': serializer.toJson<double?>(shareholdersEquity),
     };
   }
 
@@ -860,6 +1106,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     Value<double?> capitalExpenditure = const Value.absent(),
     Value<double?> totalDebt = const Value.absent(),
     Value<double?> cash = const Value.absent(),
+    Value<double?> dilutedShares = const Value.absent(),
+    Value<double?> operatingIncome = const Value.absent(),
+    Value<double?> depreciationAmortisation = const Value.absent(),
+    Value<double?> totalAssets = const Value.absent(),
+    Value<double?> shareholdersEquity = const Value.absent(),
   }) => FiscalYearRow(
     cik: cik ?? this.cik,
     fiscalYear: fiscalYear ?? this.fiscalYear,
@@ -873,6 +1124,19 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
         : this.capitalExpenditure,
     totalDebt: totalDebt.present ? totalDebt.value : this.totalDebt,
     cash: cash.present ? cash.value : this.cash,
+    dilutedShares: dilutedShares.present
+        ? dilutedShares.value
+        : this.dilutedShares,
+    operatingIncome: operatingIncome.present
+        ? operatingIncome.value
+        : this.operatingIncome,
+    depreciationAmortisation: depreciationAmortisation.present
+        ? depreciationAmortisation.value
+        : this.depreciationAmortisation,
+    totalAssets: totalAssets.present ? totalAssets.value : this.totalAssets,
+    shareholdersEquity: shareholdersEquity.present
+        ? shareholdersEquity.value
+        : this.shareholdersEquity,
   );
   FiscalYearRow copyWithCompanion(FiscalYearsCompanion data) {
     return FiscalYearRow(
@@ -890,6 +1154,21 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           : this.capitalExpenditure,
       totalDebt: data.totalDebt.present ? data.totalDebt.value : this.totalDebt,
       cash: data.cash.present ? data.cash.value : this.cash,
+      dilutedShares: data.dilutedShares.present
+          ? data.dilutedShares.value
+          : this.dilutedShares,
+      operatingIncome: data.operatingIncome.present
+          ? data.operatingIncome.value
+          : this.operatingIncome,
+      depreciationAmortisation: data.depreciationAmortisation.present
+          ? data.depreciationAmortisation.value
+          : this.depreciationAmortisation,
+      totalAssets: data.totalAssets.present
+          ? data.totalAssets.value
+          : this.totalAssets,
+      shareholdersEquity: data.shareholdersEquity.present
+          ? data.shareholdersEquity.value
+          : this.shareholdersEquity,
     );
   }
 
@@ -903,7 +1182,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ..write('operatingCashFlow: $operatingCashFlow, ')
           ..write('capitalExpenditure: $capitalExpenditure, ')
           ..write('totalDebt: $totalDebt, ')
-          ..write('cash: $cash')
+          ..write('cash: $cash, ')
+          ..write('dilutedShares: $dilutedShares, ')
+          ..write('operatingIncome: $operatingIncome, ')
+          ..write('depreciationAmortisation: $depreciationAmortisation, ')
+          ..write('totalAssets: $totalAssets, ')
+          ..write('shareholdersEquity: $shareholdersEquity')
           ..write(')'))
         .toString();
   }
@@ -918,6 +1202,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     capitalExpenditure,
     totalDebt,
     cash,
+    dilutedShares,
+    operatingIncome,
+    depreciationAmortisation,
+    totalAssets,
+    shareholdersEquity,
   );
   @override
   bool operator ==(Object other) =>
@@ -930,7 +1219,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           other.operatingCashFlow == this.operatingCashFlow &&
           other.capitalExpenditure == this.capitalExpenditure &&
           other.totalDebt == this.totalDebt &&
-          other.cash == this.cash);
+          other.cash == this.cash &&
+          other.dilutedShares == this.dilutedShares &&
+          other.operatingIncome == this.operatingIncome &&
+          other.depreciationAmortisation == this.depreciationAmortisation &&
+          other.totalAssets == this.totalAssets &&
+          other.shareholdersEquity == this.shareholdersEquity);
 }
 
 class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
@@ -942,6 +1236,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
   final Value<double?> capitalExpenditure;
   final Value<double?> totalDebt;
   final Value<double?> cash;
+  final Value<double?> dilutedShares;
+  final Value<double?> operatingIncome;
+  final Value<double?> depreciationAmortisation;
+  final Value<double?> totalAssets;
+  final Value<double?> shareholdersEquity;
   final Value<int> rowid;
   const FiscalYearsCompanion({
     this.cik = const Value.absent(),
@@ -952,6 +1251,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.capitalExpenditure = const Value.absent(),
     this.totalDebt = const Value.absent(),
     this.cash = const Value.absent(),
+    this.dilutedShares = const Value.absent(),
+    this.operatingIncome = const Value.absent(),
+    this.depreciationAmortisation = const Value.absent(),
+    this.totalAssets = const Value.absent(),
+    this.shareholdersEquity = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FiscalYearsCompanion.insert({
@@ -963,6 +1267,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.capitalExpenditure = const Value.absent(),
     this.totalDebt = const Value.absent(),
     this.cash = const Value.absent(),
+    this.dilutedShares = const Value.absent(),
+    this.operatingIncome = const Value.absent(),
+    this.depreciationAmortisation = const Value.absent(),
+    this.totalAssets = const Value.absent(),
+    this.shareholdersEquity = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        fiscalYear = Value(fiscalYear);
@@ -975,6 +1284,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Expression<double>? capitalExpenditure,
     Expression<double>? totalDebt,
     Expression<double>? cash,
+    Expression<double>? dilutedShares,
+    Expression<double>? operatingIncome,
+    Expression<double>? depreciationAmortisation,
+    Expression<double>? totalAssets,
+    Expression<double>? shareholdersEquity,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -986,6 +1300,12 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       if (capitalExpenditure != null) 'capital_expenditure': capitalExpenditure,
       if (totalDebt != null) 'total_debt': totalDebt,
       if (cash != null) 'cash': cash,
+      if (dilutedShares != null) 'diluted_shares': dilutedShares,
+      if (operatingIncome != null) 'operating_income': operatingIncome,
+      if (depreciationAmortisation != null)
+        'depreciation_amortisation': depreciationAmortisation,
+      if (totalAssets != null) 'total_assets': totalAssets,
+      if (shareholdersEquity != null) 'shareholders_equity': shareholdersEquity,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -999,6 +1319,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Value<double?>? capitalExpenditure,
     Value<double?>? totalDebt,
     Value<double?>? cash,
+    Value<double?>? dilutedShares,
+    Value<double?>? operatingIncome,
+    Value<double?>? depreciationAmortisation,
+    Value<double?>? totalAssets,
+    Value<double?>? shareholdersEquity,
     Value<int>? rowid,
   }) {
     return FiscalYearsCompanion(
@@ -1010,6 +1335,12 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       capitalExpenditure: capitalExpenditure ?? this.capitalExpenditure,
       totalDebt: totalDebt ?? this.totalDebt,
       cash: cash ?? this.cash,
+      dilutedShares: dilutedShares ?? this.dilutedShares,
+      operatingIncome: operatingIncome ?? this.operatingIncome,
+      depreciationAmortisation:
+          depreciationAmortisation ?? this.depreciationAmortisation,
+      totalAssets: totalAssets ?? this.totalAssets,
+      shareholdersEquity: shareholdersEquity ?? this.shareholdersEquity,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1041,6 +1372,23 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     if (cash.present) {
       map['cash'] = Variable<double>(cash.value);
     }
+    if (dilutedShares.present) {
+      map['diluted_shares'] = Variable<double>(dilutedShares.value);
+    }
+    if (operatingIncome.present) {
+      map['operating_income'] = Variable<double>(operatingIncome.value);
+    }
+    if (depreciationAmortisation.present) {
+      map['depreciation_amortisation'] = Variable<double>(
+        depreciationAmortisation.value,
+      );
+    }
+    if (totalAssets.present) {
+      map['total_assets'] = Variable<double>(totalAssets.value);
+    }
+    if (shareholdersEquity.present) {
+      map['shareholders_equity'] = Variable<double>(shareholdersEquity.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1058,6 +1406,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
           ..write('capitalExpenditure: $capitalExpenditure, ')
           ..write('totalDebt: $totalDebt, ')
           ..write('cash: $cash, ')
+          ..write('dilutedShares: $dilutedShares, ')
+          ..write('operatingIncome: $operatingIncome, ')
+          ..write('depreciationAmortisation: $depreciationAmortisation, ')
+          ..write('totalAssets: $totalAssets, ')
+          ..write('shareholdersEquity: $shareholdersEquity, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2040,6 +2393,970 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
   }
 }
 
+class $SharePricesTable extends SharePrices
+    with TableInfo<$SharePricesTable, SharePriceRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SharePricesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cikMeta = const VerificationMeta('cik');
+  @override
+  late final GeneratedColumn<String> cik = GeneratedColumn<String>(
+    'cik',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pricePerShareMeta = const VerificationMeta(
+    'pricePerShare',
+  );
+  @override
+  late final GeneratedColumn<double> pricePerShare = GeneratedColumn<double>(
+    'price_per_share',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _asOfMeta = const VerificationMeta('asOf');
+  @override
+  late final GeneratedColumn<DateTime> asOf = GeneratedColumn<DateTime>(
+    'as_of',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isQuotedMeta = const VerificationMeta(
+    'isQuoted',
+  );
+  @override
+  late final GeneratedColumn<bool> isQuoted = GeneratedColumn<bool>(
+    'is_quoted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_quoted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [cik, pricePerShare, asOf, isQuoted];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'share_prices';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SharePriceRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cik')) {
+      context.handle(
+        _cikMeta,
+        cik.isAcceptableOrUnknown(data['cik']!, _cikMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cikMeta);
+    }
+    if (data.containsKey('price_per_share')) {
+      context.handle(
+        _pricePerShareMeta,
+        pricePerShare.isAcceptableOrUnknown(
+          data['price_per_share']!,
+          _pricePerShareMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_pricePerShareMeta);
+    }
+    if (data.containsKey('as_of')) {
+      context.handle(
+        _asOfMeta,
+        asOf.isAcceptableOrUnknown(data['as_of']!, _asOfMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_asOfMeta);
+    }
+    if (data.containsKey('is_quoted')) {
+      context.handle(
+        _isQuotedMeta,
+        isQuoted.isAcceptableOrUnknown(data['is_quoted']!, _isQuotedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cik};
+  @override
+  SharePriceRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SharePriceRow(
+      cik: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cik'],
+      )!,
+      pricePerShare: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price_per_share'],
+      )!,
+      asOf: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}as_of'],
+      )!,
+      isQuoted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_quoted'],
+      )!,
+    );
+  }
+
+  @override
+  $SharePricesTable createAlias(String alias) {
+    return $SharePricesTable(attachedDatabase, alias);
+  }
+}
+
+class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
+  final String cik;
+  final double pricePerShare;
+
+  /// When the price was true: the exchange timestamp for a quoted price, or
+  /// when it was typed for an entered one.
+  final DateTime asOf;
+
+  /// Whether a provider quoted this price. A stale quote and a typed guess are
+  /// both prices, and the report must not present them as the same thing.
+  final bool isQuoted;
+  const SharePriceRow({
+    required this.cik,
+    required this.pricePerShare,
+    required this.asOf,
+    required this.isQuoted,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cik'] = Variable<String>(cik);
+    map['price_per_share'] = Variable<double>(pricePerShare);
+    map['as_of'] = Variable<DateTime>(asOf);
+    map['is_quoted'] = Variable<bool>(isQuoted);
+    return map;
+  }
+
+  SharePricesCompanion toCompanion(bool nullToAbsent) {
+    return SharePricesCompanion(
+      cik: Value(cik),
+      pricePerShare: Value(pricePerShare),
+      asOf: Value(asOf),
+      isQuoted: Value(isQuoted),
+    );
+  }
+
+  factory SharePriceRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SharePriceRow(
+      cik: serializer.fromJson<String>(json['cik']),
+      pricePerShare: serializer.fromJson<double>(json['pricePerShare']),
+      asOf: serializer.fromJson<DateTime>(json['asOf']),
+      isQuoted: serializer.fromJson<bool>(json['isQuoted']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cik': serializer.toJson<String>(cik),
+      'pricePerShare': serializer.toJson<double>(pricePerShare),
+      'asOf': serializer.toJson<DateTime>(asOf),
+      'isQuoted': serializer.toJson<bool>(isQuoted),
+    };
+  }
+
+  SharePriceRow copyWith({
+    String? cik,
+    double? pricePerShare,
+    DateTime? asOf,
+    bool? isQuoted,
+  }) => SharePriceRow(
+    cik: cik ?? this.cik,
+    pricePerShare: pricePerShare ?? this.pricePerShare,
+    asOf: asOf ?? this.asOf,
+    isQuoted: isQuoted ?? this.isQuoted,
+  );
+  SharePriceRow copyWithCompanion(SharePricesCompanion data) {
+    return SharePriceRow(
+      cik: data.cik.present ? data.cik.value : this.cik,
+      pricePerShare: data.pricePerShare.present
+          ? data.pricePerShare.value
+          : this.pricePerShare,
+      asOf: data.asOf.present ? data.asOf.value : this.asOf,
+      isQuoted: data.isQuoted.present ? data.isQuoted.value : this.isQuoted,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SharePriceRow(')
+          ..write('cik: $cik, ')
+          ..write('pricePerShare: $pricePerShare, ')
+          ..write('asOf: $asOf, ')
+          ..write('isQuoted: $isQuoted')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(cik, pricePerShare, asOf, isQuoted);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SharePriceRow &&
+          other.cik == this.cik &&
+          other.pricePerShare == this.pricePerShare &&
+          other.asOf == this.asOf &&
+          other.isQuoted == this.isQuoted);
+}
+
+class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
+  final Value<String> cik;
+  final Value<double> pricePerShare;
+  final Value<DateTime> asOf;
+  final Value<bool> isQuoted;
+  final Value<int> rowid;
+  const SharePricesCompanion({
+    this.cik = const Value.absent(),
+    this.pricePerShare = const Value.absent(),
+    this.asOf = const Value.absent(),
+    this.isQuoted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SharePricesCompanion.insert({
+    required String cik,
+    required double pricePerShare,
+    required DateTime asOf,
+    this.isQuoted = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cik = Value(cik),
+       pricePerShare = Value(pricePerShare),
+       asOf = Value(asOf);
+  static Insertable<SharePriceRow> custom({
+    Expression<String>? cik,
+    Expression<double>? pricePerShare,
+    Expression<DateTime>? asOf,
+    Expression<bool>? isQuoted,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cik != null) 'cik': cik,
+      if (pricePerShare != null) 'price_per_share': pricePerShare,
+      if (asOf != null) 'as_of': asOf,
+      if (isQuoted != null) 'is_quoted': isQuoted,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SharePricesCompanion copyWith({
+    Value<String>? cik,
+    Value<double>? pricePerShare,
+    Value<DateTime>? asOf,
+    Value<bool>? isQuoted,
+    Value<int>? rowid,
+  }) {
+    return SharePricesCompanion(
+      cik: cik ?? this.cik,
+      pricePerShare: pricePerShare ?? this.pricePerShare,
+      asOf: asOf ?? this.asOf,
+      isQuoted: isQuoted ?? this.isQuoted,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cik.present) {
+      map['cik'] = Variable<String>(cik.value);
+    }
+    if (pricePerShare.present) {
+      map['price_per_share'] = Variable<double>(pricePerShare.value);
+    }
+    if (asOf.present) {
+      map['as_of'] = Variable<DateTime>(asOf.value);
+    }
+    if (isQuoted.present) {
+      map['is_quoted'] = Variable<bool>(isQuoted.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SharePricesCompanion(')
+          ..write('cik: $cik, ')
+          ..write('pricePerShare: $pricePerShare, ')
+          ..write('asOf: $asOf, ')
+          ..write('isQuoted: $isQuoted, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WatchlistsTable extends Watchlists
+    with TableInfo<$WatchlistsTable, WatchlistRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WatchlistsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colourIndexMeta = const VerificationMeta(
+    'colourIndex',
+  );
+  @override
+  late final GeneratedColumn<int> colourIndex = GeneratedColumn<int>(
+    'colour_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta(
+    'isDefault',
+  );
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_default" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    colourIndex,
+    isDefault,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'watchlists';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WatchlistRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('colour_index')) {
+      context.handle(
+        _colourIndexMeta,
+        colourIndex.isAcceptableOrUnknown(
+          data['colour_index']!,
+          _colourIndexMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_colourIndexMeta);
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(
+        _isDefaultMeta,
+        isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  WatchlistRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WatchlistRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      colourIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}colour_index'],
+      )!,
+      isDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_default'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WatchlistsTable createAlias(String alias) {
+    return $WatchlistsTable(attachedDatabase, alias);
+  }
+}
+
+class WatchlistRow extends DataClass implements Insertable<WatchlistRow> {
+  final int id;
+  final String name;
+
+  /// An index into the palette in `ThemeRepo`, not a colour value: the palette
+  /// has to change with the theme, so storing an ARGB int would pin a list to
+  /// one appearance for ever.
+  final int colourIndex;
+
+  /// The list every star goes into. Seeded once, cannot be deleted, and sorts
+  /// first. Making favourites an ordinary list keeps one mechanism instead of
+  /// a flag beside a table that does the same job.
+  final bool isDefault;
+  final DateTime createdAt;
+  const WatchlistRow({
+    required this.id,
+    required this.name,
+    required this.colourIndex,
+    required this.isDefault,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['colour_index'] = Variable<int>(colourIndex);
+    map['is_default'] = Variable<bool>(isDefault);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  WatchlistsCompanion toCompanion(bool nullToAbsent) {
+    return WatchlistsCompanion(
+      id: Value(id),
+      name: Value(name),
+      colourIndex: Value(colourIndex),
+      isDefault: Value(isDefault),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory WatchlistRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WatchlistRow(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      colourIndex: serializer.fromJson<int>(json['colourIndex']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'colourIndex': serializer.toJson<int>(colourIndex),
+      'isDefault': serializer.toJson<bool>(isDefault),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  WatchlistRow copyWith({
+    int? id,
+    String? name,
+    int? colourIndex,
+    bool? isDefault,
+    DateTime? createdAt,
+  }) => WatchlistRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    colourIndex: colourIndex ?? this.colourIndex,
+    isDefault: isDefault ?? this.isDefault,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  WatchlistRow copyWithCompanion(WatchlistsCompanion data) {
+    return WatchlistRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      colourIndex: data.colourIndex.present
+          ? data.colourIndex.value
+          : this.colourIndex,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchlistRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('colourIndex: $colourIndex, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, colourIndex, isDefault, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WatchlistRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.colourIndex == this.colourIndex &&
+          other.isDefault == this.isDefault &&
+          other.createdAt == this.createdAt);
+}
+
+class WatchlistsCompanion extends UpdateCompanion<WatchlistRow> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<int> colourIndex;
+  final Value<bool> isDefault;
+  final Value<DateTime> createdAt;
+  const WatchlistsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.colourIndex = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  WatchlistsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required int colourIndex,
+    this.isDefault = const Value.absent(),
+    required DateTime createdAt,
+  }) : name = Value(name),
+       colourIndex = Value(colourIndex),
+       createdAt = Value(createdAt);
+  static Insertable<WatchlistRow> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<int>? colourIndex,
+    Expression<bool>? isDefault,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (colourIndex != null) 'colour_index': colourIndex,
+      if (isDefault != null) 'is_default': isDefault,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  WatchlistsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<int>? colourIndex,
+    Value<bool>? isDefault,
+    Value<DateTime>? createdAt,
+  }) {
+    return WatchlistsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      colourIndex: colourIndex ?? this.colourIndex,
+      isDefault: isDefault ?? this.isDefault,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (colourIndex.present) {
+      map['colour_index'] = Variable<int>(colourIndex.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchlistsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('colourIndex: $colourIndex, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $WatchlistEntriesTable extends WatchlistEntries
+    with TableInfo<$WatchlistEntriesTable, WatchlistEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $WatchlistEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _watchlistIdMeta = const VerificationMeta(
+    'watchlistId',
+  );
+  @override
+  late final GeneratedColumn<int> watchlistId = GeneratedColumn<int>(
+    'watchlist_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES watchlists (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _cikMeta = const VerificationMeta('cik');
+  @override
+  late final GeneratedColumn<String> cik = GeneratedColumn<String>(
+    'cik',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> addedAt = GeneratedColumn<DateTime>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [watchlistId, cik, addedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'watchlist_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<WatchlistEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('watchlist_id')) {
+      context.handle(
+        _watchlistIdMeta,
+        watchlistId.isAcceptableOrUnknown(
+          data['watchlist_id']!,
+          _watchlistIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_watchlistIdMeta);
+    }
+    if (data.containsKey('cik')) {
+      context.handle(
+        _cikMeta,
+        cik.isAcceptableOrUnknown(data['cik']!, _cikMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cikMeta);
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {watchlistId, cik};
+  @override
+  WatchlistEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return WatchlistEntryRow(
+      watchlistId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}watchlist_id'],
+      )!,
+      cik: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cik'],
+      )!,
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}added_at'],
+      )!,
+    );
+  }
+
+  @override
+  $WatchlistEntriesTable createAlias(String alias) {
+    return $WatchlistEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class WatchlistEntryRow extends DataClass
+    implements Insertable<WatchlistEntryRow> {
+  final int watchlistId;
+  final String cik;
+  final DateTime addedAt;
+  const WatchlistEntryRow({
+    required this.watchlistId,
+    required this.cik,
+    required this.addedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['watchlist_id'] = Variable<int>(watchlistId);
+    map['cik'] = Variable<String>(cik);
+    map['added_at'] = Variable<DateTime>(addedAt);
+    return map;
+  }
+
+  WatchlistEntriesCompanion toCompanion(bool nullToAbsent) {
+    return WatchlistEntriesCompanion(
+      watchlistId: Value(watchlistId),
+      cik: Value(cik),
+      addedAt: Value(addedAt),
+    );
+  }
+
+  factory WatchlistEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return WatchlistEntryRow(
+      watchlistId: serializer.fromJson<int>(json['watchlistId']),
+      cik: serializer.fromJson<String>(json['cik']),
+      addedAt: serializer.fromJson<DateTime>(json['addedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'watchlistId': serializer.toJson<int>(watchlistId),
+      'cik': serializer.toJson<String>(cik),
+      'addedAt': serializer.toJson<DateTime>(addedAt),
+    };
+  }
+
+  WatchlistEntryRow copyWith({
+    int? watchlistId,
+    String? cik,
+    DateTime? addedAt,
+  }) => WatchlistEntryRow(
+    watchlistId: watchlistId ?? this.watchlistId,
+    cik: cik ?? this.cik,
+    addedAt: addedAt ?? this.addedAt,
+  );
+  WatchlistEntryRow copyWithCompanion(WatchlistEntriesCompanion data) {
+    return WatchlistEntryRow(
+      watchlistId: data.watchlistId.present
+          ? data.watchlistId.value
+          : this.watchlistId,
+      cik: data.cik.present ? data.cik.value : this.cik,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchlistEntryRow(')
+          ..write('watchlistId: $watchlistId, ')
+          ..write('cik: $cik, ')
+          ..write('addedAt: $addedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(watchlistId, cik, addedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WatchlistEntryRow &&
+          other.watchlistId == this.watchlistId &&
+          other.cik == this.cik &&
+          other.addedAt == this.addedAt);
+}
+
+class WatchlistEntriesCompanion extends UpdateCompanion<WatchlistEntryRow> {
+  final Value<int> watchlistId;
+  final Value<String> cik;
+  final Value<DateTime> addedAt;
+  final Value<int> rowid;
+  const WatchlistEntriesCompanion({
+    this.watchlistId = const Value.absent(),
+    this.cik = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  WatchlistEntriesCompanion.insert({
+    required int watchlistId,
+    required String cik,
+    required DateTime addedAt,
+    this.rowid = const Value.absent(),
+  }) : watchlistId = Value(watchlistId),
+       cik = Value(cik),
+       addedAt = Value(addedAt);
+  static Insertable<WatchlistEntryRow> custom({
+    Expression<int>? watchlistId,
+    Expression<String>? cik,
+    Expression<DateTime>? addedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (watchlistId != null) 'watchlist_id': watchlistId,
+      if (cik != null) 'cik': cik,
+      if (addedAt != null) 'added_at': addedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  WatchlistEntriesCompanion copyWith({
+    Value<int>? watchlistId,
+    Value<String>? cik,
+    Value<DateTime>? addedAt,
+    Value<int>? rowid,
+  }) {
+    return WatchlistEntriesCompanion(
+      watchlistId: watchlistId ?? this.watchlistId,
+      cik: cik ?? this.cik,
+      addedAt: addedAt ?? this.addedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (watchlistId.present) {
+      map['watchlist_id'] = Variable<int>(watchlistId.value);
+    }
+    if (cik.present) {
+      map['cik'] = Variable<String>(cik.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<DateTime>(addedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('WatchlistEntriesCompanion(')
+          ..write('watchlistId: $watchlistId, ')
+          ..write('cik: $cik, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2048,6 +3365,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FiscalYearsTable fiscalYears = $FiscalYearsTable(this);
   late final $FiscalQuartersTable fiscalQuarters = $FiscalQuartersTable(this);
   late final $IngestRunsTable ingestRuns = $IngestRunsTable(this);
+  late final $SharePricesTable sharePrices = $SharePricesTable(this);
+  late final $WatchlistsTable watchlists = $WatchlistsTable(this);
+  late final $WatchlistEntriesTable watchlistEntries = $WatchlistEntriesTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2058,19 +3380,34 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     fiscalYears,
     fiscalQuarters,
     ingestRuns,
+    sharePrices,
+    watchlists,
+    watchlistEntries,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'watchlists',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('watchlist_entries', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$CompaniesTableCreateCompanionBuilder = CompaniesCompanion Function({
   required String cik,
   required String name,
   Value<int?> sic,
+  Value<double?> sharesOutstanding,
   Value<int> rowid,
 });
 typedef $$CompaniesTableUpdateCompanionBuilder = CompaniesCompanion Function({
   Value<String> cik,
   Value<String> name,
   Value<int?> sic,
+  Value<double?> sharesOutstanding,
   Value<int> rowid,
 });
 
@@ -2136,6 +3473,11 @@ class $$CompaniesTableFilterComposer
 
   ColumnFilters<int> get sic => $composableBuilder(
     column: $table.sic,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get sharesOutstanding => $composableBuilder(
+    column: $table.sharesOutstanding,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2213,6 +3555,11 @@ class $$CompaniesTableOrderingComposer
     column: $table.sic,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<double> get sharesOutstanding => $composableBuilder(
+    column: $table.sharesOutstanding,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CompaniesTableAnnotationComposer
@@ -2232,6 +3579,11 @@ class $$CompaniesTableAnnotationComposer
 
   GeneratedColumn<int> get sic =>
       $composableBuilder(column: $table.sic, builder: (column) => column);
+
+  GeneratedColumn<double> get sharesOutstanding => $composableBuilder(
+    column: $table.sharesOutstanding,
+    builder: (column) => column,
+  );
 
   Expression<T> fiscalYearsRefs<T extends Object>(
     Expression<T> Function($$FiscalYearsTableAnnotationComposer a) f,
@@ -2318,11 +3670,13 @@ class $$CompaniesTableTableManager
                 Value<String> cik = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<int?> sic = const Value.absent(),
+                Value<double?> sharesOutstanding = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CompaniesCompanion(
                 cik: cik,
                 name: name,
                 sic: sic,
+                sharesOutstanding: sharesOutstanding,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2330,11 +3684,13 @@ class $$CompaniesTableTableManager
                 required String cik,
                 required String name,
                 Value<int?> sic = const Value.absent(),
+                Value<double?> sharesOutstanding = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CompaniesCompanion.insert(
                 cik: cik,
                 name: name,
                 sic: sic,
+                sharesOutstanding: sharesOutstanding,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -2584,6 +3940,11 @@ typedef $$FiscalYearsTableCreateCompanionBuilder =
       Value<double?> capitalExpenditure,
       Value<double?> totalDebt,
       Value<double?> cash,
+      Value<double?> dilutedShares,
+      Value<double?> operatingIncome,
+      Value<double?> depreciationAmortisation,
+      Value<double?> totalAssets,
+      Value<double?> shareholdersEquity,
       Value<int> rowid,
     });
 typedef $$FiscalYearsTableUpdateCompanionBuilder =
@@ -2596,6 +3957,11 @@ typedef $$FiscalYearsTableUpdateCompanionBuilder =
       Value<double?> capitalExpenditure,
       Value<double?> totalDebt,
       Value<double?> cash,
+      Value<double?> dilutedShares,
+      Value<double?> operatingIncome,
+      Value<double?> depreciationAmortisation,
+      Value<double?> totalAssets,
+      Value<double?> shareholdersEquity,
       Value<int> rowid,
     });
 
@@ -2662,6 +4028,31 @@ class $$FiscalYearsTableFilterComposer
 
   ColumnFilters<double> get cash => $composableBuilder(
     column: $table.cash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dilutedShares => $composableBuilder(
+    column: $table.dilutedShares,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get operatingIncome => $composableBuilder(
+    column: $table.operatingIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get depreciationAmortisation => $composableBuilder(
+    column: $table.depreciationAmortisation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalAssets => $composableBuilder(
+    column: $table.totalAssets,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get shareholdersEquity => $composableBuilder(
+    column: $table.shareholdersEquity,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2733,6 +4124,31 @@ class $$FiscalYearsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get dilutedShares => $composableBuilder(
+    column: $table.dilutedShares,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get operatingIncome => $composableBuilder(
+    column: $table.operatingIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get depreciationAmortisation => $composableBuilder(
+    column: $table.depreciationAmortisation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalAssets => $composableBuilder(
+    column: $table.totalAssets,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get shareholdersEquity => $composableBuilder(
+    column: $table.shareholdersEquity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CompaniesTableOrderingComposer get cik {
     final $$CompaniesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2792,6 +4208,31 @@ class $$FiscalYearsTableAnnotationComposer
 
   GeneratedColumn<double> get cash =>
       $composableBuilder(column: $table.cash, builder: (column) => column);
+
+  GeneratedColumn<double> get dilutedShares => $composableBuilder(
+    column: $table.dilutedShares,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get operatingIncome => $composableBuilder(
+    column: $table.operatingIncome,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get depreciationAmortisation => $composableBuilder(
+    column: $table.depreciationAmortisation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalAssets => $composableBuilder(
+    column: $table.totalAssets,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get shareholdersEquity => $composableBuilder(
+    column: $table.shareholdersEquity,
+    builder: (column) => column,
+  );
 
   $$CompaniesTableAnnotationComposer get cik {
     final $$CompaniesTableAnnotationComposer composer = $composerBuilder(
@@ -2853,6 +4294,11 @@ class $$FiscalYearsTableTableManager
                 Value<double?> capitalExpenditure = const Value.absent(),
                 Value<double?> totalDebt = const Value.absent(),
                 Value<double?> cash = const Value.absent(),
+                Value<double?> dilutedShares = const Value.absent(),
+                Value<double?> operatingIncome = const Value.absent(),
+                Value<double?> depreciationAmortisation = const Value.absent(),
+                Value<double?> totalAssets = const Value.absent(),
+                Value<double?> shareholdersEquity = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion(
                 cik: cik,
@@ -2863,6 +4309,11 @@ class $$FiscalYearsTableTableManager
                 capitalExpenditure: capitalExpenditure,
                 totalDebt: totalDebt,
                 cash: cash,
+                dilutedShares: dilutedShares,
+                operatingIncome: operatingIncome,
+                depreciationAmortisation: depreciationAmortisation,
+                totalAssets: totalAssets,
+                shareholdersEquity: shareholdersEquity,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2875,6 +4326,11 @@ class $$FiscalYearsTableTableManager
                 Value<double?> capitalExpenditure = const Value.absent(),
                 Value<double?> totalDebt = const Value.absent(),
                 Value<double?> cash = const Value.absent(),
+                Value<double?> dilutedShares = const Value.absent(),
+                Value<double?> operatingIncome = const Value.absent(),
+                Value<double?> depreciationAmortisation = const Value.absent(),
+                Value<double?> totalAssets = const Value.absent(),
+                Value<double?> shareholdersEquity = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion.insert(
                 cik: cik,
@@ -2885,6 +4341,11 @@ class $$FiscalYearsTableTableManager
                 capitalExpenditure: capitalExpenditure,
                 totalDebt: totalDebt,
                 cash: cash,
+                dilutedShares: dilutedShares,
+                operatingIncome: operatingIncome,
+                depreciationAmortisation: depreciationAmortisation,
+                totalAssets: totalAssets,
+                shareholdersEquity: shareholdersEquity,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -3557,6 +5018,778 @@ typedef $$IngestRunsTableProcessedTableManager =
       IngestRunRow,
       PrefetchHooks Function()
     >;
+typedef $$SharePricesTableCreateCompanionBuilder =
+    SharePricesCompanion Function({
+      required String cik,
+      required double pricePerShare,
+      required DateTime asOf,
+      Value<bool> isQuoted,
+      Value<int> rowid,
+    });
+typedef $$SharePricesTableUpdateCompanionBuilder =
+    SharePricesCompanion Function({
+      Value<String> cik,
+      Value<double> pricePerShare,
+      Value<DateTime> asOf,
+      Value<bool> isQuoted,
+      Value<int> rowid,
+    });
+
+class $$SharePricesTableFilterComposer
+    extends Composer<_$AppDatabase, $SharePricesTable> {
+  $$SharePricesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pricePerShare => $composableBuilder(
+    column: $table.pricePerShare,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get asOf => $composableBuilder(
+    column: $table.asOf,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isQuoted => $composableBuilder(
+    column: $table.isQuoted,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SharePricesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SharePricesTable> {
+  $$SharePricesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pricePerShare => $composableBuilder(
+    column: $table.pricePerShare,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get asOf => $composableBuilder(
+    column: $table.asOf,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isQuoted => $composableBuilder(
+    column: $table.isQuoted,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SharePricesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SharePricesTable> {
+  $$SharePricesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cik =>
+      $composableBuilder(column: $table.cik, builder: (column) => column);
+
+  GeneratedColumn<double> get pricePerShare => $composableBuilder(
+    column: $table.pricePerShare,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get asOf =>
+      $composableBuilder(column: $table.asOf, builder: (column) => column);
+
+  GeneratedColumn<bool> get isQuoted =>
+      $composableBuilder(column: $table.isQuoted, builder: (column) => column);
+}
+
+class $$SharePricesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SharePricesTable,
+          SharePriceRow,
+          $$SharePricesTableFilterComposer,
+          $$SharePricesTableOrderingComposer,
+          $$SharePricesTableAnnotationComposer,
+          $$SharePricesTableCreateCompanionBuilder,
+          $$SharePricesTableUpdateCompanionBuilder,
+          (
+            SharePriceRow,
+            BaseReferences<_$AppDatabase, $SharePricesTable, SharePriceRow>,
+          ),
+          SharePriceRow,
+          PrefetchHooks Function()
+        > {
+  $$SharePricesTableTableManager(_$AppDatabase db, $SharePricesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SharePricesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SharePricesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SharePricesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cik = const Value.absent(),
+                Value<double> pricePerShare = const Value.absent(),
+                Value<DateTime> asOf = const Value.absent(),
+                Value<bool> isQuoted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SharePricesCompanion(
+                cik: cik,
+                pricePerShare: pricePerShare,
+                asOf: asOf,
+                isQuoted: isQuoted,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cik,
+                required double pricePerShare,
+                required DateTime asOf,
+                Value<bool> isQuoted = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SharePricesCompanion.insert(
+                cik: cik,
+                pricePerShare: pricePerShare,
+                asOf: asOf,
+                isQuoted: isQuoted,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SharePricesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SharePricesTable,
+      SharePriceRow,
+      $$SharePricesTableFilterComposer,
+      $$SharePricesTableOrderingComposer,
+      $$SharePricesTableAnnotationComposer,
+      $$SharePricesTableCreateCompanionBuilder,
+      $$SharePricesTableUpdateCompanionBuilder,
+      (
+        SharePriceRow,
+        BaseReferences<_$AppDatabase, $SharePricesTable, SharePriceRow>,
+      ),
+      SharePriceRow,
+      PrefetchHooks Function()
+    >;
+typedef $$WatchlistsTableCreateCompanionBuilder = WatchlistsCompanion Function({
+  Value<int> id,
+  required String name,
+  required int colourIndex,
+  Value<bool> isDefault,
+  required DateTime createdAt,
+});
+typedef $$WatchlistsTableUpdateCompanionBuilder = WatchlistsCompanion Function({
+  Value<int> id,
+  Value<String> name,
+  Value<int> colourIndex,
+  Value<bool> isDefault,
+  Value<DateTime> createdAt,
+});
+
+final class $$WatchlistsTableReferences
+    extends BaseReferences<_$AppDatabase, $WatchlistsTable, WatchlistRow> {
+  $$WatchlistsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$WatchlistEntriesTable, List<WatchlistEntryRow>>
+  _watchlistEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.watchlistEntries,
+    aliasName: 'watchlists__id__watchlist_entries__watchlist_id',
+  );
+
+  $$WatchlistEntriesTableProcessedTableManager get watchlistEntriesRefs {
+    final manager = $$WatchlistEntriesTableTableManager(
+      $_db,
+      $_db.watchlistEntries,
+    ).filter((f) => f.watchlistId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _watchlistEntriesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$WatchlistsTableFilterComposer
+    extends Composer<_$AppDatabase, $WatchlistsTable> {
+  $$WatchlistsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colourIndex => $composableBuilder(
+    column: $table.colourIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> watchlistEntriesRefs(
+    Expression<bool> Function($$WatchlistEntriesTableFilterComposer f) f,
+  ) {
+    final $$WatchlistEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchlistEntries,
+      getReferencedColumn: (t) => t.watchlistId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchlistEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.watchlistEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$WatchlistsTableOrderingComposer
+    extends Composer<_$AppDatabase, $WatchlistsTable> {
+  $$WatchlistsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get colourIndex => $composableBuilder(
+    column: $table.colourIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$WatchlistsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WatchlistsTable> {
+  $$WatchlistsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get colourIndex => $composableBuilder(
+    column: $table.colourIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> watchlistEntriesRefs<T extends Object>(
+    Expression<T> Function($$WatchlistEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$WatchlistEntriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.watchlistEntries,
+      getReferencedColumn: (t) => t.watchlistId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchlistEntriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.watchlistEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$WatchlistsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WatchlistsTable,
+          WatchlistRow,
+          $$WatchlistsTableFilterComposer,
+          $$WatchlistsTableOrderingComposer,
+          $$WatchlistsTableAnnotationComposer,
+          $$WatchlistsTableCreateCompanionBuilder,
+          $$WatchlistsTableUpdateCompanionBuilder,
+          (WatchlistRow, $$WatchlistsTableReferences),
+          WatchlistRow,
+          PrefetchHooks Function({bool watchlistEntriesRefs})
+        > {
+  $$WatchlistsTableTableManager(_$AppDatabase db, $WatchlistsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WatchlistsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WatchlistsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WatchlistsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> colourIndex = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => WatchlistsCompanion(
+                id: id,
+                name: name,
+                colourIndex: colourIndex,
+                isDefault: isDefault,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required int colourIndex,
+                Value<bool> isDefault = const Value.absent(),
+                required DateTime createdAt,
+              }) => WatchlistsCompanion.insert(
+                id: id,
+                name: name,
+                colourIndex: colourIndex,
+                isDefault: isDefault,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$WatchlistsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({watchlistEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (watchlistEntriesRefs) db.watchlistEntries,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (watchlistEntriesRefs)
+                    await $_getPrefetchedData<
+                      WatchlistRow,
+                      $WatchlistsTable,
+                      WatchlistEntryRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$WatchlistsTableReferences
+                          ._watchlistEntriesRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$WatchlistsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).watchlistEntriesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.watchlistId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WatchlistsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WatchlistsTable,
+      WatchlistRow,
+      $$WatchlistsTableFilterComposer,
+      $$WatchlistsTableOrderingComposer,
+      $$WatchlistsTableAnnotationComposer,
+      $$WatchlistsTableCreateCompanionBuilder,
+      $$WatchlistsTableUpdateCompanionBuilder,
+      (WatchlistRow, $$WatchlistsTableReferences),
+      WatchlistRow,
+      PrefetchHooks Function({bool watchlistEntriesRefs})
+    >;
+typedef $$WatchlistEntriesTableCreateCompanionBuilder =
+    WatchlistEntriesCompanion Function({
+      required int watchlistId,
+      required String cik,
+      required DateTime addedAt,
+      Value<int> rowid,
+    });
+typedef $$WatchlistEntriesTableUpdateCompanionBuilder =
+    WatchlistEntriesCompanion Function({
+      Value<int> watchlistId,
+      Value<String> cik,
+      Value<DateTime> addedAt,
+      Value<int> rowid,
+    });
+
+final class $$WatchlistEntriesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $WatchlistEntriesTable,
+          WatchlistEntryRow
+        > {
+  $$WatchlistEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $WatchlistsTable _watchlistIdTable(_$AppDatabase db) => db.watchlists
+      .createAlias('watchlist_entries__watchlist_id__watchlists__id');
+
+  $$WatchlistsTableProcessedTableManager get watchlistId {
+    final $_column = $_itemColumn<int>('watchlist_id')!;
+
+    final manager = $$WatchlistsTableTableManager(
+      $_db,
+      $_db.watchlists,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_watchlistIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$WatchlistEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $WatchlistEntriesTable> {
+  $$WatchlistEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$WatchlistsTableFilterComposer get watchlistId {
+    final $$WatchlistsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.watchlistId,
+      referencedTable: $db.watchlists,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchlistsTableFilterComposer(
+            $db: $db,
+            $table: $db.watchlists,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchlistEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $WatchlistEntriesTable> {
+  $$WatchlistEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$WatchlistsTableOrderingComposer get watchlistId {
+    final $$WatchlistsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.watchlistId,
+      referencedTable: $db.watchlists,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchlistsTableOrderingComposer(
+            $db: $db,
+            $table: $db.watchlists,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchlistEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $WatchlistEntriesTable> {
+  $$WatchlistEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cik =>
+      $composableBuilder(column: $table.cik, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  $$WatchlistsTableAnnotationComposer get watchlistId {
+    final $$WatchlistsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.watchlistId,
+      referencedTable: $db.watchlists,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$WatchlistsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.watchlists,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$WatchlistEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $WatchlistEntriesTable,
+          WatchlistEntryRow,
+          $$WatchlistEntriesTableFilterComposer,
+          $$WatchlistEntriesTableOrderingComposer,
+          $$WatchlistEntriesTableAnnotationComposer,
+          $$WatchlistEntriesTableCreateCompanionBuilder,
+          $$WatchlistEntriesTableUpdateCompanionBuilder,
+          (WatchlistEntryRow, $$WatchlistEntriesTableReferences),
+          WatchlistEntryRow,
+          PrefetchHooks Function({bool watchlistId})
+        > {
+  $$WatchlistEntriesTableTableManager(
+    _$AppDatabase db,
+    $WatchlistEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$WatchlistEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$WatchlistEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$WatchlistEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> watchlistId = const Value.absent(),
+                Value<String> cik = const Value.absent(),
+                Value<DateTime> addedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => WatchlistEntriesCompanion(
+                watchlistId: watchlistId,
+                cik: cik,
+                addedAt: addedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int watchlistId,
+                required String cik,
+                required DateTime addedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => WatchlistEntriesCompanion.insert(
+                watchlistId: watchlistId,
+                cik: cik,
+                addedAt: addedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$WatchlistEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({watchlistId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (watchlistId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.watchlistId,
+                        referencedTable: $$WatchlistEntriesTableReferences
+                            ._watchlistIdTable(db),
+                        referencedColumn: $$WatchlistEntriesTableReferences
+                            ._watchlistIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$WatchlistEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $WatchlistEntriesTable,
+      WatchlistEntryRow,
+      $$WatchlistEntriesTableFilterComposer,
+      $$WatchlistEntriesTableOrderingComposer,
+      $$WatchlistEntriesTableAnnotationComposer,
+      $$WatchlistEntriesTableCreateCompanionBuilder,
+      $$WatchlistEntriesTableUpdateCompanionBuilder,
+      (WatchlistEntryRow, $$WatchlistEntriesTableReferences),
+      WatchlistEntryRow,
+      PrefetchHooks Function({bool watchlistId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3571,4 +5804,10 @@ class $AppDatabaseManager {
       $$FiscalQuartersTableTableManager(_db, _db.fiscalQuarters);
   $$IngestRunsTableTableManager get ingestRuns =>
       $$IngestRunsTableTableManager(_db, _db.ingestRuns);
+  $$SharePricesTableTableManager get sharePrices =>
+      $$SharePricesTableTableManager(_db, _db.sharePrices);
+  $$WatchlistsTableTableManager get watchlists =>
+      $$WatchlistsTableTableManager(_db, _db.watchlists);
+  $$WatchlistEntriesTableTableManager get watchlistEntries =>
+      $$WatchlistEntriesTableTableManager(_db, _db.watchlistEntries);
 }

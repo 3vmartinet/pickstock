@@ -6,19 +6,25 @@
     // These configurations run against the fvm-managed SDK, which is bound in
     // .vscode/settings.json via "dart.flutterSdkPath". There is no per-launch
     // SDK setting; changing that one setting redirects every entry below.
+    //
+    // `--dart-define-from-file=env.json` supplies the Finnhub API key, which is
+    // gitignored. Without it the app runs fine and the share price is typed in;
+    // copy env.example.json to env.json and paste a key to get live quotes.
     "version": "0.2.0",
     "configurations": [
         {
             "name": "pickstock (macOS)",
             "request": "launch",
             "type": "dart",
-            "deviceId": "macos"
+            "deviceId": "macos",
+            "toolArgs": ["--dart-define-from-file=env.json"]
         },
         {
             "name": "pickstock (Linux)",
             "request": "launch",
             "type": "dart",
-            "deviceId": "linux"
+            "deviceId": "linux",
+            "toolArgs": ["--dart-define-from-file=env.json"]
         },
         {
             "name": "pickstock (mock data, no database)",
@@ -32,13 +38,15 @@
             "name": "pickstock (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "toolArgs": ["--dart-define-from-file=env.json"]
         },
         {
             "name": "pickstock (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "toolArgs": ["--dart-define-from-file=env.json"]
         }
     ]
 }

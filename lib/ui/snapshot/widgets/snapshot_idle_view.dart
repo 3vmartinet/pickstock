@@ -72,7 +72,7 @@ class _SuggestedTickers extends StatelessWidget {
     return Column(
       spacing: ThemeRepo.spaceSmall,
       children: [
-        Text(context.strings.searchExamples).muted().xSmall(),
+        Text(context.strings.idleShortcuts).muted().xSmall(),
         Wrap(
           spacing: ThemeRepo.spaceSmall,
           runSpacing: ThemeRepo.spaceSmall,

@@ -1,12 +1,16 @@
-import 'package:pickstock/ui/browse/browse_screen.dart';
+import 'package:pickstock/ui/company/company_screen.dart';
+import 'package:pickstock/ui/home/home_screen.dart';
 import 'package:pickstock/ui/ingest/ingest_gate.dart';
-import 'package:pickstock/ui/snapshot/snapshot_screen.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// Every destination in the app, and how to build it.
 enum AppRoute {
-  snapshot(path: '/'),
-  browse(path: '/browse');
+  /// The ticker list, which is the app's main screen.
+  home(path: '/'),
+
+  /// One company's report. Only pushed on windows too narrow to show it
+  /// beside the list.
+  company(path: '/company');
 
   const AppRoute({required this.path});
 
@@ -17,8 +21,8 @@ enum AppRoute {
   Widget build() => IngestGate(child: _screen());
 
   Widget _screen() => switch (this) {
-    AppRoute.snapshot => const SnapshotScreen(),
-    AppRoute.browse => const BrowseScreen(),
+    AppRoute.home => const HomeScreen(),
+    AppRoute.company => const CompanyScreen(),
   };
 
   static Map<String, WidgetBuilder> get routes => {

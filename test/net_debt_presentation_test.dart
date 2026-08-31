@@ -42,7 +42,7 @@ void main() {
     expect(find.text('Net cash'), findsNothing);
     // And the sanity check agrees with it.
     expect(find.text('More cash than debt?'), findsOneWidget);
-    expect(find.text('Net debt of \$62.7B'), findsOneWidget);
+    expect(find.text('Net debt of \$44B'), findsOneWidget);
   });
 
   testWidgets('a filer holding more cash than debt is headed Net cash', (
@@ -58,7 +58,7 @@ void main() {
     await report(tester, 'AAPL');
 
     // Not a percentage: net debt turning into net cash has no sensible rate.
-    expect(find.text('was net debt of \$76.7B'), findsOneWidget);
+    expect(find.text('was net debt of \$41.5B'), findsOneWidget);
   });
 
   testWidgets('the table signs net debt rather than bracketing it', (
@@ -78,7 +78,8 @@ void main() {
 
     expect(
       find.text(
-        'Net debt is negative when a company holds more cash than it owes.',
+        'Cash includes short-term investments. Net debt is negative when a '
+        'company holds more of it than it owes.',
       ),
       findsOneWidget,
     );

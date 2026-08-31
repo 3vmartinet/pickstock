@@ -2,28 +2,34 @@
   "@@locale": "en",
 
   "appTitle": "PickStock",
-  "appSubtitle": "Financial health snapshots from SEC EDGAR",
 
   "stageDirectoryLabel": "Ticker directory",
   "stageDirectoryDetail": "Symbols and company names",
+  "statDownloaded": "Downloaded",
+  "statLoaded": "Companies read",
+  "statDataSets": "Data sets",
+  "statSpeed": "Speed",
+  "statRemaining": "Remaining",
+  "statPending": "—",
+
   "stageSectorsLabel": "Industry codes",
   "stageSectorsDetail": "A sector for each filer, about 60 MB a quarter",
-  "ingestDataSets": "{read} of {total} data sets",
+  "ingestDataSets": "{read} / {total}",
   "@ingestDataSets": { "placeholders": { "read": { "type": "int" }, "total": { "type": "int" } } },
   "stageDownloadLabel": "SEC bulk archive",
   "stageDownloadDetail": "About 1.4 GB, downloaded once",
   "stageLoadLabel": "Local database",
   "stageLoadDetail": "Reading filings for every company",
   "ingestPreparing": "Preparing your data",
-  "ingestBytesOfTotal": "{received} of {total}",
+  "ingestBytesOfTotal": "{received} / {total}",
   "@ingestBytesOfTotal": { "placeholders": { "received": { "type": "String" }, "total": { "type": "String" } } },
   "ingestRate": "{rate}/s",
   "@ingestRate": { "placeholders": { "rate": { "type": "String" } } },
-  "ingestRateCompanies": "{rate} companies/s",
+  "ingestRateCompanies": "{rate}/s",
   "@ingestRateCompanies": { "placeholders": { "rate": { "type": "int", "format": "decimalPattern" } } },
-  "ingestRemaining": "{duration} left",
+  "ingestRemaining": "{duration}",
   "@ingestRemaining": { "placeholders": { "duration": { "type": "String" } } },
-  "ingestCompaniesOfTotal": "{loaded} of {total} companies",
+  "ingestCompaniesOfTotal": "{loaded} / {total}",
   "@ingestCompaniesOfTotal": { "placeholders": { "loaded": { "type": "int", "format": "decimalPattern" }, "total": { "type": "int", "format": "decimalPattern" } } },
   "durationMinutesSeconds": "{minutes}m {seconds}s",
   "@durationMinutesSeconds": { "placeholders": { "minutes": { "type": "int" }, "seconds": { "type": "int" } } },
@@ -41,32 +47,18 @@
   "updateAvailable": "Update available",
   "updateAvailableOn": "SEC rebuilt the archive on {date}. Download it to refresh your figures.",
   "@updateAvailableOn": { "placeholders": { "date": { "type": "DateTime", "format": "yMMMd" } } },
-  "ingestStageDirectory": "Fetching the ticker directory…",
-  "ingestStageDownload": "Downloading the archive… {percent}",
-  "@ingestStageDownload": { "placeholders": { "percent": { "type": "String" } } },
-  "ingestStageDownloadSized": "Downloading the archive… {received} of {total}",
-  "@ingestStageDownloadSized": { "placeholders": { "received": { "type": "String" }, "total": { "type": "String" } } },
-  "ingestStageLoad": "Loading filings into the database… {count} of {total} companies",
-  "@ingestStageLoad": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" }, "total": { "type": "int", "format": "decimalPattern" } } },
-  "ingestStageFinishing": "Finishing up…",
-  "ingestStageLoadHint": "Reading 20,000 filings takes a few minutes.",
   "ingestWarnLeave": "This takes a few minutes. Leave the app open.",
 
   "toggleTheme": "Toggle light / dark theme",
 
-  "searchPlaceholder": "Search by symbol or company name",
-  "searchExamples": "Try one of these",
 
-  "browseTitle": "All tickers",
   "browseSubtitle": "{count, plural, =1{1 symbol} other{{count} symbols}} filed with SEC EDGAR",
   "@browseSubtitle": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
-  "browseOpen": "Browse all tickers",
   "sortByName": "Name (A–Z)",
   "sortRevenueOneYear": "Revenue growth, 1 year",
   "sortRevenueYears": "Revenue growth, {years}-year annualised",
   "@sortRevenueYears": { "placeholders": { "years": { "type": "int" } } },
   "sortFreeCashFlowOneYear": "Free cash flow growth, 1 year",
-  "browseSortLabel": "Sort",
   "sectorTechnology": "Tech",
   "sectorHealthcare": "Pharma & health",
   "sectorFinancials": "Finance",
@@ -88,13 +80,12 @@
   "browseEmptyTitle": "No matching symbols",
   "browseEmptyBody": "Nothing in EDGAR's directory matches \"{query}\".",
   "@browseEmptyBody": { "placeholders": { "query": { "type": "String" } } },
-  "browseBack": "Back to the report",
+  "backToList": "Back to the list",
 
+  "idleShortcuts": "Or start with one of these",
   "idleTitle": "Check a company before you invest",
-  "idleBody": "Type a ticker symbol or a company name to pull the last three fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from the company's own 10-K filings.",
+  "idleBody": "Pick a company from the list to pull ten fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from its own 10-K filings.",
 
-  "loadingResolving": "Looking up {ticker} in the SEC ticker registry…",
-  "@loadingResolving": { "placeholders": { "ticker": { "type": "String" } } },
   "loadingFetching": "Fetching XBRL company facts for {ticker}…",
   "@loadingFetching": { "placeholders": { "ticker": { "type": "String" } } },
 
@@ -152,8 +143,6 @@
   "labelRevenueGrowth": "Rev YoY",
   "labelNetIncome": "Net income",
   "labelFreeCashFlow": "Free cash flow",
-  "labelOperatingCashFlow": "Operating cash flow",
-  "labelCapitalExpenditure": "Capital expenditure",
   "labelTotalDebt": "Total debt",
   "labelCash": "Cash",
   "labelNetDebt": "Net debt",
@@ -177,14 +166,270 @@
   "hintRevenue": "Top-line sales reported on the income statement.",
   "hintNetIncome": "Bottom-line profit after every cost, tax and one-off.",
   "hintFreeCashFlow": "Operating cash flow minus capital expenditure — the cash the business actually keeps.",
-  "hintNetDebt": "Total borrowings minus cash. A negative figure is a net cash position: the company holds more cash than debt.",
+  "hintNetDebt": "Total borrowings minus cash, equivalents and short-term investments. A negative figure is a net cash position: the company holds more than it owes. Short-term investments count because treasuries and commercial paper settle a debt as readily as cash — Microsoft keeps three quarters of its money there.",
 
   "deltaVersusPriorYear": "vs FY{year}",
   "@deltaVersusPriorYear": { "placeholders": { "year": { "type": "String" } } },
 
-  "footnoteNegatives": "Net debt is negative when a company holds more cash than it owes.",
-  "footnoteSource": "Source: SEC EDGAR XBRL company facts. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.",
-  "footnoteQuarters": "Fourth-quarter income and cash-flow figures are derived by subtracting the first three quarters from the full year; balance-sheet figures are as filed.",
+  "sectionValuation": "Valuation",
+  "labelSharePrice": "Share price",
+  "hintSharePrice": "The price one share trades at. Quoted from Finnhub where a key is configured, and yours to type over either way — everything else in this report comes from the filings.",
+  "placeholderSharePrice": "0.00",
+  "valuationIdle": "Enter the current share price to see how it compares with what the filings say the business earns.",
+  "footnotePriceSource": "Prices come from Finnhub and are cached until they go stale; typing over one replaces it. Everything else is from the filings.",
+  "valuationNoShareCount": "No share count is on file for this company, so its value cannot be split per share.",
 
-  "unitMillionsSuffix": "M"
+  "quoteLive": "Live · {time}",
+  "@quoteLive": { "placeholders": { "time": { "type": "String" } } },
+  "quoteStale": "Last quote · {time}",
+  "@quoteStale": { "placeholders": { "time": { "type": "String" } } },
+  "quoteEntered": "Your price",
+  "quoteFetching": "Fetching the price…",
+  "quoteRefresh": "Fetch the current price",
+  "quoteNotConfigured": "No quote service is configured, so the price is yours to enter.",
+  "quoteNoCoverage": "No quote for this symbol — enter a price to value it.",
+  "quoteRateLimited": "The minute's quote allowance is spent. Try again shortly.",
+  "quoteNetwork": "Could not reach the quote service.",
+  "quoteService": "The quote service refused the request.",
+
+  "verdictUndervalued": "Undervalued",
+  "verdictFairlyValued": "Fairly valued",
+  "verdictOvervalued": "Overvalued",
+  "verdictNotValuable": "Cannot be valued",
+  "detailUndervalued": "The price is below the range these earnings support.",
+  "detailFairlyValued": "The price sits inside the range these earnings support.",
+  "detailOvervalued": "The price is above the range these earnings support.",
+  "detailNotValuable": "The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.",
+
+  "labelFairValueRange": "Fair range",
+  "labelUpside": "To mid-range",
+  "labelMarketCap": "Market value",
+  "labelEnterpriseValue": "Enterprise value",
+  "labelEarningsPerShare": "Earnings per share",
+  "fairValueRange": "{low} – {high}",
+  "@fairValueRange": {
+    "placeholders": {
+      "low": { "type": "String" },
+      "high": { "type": "String" }
+    }
+  },
+  "valuationBasisLine": "{low}× to {high}× {basis} of {amount}, less net debt, over {shares} shares",
+  "@valuationBasisLine": {
+    "placeholders": {
+      "low": { "type": "String" },
+      "high": { "type": "String" },
+      "basis": { "type": "String" },
+      "amount": { "type": "String" },
+      "shares": { "type": "String" }
+    }
+  },
+  "valuationGrowthPremium": "Includes {points} points of multiple for {growth} annual revenue growth.",
+  "@valuationGrowthPremium": {
+    "placeholders": {
+      "points": { "type": "String" },
+      "growth": { "type": "String" }
+    }
+  },
+  "valuationNoGrowthPremium": "No growth premium: revenue is not growing on these filings.",
+  "basisFreeCashFlow": "free cash flow",
+  "basisEarnings": "net income",
+
+  "sectionExpectations": "What the price is asking",
+  "expectationRequired": "Growth the price requires",
+  "expectationDelivered": "Growth delivered over {years} years",
+  "@expectationDelivered": { "placeholders": { "years": { "type": "int" } } },
+  "expectationPerYear": "{percent} a year",
+  "@expectationPerYear": { "placeholders": { "percent": { "type": "String" } } },
+  "expectationBasis": "Discounting {amount} a year — this company's median free cash flow margin of {margin} on its latest revenue — over ten years, fading to 2.5%.",
+  "@expectationBasis": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "margin": { "type": "String" }
+    }
+  },
+  "expectationNormalised": "Its latest reported free cash flow was {reported}, {gap} against that, so the year as filed is not used on its own.",
+  "@expectationNormalised": {
+    "placeholders": {
+      "reported": { "type": "String" },
+      "gap": { "type": "String" }
+    }
+  },
+  "expectationSensitivity": "Required growth by the return a buyer wants",
+  "expectationWorth": "Worth a share if it repeats its record",
+  "expectationRate": "{percent} return",
+  "@expectationRate": { "placeholders": { "percent": { "type": "String" } } },
+
+  "verdictBelowRecord": "Asking less than it has delivered",
+  "verdictInLineWithRecord": "Asking about what it has delivered",
+  "verdictBeyondRecord": "Asking more than it has ever delivered",
+  "verdictExpectationUnknown": "Not enough history to judge the price",
+  "detailBelowRecord": "Even a buyer wanting an 11% return needs less growth than this company has managed. Either the market doubts the record repeats, or it has not noticed it.",
+  "detailInLineWithRecord": "The growth the price requires sits inside what the company has actually produced, so the price is a reasonable reading of the record rather than a bet against it.",
+  "detailBeyondRecord": "Even a buyer content with a 7% return needs more growth than this company has ever produced. That does not make the price wrong, but it does mean the case for it is not in the filings.",
+  "detailExpectationUnknown": "Too few years on file, or no positive cash flow to discount.",
+
+  "footnoteExpectations": "A discounted cash flow run backwards: the price is taken as given and the growth it implies is solved for, so the guess belongs to the market rather than to PickStock. The figure moves a long way with the return a buyer wants, which is why the whole band is shown.",
+
+  "watchlistAll": "All companies",
+  "watchlistFilterLabel": "List",
+  "watchlistCount": "{count, plural, =0{empty} =1{1 company} other{{count} companies}}",
+  "@watchlistCount": { "placeholders": { "count": { "type": "int" } } },
+  "watchlistManage": "Manage lists",
+  "watchlistNew": "New list",
+  "watchlistEdit": "Edit list",
+  "watchlistDelete": "Delete list",
+  "watchlistDeleteConfirm": "Delete “{name}”? The companies in it are not affected.",
+  "@watchlistDeleteConfirm": { "placeholders": { "name": { "type": "String" } } },
+  "watchlistNamePlaceholder": "Semiconductors, Dividend payers…",
+  "watchlistNameLabel": "Name",
+  "watchlistColourLabel": "Colour",
+  "watchlistSave": "Save",
+  "watchlistCancel": "Cancel",
+  "watchlistCreate": "Create",
+  "watchlistDefaultLocked": "The starred list cannot be deleted.",
+  "watchlistEmptyTitle": "No lists yet",
+  "watchlistEmptyBody": "Star a company, or make a list to group the ones you are watching.",
+  "watchlistNoMatchesTitle": "Nothing in this list",
+  "watchlistNoMatchesBody": "Open a company and add it to “{name}”.",
+  "@watchlistNoMatchesBody": { "placeholders": { "name": { "type": "String" } } },
+  "watchlistStarAdd": "Add to favourites",
+  "watchlistStarRemove": "Remove from favourites",
+  "watchlistAddTo": "Add to a list",
+  "watchlistInLists": "{count, plural, =1{In 1 list} other{In {count} lists}}",
+  "@watchlistInLists": { "placeholders": { "count": { "type": "int" } } },
+  "watchlistNotInAny": "Not in any list",
+
+  "napkinTitle": "How this was worked out",
+  "napkinSubtitle": "The whole calculation, in the order it happens.",
+
+  "napkinStep1Title": "Buying the whole company",
+  "napkinStep1Body": "A share costs {price}. There are {shares} of them, so buying every share costs {marketCap}. That is what the market says the company is worth.",
+  "@napkinStep1Body": {
+    "placeholders": {
+      "price": { "type": "String" },
+      "shares": { "type": "String" },
+      "marketCap": { "type": "String" }
+    }
+  },
+
+  "napkinStep2Title": "What you get for it",
+  "napkinStep2Body": "Last year the company collected {revenue} and, after every bill including new equipment, kept {freeCashFlow}. That leftover is the money the owners could actually take out.",
+  "@napkinStep2Body": {
+    "placeholders": {
+      "revenue": { "type": "String" },
+      "freeCashFlow": { "type": "String" }
+    }
+  },
+
+  "napkinStep3TitleDebt": "You also inherit the debts",
+  "napkinStep3TitleCash": "You also get the cash pile",
+  "napkinStep3BodyDebt": "It owes {netDebt} more than it holds. Buy the company and you owe that too, so the real cost is {enterpriseValue}.",
+  "@napkinStep3BodyDebt": {
+    "placeholders": {
+      "netDebt": { "type": "String" },
+      "enterpriseValue": { "type": "String" }
+    }
+  },
+  "napkinStep3BodyCash": "It holds {netCash} more than it owes. That cash comes with the company, so the real cost is only {enterpriseValue}.",
+  "@napkinStep3BodyCash": {
+    "placeholders": {
+      "netCash": { "type": "String" },
+      "enterpriseValue": { "type": "String" }
+    }
+  },
+
+  "napkinStep4Title": "How many years of cash is that?",
+  "napkinStep4Body": "{enterpriseValue} ÷ {freeCashFlow} a year = {years} years to earn the purchase price back, if nothing ever grows.",
+  "@napkinStep4Body": {
+    "placeholders": {
+      "enterpriseValue": { "type": "String" },
+      "freeCashFlow": { "type": "String" },
+      "years": { "type": "String" }
+    }
+  },
+
+  "napkinStep5Title": "How many years is fair?",
+  "napkinStep5BodyFlat": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.",
+  "napkinStep5BodyGrowing": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one grows {growth} a year, which buys it another {premium} years: {low} to {high}.",
+  "@napkinStep5BodyGrowing": {
+    "placeholders": {
+      "growth": { "type": "String" },
+      "premium": { "type": "String" },
+      "low": { "type": "String" },
+      "high": { "type": "String" }
+    }
+  },
+
+  "napkinStep6Title": "So what is a share worth?",
+  "napkinStep6Body": "{low} to {high} years of {basis} is {valueLow} to {valueHigh}. Settle the debts, divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.",
+  "@napkinStep6Body": {
+    "placeholders": {
+      "low": { "type": "String" },
+      "high": { "type": "String" },
+      "basis": { "type": "String" },
+      "valueLow": { "type": "String" },
+      "valueHigh": { "type": "String" },
+      "shares": { "type": "String" },
+      "rangeLow": { "type": "String" },
+      "rangeHigh": { "type": "String" }
+    }
+  },
+
+  "napkinStep7Title": "And the answer",
+  "napkinStep7BodyUnder": "You are paying {price}, below the {rangeLow}–{rangeHigh} the earnings support. That is the cheap side.",
+  "napkinStep7BodyFair": "You are paying {price}, inside the {rangeLow}–{rangeHigh} the earnings support. That is a normal price.",
+  "napkinStep7BodyOver": "You are paying {price}, above the {rangeLow}–{rangeHigh} the earnings support. You are paying for growth that has not happened yet.",
+  "@napkinStep7BodyUnder": {
+    "placeholders": {
+      "price": { "type": "String" },
+      "rangeLow": { "type": "String" },
+      "rangeHigh": { "type": "String" }
+    }
+  },
+  "@napkinStep7BodyFair": {
+    "placeholders": {
+      "price": { "type": "String" },
+      "rangeLow": { "type": "String" },
+      "rangeHigh": { "type": "String" }
+    }
+  },
+  "@napkinStep7BodyOver": {
+    "placeholders": {
+      "price": { "type": "String" },
+      "rangeLow": { "type": "String" },
+      "rangeHigh": { "type": "String" }
+    }
+  },
+
+  "napkinCaveatTitle": "Worth knowing",
+  "napkinCaveatBuilding": "It spent {ratio}× more on equipment than wore out, so last year's leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.",
+  "@napkinCaveatBuilding": { "placeholders": { "ratio": { "type": "String" } } },
+  "napkinCaveatMargin": "Its profit margin is {points} points below its own ten-year normal, so the sales growth above is being won at a lower profit.",
+  "@napkinCaveatMargin": { "placeholders": { "points": { "type": "String" } } },
+  "napkinCaveatEarnings": "It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.",
+
+  "labelPriceEarnings": "P/E",
+  "labelEnterpriseValueToFreeCashFlow": "EV/FCF",
+  "labelFreeCashFlowYield": "FCF yield",
+  "labelGrowthAdjusted": "PEG",
+  "labelPriceToSales": "P/S",
+  "hintPriceEarnings": "Price divided by earnings per share: years of current profit the price costs. Blank at a loss, where the ratio means nothing.",
+  "hintEnterpriseValueToFreeCashFlow": "Enterprise value over free cash flow. Unlike P/E it counts debt, so a company that borrowed to buy its earnings looks dearer.",
+  "hintFreeCashFlowYield": "Free cash flow as a percentage of market value — what an owner earns at this price before any growth. Higher is cheaper.",
+  "hintGrowthAdjusted": "The earnings multiple divided by the annual revenue growth rate. Under 1 means the growth more than covers the multiple.",
+  "hintPriceToSales": "Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.",
+
+  "footnoteValuation": "The fair range is a heuristic: {low}–{high} times the latest year's {basis}, widened for revenue growth, less net debt. It is a frame for the price, not a target.",
+  "@footnoteValuation": {
+    "placeholders": {
+      "low": { "type": "String" },
+      "high": { "type": "String" },
+      "basis": { "type": "String" }
+    }
+  },
+
+  "footnoteNegatives": "Cash includes short-term investments. Net debt is negative when a company holds more of it than it owes.",
+  "footnoteSource": "Source: SEC EDGAR XBRL company facts. Figures in USD millions. A sanity check on the shape of the numbers — not investment advice.",
+  "footnoteQuarters": "Fourth-quarter income and cash-flow figures are derived by subtracting the first three quarters from the full year; balance-sheet figures are as filed."
+
 }
