@@ -20,11 +20,21 @@
             "toolArgs": ["--dart-define-from-file=env.json"]
         },
         {
+            // The legacy NVIDIA 390.x driver (Fermi-era GPUs) advertises GLES 3
+            // extensions it does not actually implement: samplerExternalOES has
+            // no matching texture() overload, and multisampled framebuffers
+            // never come back complete. Impeller hits both on its first frame
+            // and aborts the process, so this device falls back to Skia. The
+            // flag's help text claims it is ignored off Android; that is stale,
+            // it does take effect on Linux desktop.
             "name": "pickstock (Linux)",
             "request": "launch",
             "type": "dart",
             "deviceId": "linux",
-            "toolArgs": ["--dart-define-from-file=env.json"]
+            "toolArgs": ["--dart-define-from-file=env.json"],
+            "args": [
+                "--no-enable-impeller"
+            ]
         },
         {
             "name": "pickstock (mock data, no database)",
