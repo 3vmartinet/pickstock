@@ -159,6 +159,77 @@ void main() {
     expect(asked, isFalse);
   });
 
+  test('gives a stalled request a second chance', () async {
+    // Finnhub accepts the connection and then sends nothing, intermittently.
+    // One retry turns that into a price rather than an error.
+    var calls = 0;
+    final repo = _repo(
+      MockClient((_) async {
+        calls++;
+        if (calls == 1) {
+          await Future<void>.delayed(const Duration(seconds: 30));
+        }
+        return http.Response(_quoteBody(price: 219.64), 200);
+      }),
+    );
+
+    final quote = await repo.quoteFor('NVDA');
+
+    expect(calls, 2);
+    expect(quote.pricePerShare, 219.64);
+  }, timeout: const Timeout(Duration(seconds: 60)));
+
+  test('retries a service that is temporarily unavailable', () async {
+    var calls = 0;
+    final repo = _repo(
+      MockClient((_) async {
+        calls++;
+        return calls == 1
+            ? http.Response('', 503)
+            : http.Response(_quoteBody(price: 100), 200);
+      }),
+    );
+
+    expect((await repo.quoteFor('AAPL')).pricePerShare, 100);
+    expect(calls, 2);
+  });
+
+  test('does not retry an answer that will not change', () async {
+    // A 401 is the key being wrong, and asking twice wastes the budget.
+    var calls = 0;
+    final repo = _repo(
+      MockClient((_) async {
+        calls++;
+        return http.Response('', 401);
+      }),
+    );
+
+    await expectLater(repo.quoteFor('AAPL'), throwsA(isA<QuoteException>()));
+    expect(calls, 1);
+  });
+
+  test('gives up rather than retrying for ever', () async {
+    var calls = 0;
+    final repo = _repo(
+      MockClient((_) async {
+        calls++;
+        return http.Response('', 503);
+      }),
+    );
+
+    await expectLater(
+      repo.quoteFor('AAPL'),
+      throwsA(
+        isA<QuoteException>().having(
+          (error) => error.failure,
+          'failure',
+          QuoteFailure.service,
+        ),
+      ),
+    );
+    expect(calls, 2);
+  });
+
   test('stops itself before the provider has to', () async {
     // Finnhub's free tier allows 60 calls a minute and answers 429 beyond it,
     // so the budget is spent locally rather than by being refused.

@@ -534,6 +534,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quoteNetwork => 'Could not reach the quote service.';
 
   @override
+  String get quoteTimedOut => 'The quote service did not answer in time.';
+
+  @override
   String get quoteService => 'The quote service refused the request.';
 
   @override

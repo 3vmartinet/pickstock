@@ -190,6 +190,7 @@
   "quoteNoCoverage": "No quote for this symbol — enter a price to value it.",
   "quoteRateLimited": "The minute's quote allowance is spent. Try again shortly.",
   "quoteNetwork": "Could not reach the quote service.",
+  "quoteTimedOut": "The quote service did not answer in time.",
   "quoteService": "The quote service refused the request.",
 
   "verdictUndervalued": "Undervalued",

@@ -47,6 +47,10 @@ enum QuoteFailure {
   rateLimited,
 
   network,
+
+  /// The provider accepted the connection and then said nothing.
+  timedOut,
+
   service;
 
   String describe(AppLocalizations strings) => switch (this) {
@@ -54,6 +58,7 @@ enum QuoteFailure {
     QuoteFailure.noCoverage => strings.quoteNoCoverage,
     QuoteFailure.rateLimited => strings.quoteRateLimited,
     QuoteFailure.network => strings.quoteNetwork,
+    QuoteFailure.timedOut => strings.quoteTimedOut,
     QuoteFailure.service => strings.quoteService,
   };
 }

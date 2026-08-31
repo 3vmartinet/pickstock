@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -27,6 +28,25 @@ const Duration _window = Duration(minutes: 1);
 /// A margin left unspent, so a burst of report views cannot leave the user
 /// locked out of the next one.
 const int _reservedCalls = 5;
+
+/// How long to wait before giving up on one attempt.
+///
+/// `http` has no timeout of its own, so a connection that stalls rather than
+/// failing leaves the request outstanding for ever — and with it the spinner
+/// on the price field. Twelve seconds is well clear of the several seconds the
+/// endpoint normally takes while still being short enough to notice.
+const Duration _requestTimeout = Duration(seconds: 12);
+
+/// How many times a stalled or unavailable request is retried.
+///
+/// Finnhub stalls intermittently: measured over five consecutive calls, four
+/// returned in 2.6 to 6.5 seconds and one accepted the connection and then sent
+/// nothing at all. A single retry turns most of those into a price rather than
+/// an error, and costs one call out of sixty a minute.
+const int _retries = 1;
+
+/// The statuses worth trying again. A 4xx will say the same thing twice.
+bool _isTransient(int status) => status >= 500;
 
 class FinnhubQuoteRepo implements QuoteRepo {
   FinnhubQuoteRepo({http.Client? client, String apiKey = finnhubApiKey})
@@ -60,9 +80,33 @@ class FinnhubQuoteRepo implements QuoteRepo {
       _tokenParameter: _apiKey,
     });
 
+    QuoteException? lastFailure;
+    for (var attempt = 0; attempt <= _retries; attempt++) {
+      // Every attempt is a call, so every attempt is budgeted.
+      if (attempt > 0 && !_claimCall()) break;
+      try {
+        return await _attempt(uri, ticker);
+      } on QuoteException catch (error) {
+        lastFailure = error;
+        final isWorthRetrying =
+            error.failure == QuoteFailure.timedOut ||
+            (error.failure == QuoteFailure.service &&
+                error.cause is int &&
+                _isTransient(error.cause! as int));
+        if (!isWorthRetrying) rethrow;
+        logInfo(() => 'Retrying the quote for $ticker after ${error.failure}');
+      }
+    }
+    throw lastFailure ?? const QuoteException(QuoteFailure.service);
+  }
+
+  Future<Quote> _attempt(Uri uri, String ticker) async {
     final http.Response response;
     try {
-      response = await _client.get(uri);
+      response = await _client.get(uri).timeout(_requestTimeout);
+    } on TimeoutException catch (error) {
+      logWarning(() => 'Quote for $ticker timed out');
+      throw QuoteException(QuoteFailure.timedOut, cause: error);
     } on Exception catch (error) {
       // Deliberately not logging the URI: it carries the key.
       logWarning(() => 'Quote for $ticker failed: $error');

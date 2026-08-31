@@ -880,6 +880,12 @@ abstract class AppLocalizations {
   /// **'Could not reach the quote service.'**
   String get quoteNetwork;
 
+  /// No description provided for @quoteTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'The quote service did not answer in time.'**
+  String get quoteTimedOut;
+
   /// No description provided for @quoteService.
   ///
   /// In en, this message translates to:

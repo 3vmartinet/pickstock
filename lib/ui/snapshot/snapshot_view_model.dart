@@ -125,10 +125,16 @@ class SnapshotViewModel extends ChangeNotifier {
   /// or holds something that is not a price.
   double? get pricePerShare => _quote?.pricePerShare;
 
-  bool _isQuoting = false;
+  /// Which request a quote is in flight for, or `null` when none is.
+  ///
+  /// A plain flag leaked: cleared only when the generation still matched, it
+  /// stayed set for ever once a company was switched mid-request, and every
+  /// later quote was then refused by its own guard.
+  int? _quotingGeneration;
 
-  /// Whether a quote is in flight, so the field can show it is working.
-  bool get isQuoting => _isQuoting;
+  /// Whether a quote for the company on screen is in flight, so the field can
+  /// show it is working.
+  bool get isQuoting => _quotingGeneration == _requestGeneration;
 
   QuoteFailure? _quoteFailure;
 
@@ -217,7 +223,10 @@ class SnapshotViewModel extends ChangeNotifier {
     notifyListeners();
 
     if (!_isStale(stored)) return;
-    await _fetchQuote(generation);
+    // Not awaited: the report is complete without a quote, and making the
+    // search wait on the network would hand a slow provider the power to stall
+    // the whole screen.
+    unawaited(_fetchQuote(generation));
   }
 
   /// Asks the provider for a price, from the refresh control.
@@ -225,9 +234,12 @@ class SnapshotViewModel extends ChangeNotifier {
 
   Future<void> _fetchQuote(int generation) async {
     final current = snapshot;
-    if (current == null || !canFetchQuotes || _isQuoting) return;
+    if (current == null || !canFetchQuotes) return;
+    // Only one request per company on screen. A different company supersedes
+    // rather than being turned away, which is what a single flag did.
+    if (_quotingGeneration == generation) return;
 
-    _isQuoting = true;
+    _quotingGeneration = generation;
     _quoteFailure = null;
     notifyListeners();
 
@@ -243,8 +255,9 @@ class SnapshotViewModel extends ChangeNotifier {
       // throw away the last price known.
       _quoteFailure = error.failure;
     } finally {
-      if (generation == _requestGeneration) {
-        _isQuoting = false;
+      // Only if a newer request has not already claimed the slot.
+      if (_quotingGeneration == generation) {
+        _quotingGeneration = null;
         notifyListeners();
       }
     }
