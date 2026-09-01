@@ -138,6 +138,7 @@ class BrowseViewModel extends ChangeNotifier {
     _samplesByCik = await _database.growthSamples(
       metric: _sort.displayedMetric,
       years: _sort.years,
+      unbrokenOnly: _sort.needsUnbrokenRun,
     );
     _isLoadingSamples = false;
     _reorder();

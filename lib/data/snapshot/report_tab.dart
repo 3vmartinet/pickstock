@@ -1,7 +1,7 @@
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// The two jobs a report does, each on its own tab.
+/// The three jobs a report does, each on its own tab.
 ///
 /// One scrolling column ran to 3,445 pixels once a price arrived — nearly four
 /// screens on a laptop, with the figures table below all of it. What made it
@@ -10,7 +10,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 /// the summary of them.
 enum ReportTab {
   overview(icon: LucideIcons.shieldCheck),
-  valuation(icon: LucideIcons.scale);
+  valuation(icon: LucideIcons.scale),
+  expectations(icon: LucideIcons.target);
 
   const ReportTab({required this.icon});
 
@@ -19,5 +20,6 @@ enum ReportTab {
   String getLabel(AppLocalizations strings) => switch (this) {
     ReportTab.overview => strings.tabOverview,
     ReportTab.valuation => strings.tabValuation,
+    ReportTab.expectations => strings.tabExpectations,
   };
 }

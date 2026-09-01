@@ -334,6 +334,12 @@ abstract class AppLocalizations {
   /// **'Revenue growth, {years}-year annualised'**
   String sortRevenueYears(int years);
 
+  /// No description provided for @sortRevenueRising.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue up {years} years running'**
+  String sortRevenueRising(int years);
+
   /// No description provided for @sortFreeCashFlowOneYear.
   ///
   /// In en, this message translates to:
@@ -769,7 +775,7 @@ abstract class AppLocalizations {
   /// No description provided for @hintNetDebt.
   ///
   /// In en, this message translates to:
-  /// **'Total borrowings minus cash, equivalents and short-term investments. A negative figure is a net cash position: the company holds more than it owes. Short-term investments count because treasuries and commercial paper settle a debt as readily as cash — Microsoft keeps three quarters of its money there.'**
+  /// **'Total borrowings minus cash, equivalents and short-term investments. A negative figure is net cash: the company holds more than it owes. Treasuries and commercial paper count, because they settle a debt as readily as cash does.'**
   String get hintNetDebt;
 
   /// No description provided for @deltaVersusPriorYear.
@@ -790,6 +796,12 @@ abstract class AppLocalizations {
   /// **'Valuation'**
   String get tabValuation;
 
+  /// No description provided for @tabExpectations.
+  ///
+  /// In en, this message translates to:
+  /// **'Expectations'**
+  String get tabExpectations;
+
   /// No description provided for @sectionValuation.
   ///
   /// In en, this message translates to:
@@ -805,7 +817,7 @@ abstract class AppLocalizations {
   /// No description provided for @hintSharePrice.
   ///
   /// In en, this message translates to:
-  /// **'The price one share trades at. Quoted from Finnhub where a key is configured; click the price to type your own. Everything else in this report comes from the filings.'**
+  /// **'The price one share trades at. Quoted from Finnhub where a key is configured. Click the price to type your own.'**
   String get hintSharePrice;
 
   /// No description provided for @placeholderSharePrice.
@@ -1003,7 +1015,7 @@ abstract class AppLocalizations {
   /// No description provided for @valuationBasisLine.
   ///
   /// In en, this message translates to:
-  /// **'{low}× to {high}× {basis} of {amount}, less net debt, over {shares} shares'**
+  /// **'{low}× to {high}× {basis} of {amount}, over {shares} shares'**
   String valuationBasisLine(
     String low,
     String high,
@@ -1321,32 +1333,32 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep2Body.
   ///
   /// In en, this message translates to:
-  /// **'Last year the company collected {revenue} and, after every bill including new equipment, kept {freeCashFlow}. That leftover is the money the owners could actually take out.'**
+  /// **'In one year the company took in {revenue} and, after every bill including new equipment, had {freeCashFlow} left over. That is one year\'s spare cash — what it earns annually, not a pile it has saved up.'**
   String napkinStep2Body(String revenue, String freeCashFlow);
 
   /// No description provided for @napkinStep3TitleDebt.
   ///
   /// In en, this message translates to:
-  /// **'You also inherit the debts'**
+  /// **'It owes money, and that is already counted'**
   String get napkinStep3TitleDebt;
 
   /// No description provided for @napkinStep3TitleCash.
   ///
   /// In en, this message translates to:
-  /// **'You also get the cash pile'**
+  /// **'It holds spare cash'**
   String get napkinStep3TitleCash;
 
   /// No description provided for @napkinStep3BodyDebt.
   ///
   /// In en, this message translates to:
-  /// **'It owes {netDebt} more than it holds. Buy the company and you owe that too, so the real cost is {enterpriseValue}.'**
-  String napkinStep3BodyDebt(String netDebt, String enterpriseValue);
+  /// **'The company owes {netDebt} more than it holds. Its lenders are paid before the owners are, and that interest already came out of the {freeCashFlow} above — so the cash figure is what is left for you after the debt has taken its cut.'**
+  String napkinStep3BodyDebt(String netDebt, String freeCashFlow);
 
   /// No description provided for @napkinStep3BodyCash.
   ///
   /// In en, this message translates to:
-  /// **'It holds {netCash} more than it owes. That cash comes with the company, so the real cost is only {enterpriseValue}.'**
-  String napkinStep3BodyCash(String netCash, String enterpriseValue);
+  /// **'The company holds {netCash} more than it owes, so nothing is being siphoned off to lenders. The whole {freeCashFlow} above belongs to the owners.'**
+  String napkinStep3BodyCash(String netCash, String freeCashFlow);
 
   /// No description provided for @napkinStep4Title.
   ///
@@ -1357,12 +1369,8 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep4Body.
   ///
   /// In en, this message translates to:
-  /// **'{enterpriseValue} ÷ {freeCashFlow} a year = {years} years to earn the purchase price back, if nothing ever grows.'**
-  String napkinStep4Body(
-    String enterpriseValue,
-    String freeCashFlow,
-    String years,
-  );
+  /// **'{marketCap} to buy every share, ÷ {freeCashFlow} earned each year = {years} years to get your money back, if the company never grows. The same question as asking how many years\' rent a flat costs.'**
+  String napkinStep4Body(String marketCap, String freeCashFlow, String years);
 
   /// No description provided for @napkinStep5Title.
   ///
@@ -1379,7 +1387,7 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep5BodyGrowing.
   ///
   /// In en, this message translates to:
-  /// **'A business going nowhere is worth roughly 12 to 18 years of its cash. This one grows {growth} a year, which buys it another {premium} years: {low} to {high}.'**
+  /// **'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is growing {growth} a year, so next year\'s cash is bigger than this year\'s and you get your money back sooner than the plain sum suggests. That is worth paying more for, so the fair range moves up by {premium} years to {low} to {high}.'**
   String napkinStep5BodyGrowing(
     String growth,
     String premium,
@@ -1396,7 +1404,7 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep6Body.
   ///
   /// In en, this message translates to:
-  /// **'{low} to {high} years of {basis} is {valueLow} to {valueHigh}. Settle the debts, divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.'**
+  /// **'{low} to {high} years of {basis} is {valueLow} to {valueHigh} for the whole company. Divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.'**
   String napkinStep6Body(
     String low,
     String high,
@@ -1462,11 +1470,11 @@ abstract class AppLocalizations {
   /// **'P/E'**
   String get labelPriceEarnings;
 
-  /// No description provided for @labelEnterpriseValueToFreeCashFlow.
+  /// No description provided for @labelPriceToFreeCashFlow.
   ///
   /// In en, this message translates to:
-  /// **'EV/FCF'**
-  String get labelEnterpriseValueToFreeCashFlow;
+  /// **'P/FCF'**
+  String get labelPriceToFreeCashFlow;
 
   /// No description provided for @labelFreeCashFlowYield.
   ///
@@ -1492,11 +1500,11 @@ abstract class AppLocalizations {
   /// **'Price divided by earnings per share: years of current profit the price costs. Blank at a loss, where the ratio means nothing.'**
   String get hintPriceEarnings;
 
-  /// No description provided for @hintEnterpriseValueToFreeCashFlow.
+  /// No description provided for @hintPriceToFreeCashFlow.
   ///
   /// In en, this message translates to:
-  /// **'Enterprise value over free cash flow. Unlike P/E it counts debt, so a company that borrowed to buy its earnings looks dearer.'**
-  String get hintEnterpriseValueToFreeCashFlow;
+  /// **'Years of spare cash the shares cost. Market value, not enterprise value, because this cash flow is already after interest.'**
+  String get hintPriceToFreeCashFlow;
 
   /// No description provided for @hintFreeCashFlowYield.
   ///
@@ -1519,7 +1527,7 @@ abstract class AppLocalizations {
   /// No description provided for @footnoteValuation.
   ///
   /// In en, this message translates to:
-  /// **'The fair range is a heuristic: {low}–{high} times the latest year\'s {basis}, widened for revenue growth, less net debt. It is a frame for the price, not a target.'**
+  /// **'The fair range is a heuristic: {low}–{high} times the latest year\'s {basis}, widened for revenue growth. That cash flow is already after interest, so the debt is not subtracted a second time. It is a frame for the price, not a target.'**
   String footnoteValuation(String low, String high, String basis);
 
   /// No description provided for @footnoteNegatives.

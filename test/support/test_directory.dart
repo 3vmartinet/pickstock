@@ -220,6 +220,7 @@ Future<void> openReportTab(WidgetTester tester, ReportTab tab) async {
 const Map<ReportTab, String> _tabLabels = {
   ReportTab.overview: 'Overview',
   ReportTab.valuation: 'Valuation',
+  ReportTab.expectations: 'Expectations',
 };
 
 /// Types a share price by hand.

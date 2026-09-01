@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
@@ -9,6 +11,7 @@ import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_filter.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
 /// Narrows the directory by symbol or company name.
 class TickerFilterBar extends StatelessWidget {
@@ -66,7 +69,24 @@ class _FilterField extends StatelessWidget {
   }
 }
 
-/// Chooses what the list is ranked by, and with it what each row shows.
+/// How wide the longest option's label renders at.
+///
+/// Measured rather than guessed: the options are localised and the list grows,
+/// so a hand-picked constant would be wrong the first time either changed.
+double _widestOptionWidth(BuildContext context) {
+  final style = context.theme.typography.small;
+  var widest = 0.0;
+  for (final option in BrowseSort.values) {
+    final painter = TextPainter(
+      text: TextSpan(text: option.getLabel(context.strings), style: style),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    widest = math.max(widest, painter.width);
+  }
+  return widest;
+}
+
 /// Opens the first company in the current results, if there is one.
 void _openBestMatch(BuildContext context) {
   final best = context.read<BrowseViewModel>().companyAt(0);
@@ -77,6 +97,7 @@ void _openBestMatch(BuildContext context) {
   }
 }
 
+/// Chooses what the list is ranked by, and with it what each row shows.
 class _SortSelect extends StatelessWidget {
   const _SortSelect();
 
@@ -86,39 +107,53 @@ class _SortSelect extends StatelessWidget {
       (viewModel) => viewModel.sort,
     );
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: ThemeRepo.sortSelectMaxWidth),
-      child: Select<BrowseSort>(
-        value: sort,
-        itemBuilder: (context, item) => Text(item.getLabel(context.strings)),
-        onChanged: (value) => value == null
-            ? null
-            : context.read<BrowseViewModel>().selectSort(value),
-        popupConstraints: const BoxConstraints(
-          minWidth: ThemeRepo.sortPopupMinWidth,
-          maxHeight: ThemeRepo.sortPopupMaxHeight,
-        ),
-        // The popup defaults to the button's exact width, which wraps the
-        // longer options over three lines. Letting it size to its content and
-        // treating the button as a floor keeps every option on one line.
-        overlayConfiguration: const PopoverConfiguration(
-          // The same anchoring shadcn's own default uses, with only the width
-          // rule changed.
-          alignment: Alignment.topCenter,
-          widthConstraint: PopoverConstraint.anchorMinSize,
-        ),
-        popup: SelectPopup(
-          items: SelectItemList(
-            children: [
-              for (final option in BrowseSort.values)
-                SelectItemButton(
-                  value: option,
-                  child: Text(option.getLabel(context.strings)).singleLine(),
-                ),
-            ],
-          ),
-        ).call,
+    // Sized to the longest option rather than to whichever one is chosen, so
+    // the control does not resize as you use it and the popup — which matches
+    // its anchor — fits every option on one line without stretching to the
+    // window.
+    //
+    // Capped rather than clamped to the available width: the bar is a `Wrap`,
+    // which hands its children unbounded constraints, so there is no available
+    // width to clamp against. The cap is well clear of what the labels
+    // measure and only bites on a font or a locale that runs long.
+    return SizedBox(
+      width: math.min(
+        _widestOptionWidth(context) + ThemeRepo.selectChromeWidth,
+        ThemeRepo.sortSelectMaxWidth,
       ),
+      child: _SortDropdown(sort: sort),
+    );
+  }
+}
+
+class _SortDropdown extends StatelessWidget {
+  const _SortDropdown({required this.sort});
+
+  final BrowseSort sort;
+
+  @override
+  Widget build(BuildContext context) {
+    return Select<BrowseSort>(
+      value: sort,
+      itemBuilder: (context, item) =>
+          Text(item.getLabel(context.strings)).singleLine(),
+      onChanged: (value) => value == null
+          ? null
+          : context.read<BrowseViewModel>().selectSort(value),
+      popupConstraints: const BoxConstraints(
+        maxHeight: ThemeRepo.sortPopupMaxHeight,
+      ),
+      popup: SelectPopup(
+        items: SelectItemList(
+          children: [
+            for (final option in BrowseSort.values)
+              SelectItemButton(
+                value: option,
+                child: Text(option.getLabel(context.strings)).singleLine(),
+              ),
+          ],
+        ),
+      ).call,
     );
   }
 }

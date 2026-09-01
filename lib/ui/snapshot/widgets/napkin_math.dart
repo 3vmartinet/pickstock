@@ -138,18 +138,15 @@ List<_Step> _stepsFor(
           ? strings.napkinStep3TitleDebt
           : strings.napkinStep3TitleCash,
       body: netDebt >= 0
-          ? strings.napkinStep3BodyDebt(money(netDebt), money(enterpriseValue))
-          : strings.napkinStep3BodyCash(
-              money(netDebt.abs()),
-              money(enterpriseValue),
-            ),
+          ? strings.napkinStep3BodyDebt(money(netDebt), money(basis))
+          : strings.napkinStep3BodyCash(money(netDebt.abs()), money(basis)),
     ),
     (
       title: strings.napkinStep4Title,
       body: strings.napkinStep4Body(
-        money(enterpriseValue),
+        money(marketCap),
         money(basis),
-        years(enterpriseValue / basis),
+        years(marketCap / basis),
       ),
     ),
     (
@@ -248,7 +245,7 @@ class _NumberedStep extends StatelessWidget {
             spacing: ThemeRepo.spaceXSmall,
             children: [
               Text(step.title).small().semiBold(),
-              Text(step.body).muted().small(),
+              _Sentence(step.body),
             ],
           ),
         ),
@@ -256,6 +253,42 @@ class _NumberedStep extends StatelessWidget {
     );
   }
 }
+
+/// A line of the explanation, with its figures picked out.
+///
+/// The prose is scaffolding; the numbers are the point. Left uniformly muted,
+/// a reader has to parse the sentence to find them, which is the opposite of
+/// what a worked example is for.
+class _Sentence extends StatelessWidget {
+  const _Sentence(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    // Weight only, no colour: the figures inherit the muted colour of the
+    // prose around them. Darkening them as well made every step read as half
+    // heading, half sentence.
+    const emphasis = TextStyle(fontWeight: ThemeRepo.napkinFigureWeight);
+
+    final spans = <TextSpan>[];
+    var at = 0;
+    for (final match in _figure.allMatches(text)) {
+      if (match.start > at) {
+        spans.add(TextSpan(text: text.substring(at, match.start)));
+      }
+      spans.add(TextSpan(text: match[0], style: emphasis));
+      at = match.end;
+    }
+    if (at < text.length) spans.add(TextSpan(text: text.substring(at)));
+
+    return Text.rich(TextSpan(children: spans)).muted().small();
+  }
+}
+
+/// A figure in the prose: an amount, a count, a rate or a multiple. The
+/// optional tail covers `$3.71T`, `24.5%` and `18×` alike.
+final RegExp _figure = RegExp(r'\$?\d[\d,]*(?:\.\d+)?(?:[KMBT]\b|%|×)?');
 
 class _Caveats extends StatelessWidget {
   const _Caveats(this.caveats);

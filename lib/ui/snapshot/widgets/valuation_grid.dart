@@ -6,6 +6,7 @@ import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/widgets/responsive_grid.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
@@ -68,9 +69,7 @@ class _RatioCard extends StatelessWidget {
                     .singleLine(),
               ),
               Tooltip(
-                tooltip: TooltipContainer(
-                  child: Text(metric.getHint(context.strings)),
-                ).call,
+                tooltip: HintTooltip(metric.getHint(context.strings)).call,
                 child: const Icon(LucideIcons.info)
                     .iconXSmall()
                     .iconMutedForeground(),

@@ -1,6 +1,7 @@
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// Offers a refresh, but only once SEC has actually rebuilt the archive.
@@ -19,12 +20,10 @@ class IngestButton extends StatelessWidget {
     final publishedOn = viewModel.availableArchiveDate;
 
     return Tooltip(
-      tooltip: TooltipContainer(
-        child: Text(
-          publishedOn == null
-              ? context.strings.gateRefresh
-              : context.strings.updateAvailableOn(publishedOn),
-        ),
+      tooltip: HintTooltip(
+        publishedOn == null
+            ? context.strings.gateRefresh
+            : context.strings.updateAvailableOn(publishedOn),
       ).call,
       child: PrimaryButton(
         size: ButtonSize.small,

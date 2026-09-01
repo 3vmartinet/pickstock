@@ -1,6 +1,7 @@
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/ui/app_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
@@ -12,7 +13,7 @@ class ThemeToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = context.theme.brightness == Brightness.dark;
     return Tooltip(
-      tooltip: TooltipContainer(child: Text(context.strings.toggleTheme)).call,
+      tooltip: HintTooltip(context.strings.toggleTheme).call,
       child: GhostButton(
         density: ButtonDensity.icon,
         onPressed: () =>

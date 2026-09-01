@@ -10,16 +10,21 @@ and need no network. A free Finnhub key adds live share prices for the valuation
 
 ## What it shows
 
-The report has two tabs — **Overview** and **Valuation** — under a fixed company
-header. In one column it ran to 3,445 pixels once a price arrived: nearly four
+The report has three tabs — **Overview**, **Valuation** and **Expectations** —
+under a fixed company header. In one column it ran to 3,445 pixels once a price arrived: nearly four
 screens on a laptop, with the figures table below all of it, and the whole page
 growing by 2,220 pixels the moment a quote landed.
 
 The valuation is what made it unreadable, so that is what moved. The filings —
 sanity checks, highlights and the history table — are a fixed 1,174 pixels and
 stay together on the overview, where the table sits with the summary of it. The
-valuation grows from 424 to 2,644 pixels when a price lands and no longer drags
-anything with it.
+valuation grows from 424 to 2,331 pixels when a price lands and no longer drags
+anything with it. The growth it implies is a separate question from the band it
+is measured against, so it has a tab of its own — 674 pixels, and readable.
+
+The company header and the tab bar are **pinned**: only the tab's content
+scrolls under them, so the name of what you are reading and the way to the other
+tab are always on screen.
 
 The tab bar uses `Tabs` with `expand`, so the two share the available width. The
 underlined `TabList` sizes each tab to its content, which ran past the right
@@ -31,7 +36,7 @@ edge of a narrow window — unreachable, with nothing to say there was more.
 | Highlights | Overview | Revenue, net income, free cash flow and net debt/(cash) for the latest year, each with its year-over-year move. |
 | History | Overview | **Annual** or **Quarterly**, chosen with a tab: up to ten fiscal years or the last eight quarters, line by line. An eight-column table where all of it fits, one card per period below that. Sortable, newest first by default. |
 | Valuation | Valuation | Whether the price is above or below the range the filings support, with the multiples, the cash stream and the growth premium behind it, plus P/E, EV/FCF, FCF yield, PEG and P/S. |
-| What the price is asking | Valuation | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
+| What the price is asking | Expectations | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
 | How this was worked out | Valuation | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
 | All tickers | — | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
 | Watchlists | — | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
@@ -146,6 +151,14 @@ A rate is only quoted where it means something:
 * The base must clear `minimumGrowthBase` (currently $1m). A shell company going
   from $8,000 of revenue to $97m is arithmetically a 10,000% annual rate and
   tells you nothing; without the floor those companies head every ranking.
+**Run-of-growth orderings** ask a stricter question: revenue higher than the
+year before it in *every* year of the window, over 2, 3, 5 or 10 years. A dip
+breaks the run, and so does a missing year — a gap in the filings is not read
+through. Companies that fail sort last with `—`, exactly as a company with no
+figure does, and the ones that qualify are ranked among themselves by the annual
+rate over the same window, so steady compounders lead rather than one lucky
+year.
+
 * The window ends at the company's **latest fiscal year** — the same one the
   report headlines — not the latest year that happens to carry a figure, so the
   list and the report never disagree about which year they are talking about.
@@ -197,9 +210,9 @@ Everything else comes out of the filings:
 | Figure | How |
 | --- | --- |
 | Market value | price × shares outstanding (`dei:EntityCommonStockSharesOutstanding` from the newest filing's cover, falling back to `us-gaap:CommonStockSharesOutstanding`) |
-| Enterprise value | market value + net debt, so a company that borrowed to buy its earnings does not look cheap |
+| Enterprise value | market value + net debt: what an acquirer pays for the whole business, reported as context rather than used in the band |
 | Earnings per share | net income ÷ diluted weighted-average shares, the divisor the company itself reports against |
-| Fair range | 12× to 18× the latest year's free cash flow — net income where there is no usable cash flow — **less net debt**, over the share count |
+| Fair range | 12× to 18× the latest year's free cash flow — net income where there is no usable cash flow — over the share count |
 | Growth premium | +0.6 of a turn per point of annualised revenue growth, capped at 25 points, so a fast grower is not called expensive for growing and a 300% year is not extrapolated for a decade |
 
 The band is drawn to scale with the price marked on it, and each bound carries
@@ -279,6 +292,28 @@ its own mutations keeps the report, the tiles and the filter in step — and the
 streams brought a real cost: drift defers stream updates with `Timer.run`, which
 left a pending timer at the end of every widget test.
 
+### Why the band does not subtract debt
+
+Free cash flow here is operating cash flow less capital spending, and US filers
+put interest paid in the **operating** section — so it is already net of what
+the lenders take. It is the shareholders' cash, and a multiple of it is what
+their shares are worth.
+
+Subtracting net debt from that would charge for the same debt twice: once
+through the interest already deducted from the cash flow, and again as a lump
+off the total. The band did exactly that until a reader asked why step 4 divided
+enterprise value by free cash flow — the same mismatch, since an enterprise
+value belongs to lenders and shareholders together while that cash flow belongs
+only to the shareholders. Both are now measured against the **market value**,
+which is the matching half.
+
+The ratio grid quotes **P/FCF** rather than EV/FCF for the same reason.
+Enterprise value is still shown, because what an acquirer would pay is worth
+knowing; it just is not the numerator over this denominator. Doing it properly
+in the enterprise frame would need unlevered cash flow — free cash flow with
+after-tax interest added back — which means an interest-expense figure the
+ingest does not collect.
+
 ### The worked example
 
 Beside the verdict, the whole calculation is spelled out in the order it
@@ -286,6 +321,9 @@ happens: what buying every share costs, what the company kept last year, what
 debt comes with it, how many years of cash that price is, how many years is
 fair, and what that makes one share worth. Every step carries the company's own
 figures, so it can be checked rather than trusted.
+
+Figures in the prose are set in the foreground weight while the words around
+them stay muted, so the numbers can be found without reading the sentence.
 
 It also carries the caveats that would mislead a reader taking the steps at face
 value: capital spending well above depreciation (so the year's cash understates

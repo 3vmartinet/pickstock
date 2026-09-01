@@ -3,6 +3,8 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_table.dart';
 import 'package:pickstock/ui/snapshot/widgets/snapshot_report.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -81,6 +83,65 @@ void main() {
     // The tab left open for the last company says nothing about this one.
     expect(find.text('Sanity check'), findsOneWidget);
     expect(find.text('Fair value'), findsNothing);
+  });
+
+  testWidgets('gives the expectations a tab of their own', (tester) async {
+    await openApple(tester);
+    await openReportTab(tester, ReportTab.valuation);
+    await enterPriceByHand(tester, '250');
+
+    // The band and the growth it implies are two questions, and together they
+    // made one tab three screens long.
+    expect(find.text('Fair value'), findsOneWidget);
+    expect(find.text('What the price is asking'), findsNothing);
+
+    await openReportTab(tester, ReportTab.expectations);
+
+    expect(find.text('What the price is asking'), findsOneWidget);
+    expect(find.text('Fair value'), findsNothing);
+  });
+
+  testWidgets('the expectations tab asks for a price of its own', (
+    tester,
+  ) async {
+    await openApple(tester);
+    await openReportTab(tester, ReportTab.expectations);
+
+    // Nothing to compute without a price, so the same way in is offered
+    // rather than an empty tab.
+    expect(find.text('Set a price'), findsOneWidget);
+  });
+
+  testWidgets('keeps the company and its tabs on screen while scrolling', (
+    tester,
+  ) async {
+    await openApple(tester);
+
+    final headerBefore = tester.getRect(find.byType(CompanyHeader));
+    final tabsBefore = tester.getRect(find.byType(ReportTabs));
+
+    // Scroll the report a long way down.
+    await tester.drag(find.byType(HistoryTable), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    // The name of what you are reading, and the way to the other tab, are
+    // both still there and have not moved.
+    expect(tester.getRect(find.byType(CompanyHeader)), headerBefore);
+    expect(tester.getRect(find.byType(ReportTabs)), tabsBefore);
+    expect(find.text('Apple Inc.'), findsWidgets);
+  });
+
+  testWidgets('the tab bar sits close under the company', (tester) async {
+    await openApple(tester);
+
+    final header = tester.getRect(find.byType(CompanyHeader));
+    // The bar itself, not the widget that pads it.
+    final bar = tester.getRect(
+      find.descendant(of: find.byType(ReportTabs), matching: find.byType(Tabs)),
+    );
+
+    // Half a section's spacing: the two are one block, not two sections.
+    expect(bar.top - header.bottom, ThemeRepo.reportTabsGap);
   });
 
   testWidgets('every tab is reachable on a narrow window', (tester) async {

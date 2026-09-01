@@ -4,6 +4,7 @@ import 'package:pickstock/app.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/watchlist/widgets/add_to_watchlist_button.dart';
+import 'package:pickstock/ui/watchlist/widgets/watchlist_filter.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_star.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -80,6 +81,28 @@ void main() {
     expect(header.height, lessThan(_oneRowHeaderHeight));
     // And the controls still share the title's row rather than dropping below.
     expect(star.center.dy, closeTo(title.center.dy, 8));
+  });
+
+  testWidgets('the list button is padded like its siblings', (tester) async {
+    await openApple(tester, _wideSize);
+
+    final button = tester.getRect(find.byType(AddToWatchlistButton));
+    final icon = tester.getRect(find.byIcon(LucideIcons.listPlus));
+    final label = tester.getRect(find.text('Not in any list'));
+
+    // Compact density collapsed the padding to nothing: the icon sat flush
+    // against the left edge and the text touched top and bottom, an 18-pixel
+    // pill beside the 38-pixel one in the toolbar.
+    expect(
+      icon.left - button.left,
+      greaterThanOrEqualTo(ThemeRepo.spaceMedium),
+    );
+    expect(label.top - button.top, greaterThanOrEqualTo(ThemeRepo.spaceSmall));
+    expect(
+      button.bottom - label.bottom,
+      greaterThanOrEqualTo(ThemeRepo.spaceSmall),
+    );
+    expect(button.height, tester.getRect(find.byType(WatchlistFilter)).height);
   });
 
   testWidgets('the list button stays a real target without its label', (

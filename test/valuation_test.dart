@@ -50,7 +50,7 @@ FinancialSnapshot _snapshot({
 
 void main() {
   group('valuation arithmetic', () {
-    test('values the business on free cash flow, less what lenders own', () {
+    test('values the shares on the cash that reaches them', () {
       final valuation = Valuation(snapshot: _snapshot(), pricePerShare: 100);
 
       expect(valuation.basis, ValuationBasis.freeCashFlow);
@@ -59,11 +59,12 @@ void main() {
       expect(valuation.growthPremiumMultiple, 0);
       expect(valuation.lowMultiple, 12);
       expect(valuation.highMultiple, 18);
-      // 100m x 12 = 1.2bn of business, less 40m net debt, over 10m shares.
-      expect(valuation.fairValueLow, closeTo(116, 0.01));
-      expect(valuation.fairValueHigh, closeTo(176, 0.01));
-      expect(valuation.percentToLow, closeTo(16, 0.01));
-      expect(valuation.percentToHigh, closeTo(76, 0.01));
+      // 100m x 12 = 1.2bn over 10m shares. No net-debt adjustment: the cash
+      // flow is already after the interest the lenders take.
+      expect(valuation.fairValueLow, closeTo(120, 0.01));
+      expect(valuation.fairValueHigh, closeTo(180, 0.01));
+      expect(valuation.percentToLow, closeTo(20, 0.01));
+      expect(valuation.percentToHigh, closeTo(80, 0.01));
     });
 
     test('places the price against the band', () {
@@ -84,14 +85,14 @@ void main() {
     test('measures the distance to each end of the band', () {
       final valuation = Valuation(snapshot: _snapshot(), pricePerShare: 100);
 
-      // The band is 116 to 176 against a price of 100.
-      expect(valuation.percentToLow, closeTo(16, 0.01));
-      expect(valuation.percentToHigh, closeTo(76, 0.01));
+      // The band is 120 to 180 against a price of 100.
+      expect(valuation.percentToLow, closeTo(20, 0.01));
+      expect(valuation.percentToHigh, closeTo(80, 0.01));
 
       // Above the band both readings turn negative: the price has to fall.
       final dear = Valuation(snapshot: _snapshot(), pricePerShare: 200);
-      expect(dear.percentToLow, closeTo(-42, 0.01));
-      expect(dear.percentToHigh, closeTo(-12, 0.01));
+      expect(dear.percentToLow, closeTo(-40, 0.01));
+      expect(dear.percentToHigh, closeTo(-10, 0.01));
     });
 
     test('pays for growth, but only up to the credited ceiling', () {
@@ -157,15 +158,27 @@ void main() {
       expect(valuation.verdict, ValuationVerdict.unknown);
     });
 
-    test('a business worth less than its debts bottoms out at nothing', () {
-      final valuation = Valuation(
+    test('does not charge for the same debt twice', () {
+      // Free cash flow is operating cash flow less capital spending, and US
+      // filers put interest paid in the operating section — so the lenders
+      // have already been paid out of it. Subtracting their principal from a
+      // multiple of it as well would penalise the debt a second time, and the
+      // band would move with debt the cash flow has already accounted for.
+      final borrowed = Valuation(
         snapshot: _snapshot(totalDebt: 5000 * _million),
         pricePerShare: 100,
       );
+      final debtFree = Valuation(
+        snapshot: _snapshot(totalDebt: 0, cash: 0),
+        pricePerShare: 100,
+      );
 
-      expect(valuation.fairValueLow, 0);
-      expect(valuation.fairValueHigh, 0);
-      expect(valuation.verdict, ValuationVerdict.overvalued);
+      expect(borrowed.fairValueLow, debtFree.fairValueLow);
+      expect(borrowed.fairValueHigh, debtFree.fairValueHigh);
+      // The debt is still reported; it just is not double counted. Net of the
+      // fixture's 10m of cash.
+      expect(borrowed.netDebt, 4990 * _million);
+      expect(borrowed.enterpriseValue, greaterThan(borrowed.marketCap!));
     });
 
     test('derives the market and enterprise figures from the share count', () {
@@ -176,20 +189,21 @@ void main() {
       expect(valuation.enterpriseValue, 1040 * _million);
       expect(valuation.earningsPerShare, closeTo(10, 0.001));
       expect(valuation.priceEarningsRatio, closeTo(10, 0.001));
-      expect(valuation.enterpriseValueToFreeCashFlow, closeTo(10.4, 0.001));
+      expect(valuation.priceToFreeCashFlow, closeTo(10, 0.001));
       expect(valuation.freeCashFlowYieldPercent, closeTo(10, 0.001));
       expect(valuation.priceToSalesRatio, closeTo(1, 0.001));
     });
 
-    test('a net cash pile is handed back, raising the per-share value', () {
+    test('a net cash pile lowers what an acquirer would pay', () {
       final netCash = Valuation(
         snapshot: _snapshot(totalDebt: 10 * _million, cash: 50 * _million),
         pricePerShare: 100,
       );
 
-      // 1.2bn plus 40m of surplus cash, over 10m shares.
-      expect(netCash.fairValueLow, closeTo(124, 0.01));
+      // The enterprise value nets the surplus cash off the market value; the
+      // band itself is struck on the cash flow alone.
       expect(netCash.enterpriseValue, 960 * _million);
+      expect(netCash.fairValueLow, closeTo(120, 0.01));
     });
 
     test('leaves ratios unstated rather than meaningless at a loss', () {

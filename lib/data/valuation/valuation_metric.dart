@@ -12,7 +12,7 @@ FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 /// yield or a plain number is the enum's business, not the widget's.
 enum ValuationMetric {
   priceEarnings(cheapBelow: 15, expensiveAbove: 25),
-  enterpriseValueToFreeCashFlow(cheapBelow: 15, expensiveAbove: 25),
+  priceToFreeCashFlow(cheapBelow: 15, expensiveAbove: 25),
 
   /// A yield, so the thresholds run the other way: more is cheaper.
   freeCashFlowYield(cheapBelow: 3, expensiveAbove: 6, isHigherCheaper: true),
@@ -33,8 +33,7 @@ enum ValuationMetric {
 
   String getLabel(AppLocalizations strings) => switch (this) {
     ValuationMetric.priceEarnings => strings.labelPriceEarnings,
-    ValuationMetric.enterpriseValueToFreeCashFlow =>
-      strings.labelEnterpriseValueToFreeCashFlow,
+    ValuationMetric.priceToFreeCashFlow => strings.labelPriceToFreeCashFlow,
     ValuationMetric.freeCashFlowYield => strings.labelFreeCashFlowYield,
     ValuationMetric.growthAdjusted => strings.labelGrowthAdjusted,
     ValuationMetric.priceToSales => strings.labelPriceToSales,
@@ -42,8 +41,7 @@ enum ValuationMetric {
 
   String getHint(AppLocalizations strings) => switch (this) {
     ValuationMetric.priceEarnings => strings.hintPriceEarnings,
-    ValuationMetric.enterpriseValueToFreeCashFlow =>
-      strings.hintEnterpriseValueToFreeCashFlow,
+    ValuationMetric.priceToFreeCashFlow => strings.hintPriceToFreeCashFlow,
     ValuationMetric.freeCashFlowYield => strings.hintFreeCashFlowYield,
     ValuationMetric.growthAdjusted => strings.hintGrowthAdjusted,
     ValuationMetric.priceToSales => strings.hintPriceToSales,
@@ -51,8 +49,7 @@ enum ValuationMetric {
 
   double? getValue(Valuation valuation) => switch (this) {
     ValuationMetric.priceEarnings => valuation.priceEarningsRatio,
-    ValuationMetric.enterpriseValueToFreeCashFlow =>
-      valuation.enterpriseValueToFreeCashFlow,
+    ValuationMetric.priceToFreeCashFlow => valuation.priceToFreeCashFlow,
     ValuationMetric.freeCashFlowYield => valuation.freeCashFlowYieldPercent,
     ValuationMetric.growthAdjusted => valuation.growthAdjustedRatio,
     ValuationMetric.priceToSales => valuation.priceToSalesRatio,

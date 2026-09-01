@@ -9,6 +9,7 @@ import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_editor.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
@@ -262,8 +263,7 @@ class _Editable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      tooltip: TooltipContainer(child: Text(context.strings.hintSharePrice))
-          .call,
+      tooltip: HintTooltip(context.strings.hintSharePrice).call,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
@@ -296,8 +296,7 @@ class _PriceLabel extends StatelessWidget {
         ),
         const _RefreshQuoteButton(),
         Tooltip(
-          tooltip: TooltipContainer(child: Text(context.strings.hintSharePrice))
-              .call,
+          tooltip: HintTooltip(context.strings.hintSharePrice).call,
           child: const Icon(LucideIcons.info)
               .iconXSmall()
               .iconMutedForeground(),
@@ -324,7 +323,7 @@ class _RefreshQuoteButton extends StatelessWidget {
     );
 
     return Tooltip(
-      tooltip: TooltipContainer(child: Text(context.strings.quoteRefresh)).call,
+      tooltip: HintTooltip(context.strings.quoteRefresh).call,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(

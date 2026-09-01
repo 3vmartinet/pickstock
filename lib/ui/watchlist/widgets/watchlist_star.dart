@@ -3,6 +3,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
@@ -24,12 +25,10 @@ class WatchlistStar extends StatelessWidget {
     );
 
     return Tooltip(
-      tooltip: TooltipContainer(
-        child: Text(
-          isStarred
-              ? context.strings.watchlistStarRemove
-              : context.strings.watchlistStarAdd,
-        ),
+      tooltip: HintTooltip(
+        isStarred
+            ? context.strings.watchlistStarRemove
+            : context.strings.watchlistStarAdd,
       ).call,
       child: GhostButton(
         density: ButtonDensity.icon,

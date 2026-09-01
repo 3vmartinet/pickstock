@@ -58,6 +58,8 @@
   "sortRevenueOneYear": "Revenue growth, 1 year",
   "sortRevenueYears": "Revenue growth, {years}-year annualised",
   "@sortRevenueYears": { "placeholders": { "years": { "type": "int" } } },
+  "sortRevenueRising": "Revenue up {years} years running",
+  "@sortRevenueRising": { "placeholders": { "years": { "type": "int" } } },
   "sortFreeCashFlowOneYear": "Free cash flow growth, 1 year",
   "sectorTechnology": "Tech",
   "sectorHealthcare": "Pharma & health",
@@ -159,16 +161,17 @@
   "hintRevenue": "Top-line sales reported on the income statement.",
   "hintNetIncome": "Bottom-line profit after every cost, tax and one-off.",
   "hintFreeCashFlow": "Operating cash flow minus capital expenditure — the cash the business actually keeps.",
-  "hintNetDebt": "Total borrowings minus cash, equivalents and short-term investments. A negative figure is a net cash position: the company holds more than it owes. Short-term investments count because treasuries and commercial paper settle a debt as readily as cash — Microsoft keeps three quarters of its money there.",
+  "hintNetDebt": "Total borrowings minus cash, equivalents and short-term investments. A negative figure is net cash: the company holds more than it owes. Treasuries and commercial paper count, because they settle a debt as readily as cash does.",
 
   "deltaVersusPriorYear": "vs FY{year}",
   "@deltaVersusPriorYear": { "placeholders": { "year": { "type": "String" } } },
 
   "tabOverview": "Overview",
   "tabValuation": "Valuation",
+  "tabExpectations": "Expectations",
   "sectionValuation": "Fair value",
   "labelSharePrice": "Share price",
-  "hintSharePrice": "The price one share trades at. Quoted from Finnhub where a key is configured; click the price to type your own. Everything else in this report comes from the filings.",
+  "hintSharePrice": "The price one share trades at. Quoted from Finnhub where a key is configured. Click the price to type your own.",
   "placeholderSharePrice": "0.00",
   "valuationIdle": "Enter the current share price to see how it compares with what the filings say the business earns.",
   "footnotePriceSource": "Prices come from Finnhub and are cached until they go stale; typing over one replaces it. Everything else is from the filings.",
@@ -206,7 +209,7 @@
   "labelMarketCap": "Market value",
   "labelEnterpriseValue": "Enterprise value",
   "labelEarningsPerShare": "Earnings per share",
-  "valuationBasisLine": "{low}× to {high}× {basis} of {amount}, less net debt, over {shares} shares",
+  "valuationBasisLine": "{low}× to {high}× {basis} of {amount}, over {shares} shares",
   "@valuationBasisLine": {
     "placeholders": {
       "low": { "type": "String" },
@@ -306,7 +309,7 @@
   },
 
   "napkinStep2Title": "What you get for it",
-  "napkinStep2Body": "Last year the company collected {revenue} and, after every bill including new equipment, kept {freeCashFlow}. That leftover is the money the owners could actually take out.",
+  "napkinStep2Body": "In one year the company took in {revenue} and, after every bill including new equipment, had {freeCashFlow} left over. That is one year's spare cash — what it earns annually, not a pile it has saved up.",
   "@napkinStep2Body": {
     "placeholders": {
       "revenue": { "type": "String" },
@@ -314,28 +317,28 @@
     }
   },
 
-  "napkinStep3TitleDebt": "You also inherit the debts",
-  "napkinStep3TitleCash": "You also get the cash pile",
-  "napkinStep3BodyDebt": "It owes {netDebt} more than it holds. Buy the company and you owe that too, so the real cost is {enterpriseValue}.",
+  "napkinStep3TitleDebt": "It owes money, and that is already counted",
+  "napkinStep3TitleCash": "It holds spare cash",
+  "napkinStep3BodyDebt": "The company owes {netDebt} more than it holds. Its lenders are paid before the owners are, and that interest already came out of the {freeCashFlow} above — so the cash figure is what is left for you after the debt has taken its cut.",
   "@napkinStep3BodyDebt": {
     "placeholders": {
       "netDebt": { "type": "String" },
-      "enterpriseValue": { "type": "String" }
+      "freeCashFlow": { "type": "String" }
     }
   },
-  "napkinStep3BodyCash": "It holds {netCash} more than it owes. That cash comes with the company, so the real cost is only {enterpriseValue}.",
+  "napkinStep3BodyCash": "The company holds {netCash} more than it owes, so nothing is being siphoned off to lenders. The whole {freeCashFlow} above belongs to the owners.",
   "@napkinStep3BodyCash": {
     "placeholders": {
       "netCash": { "type": "String" },
-      "enterpriseValue": { "type": "String" }
+      "freeCashFlow": { "type": "String" }
     }
   },
 
   "napkinStep4Title": "How many years of cash is that?",
-  "napkinStep4Body": "{enterpriseValue} ÷ {freeCashFlow} a year = {years} years to earn the purchase price back, if nothing ever grows.",
+  "napkinStep4Body": "{marketCap} to buy every share, ÷ {freeCashFlow} earned each year = {years} years to get your money back, if the company never grows. The same question as asking how many years' rent a flat costs.",
   "@napkinStep4Body": {
     "placeholders": {
-      "enterpriseValue": { "type": "String" },
+      "marketCap": { "type": "String" },
       "freeCashFlow": { "type": "String" },
       "years": { "type": "String" }
     }
@@ -343,7 +346,7 @@
 
   "napkinStep5Title": "How many years is fair?",
   "napkinStep5BodyFlat": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.",
-  "napkinStep5BodyGrowing": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one grows {growth} a year, which buys it another {premium} years: {low} to {high}.",
+  "napkinStep5BodyGrowing": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one is growing {growth} a year, so next year's cash is bigger than this year's and you get your money back sooner than the plain sum suggests. That is worth paying more for, so the fair range moves up by {premium} years to {low} to {high}.",
   "@napkinStep5BodyGrowing": {
     "placeholders": {
       "growth": { "type": "String" },
@@ -354,7 +357,7 @@
   },
 
   "napkinStep6Title": "So what is a share worth?",
-  "napkinStep6Body": "{low} to {high} years of {basis} is {valueLow} to {valueHigh}. Settle the debts, divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.",
+  "napkinStep6Body": "{low} to {high} years of {basis} is {valueLow} to {valueHigh} for the whole company. Divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.",
   "@napkinStep6Body": {
     "placeholders": {
       "low": { "type": "String" },
@@ -402,17 +405,17 @@
   "napkinCaveatEarnings": "It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.",
 
   "labelPriceEarnings": "P/E",
-  "labelEnterpriseValueToFreeCashFlow": "EV/FCF",
+  "labelPriceToFreeCashFlow": "P/FCF",
   "labelFreeCashFlowYield": "FCF yield",
   "labelGrowthAdjusted": "PEG",
   "labelPriceToSales": "P/S",
   "hintPriceEarnings": "Price divided by earnings per share: years of current profit the price costs. Blank at a loss, where the ratio means nothing.",
-  "hintEnterpriseValueToFreeCashFlow": "Enterprise value over free cash flow. Unlike P/E it counts debt, so a company that borrowed to buy its earnings looks dearer.",
+  "hintPriceToFreeCashFlow": "Years of spare cash the shares cost. Market value, not enterprise value, because this cash flow is already after interest.",
   "hintFreeCashFlowYield": "Free cash flow as a percentage of market value — what an owner earns at this price before any growth. Higher is cheaper.",
   "hintGrowthAdjusted": "The earnings multiple divided by the annual revenue growth rate. Under 1 means the growth more than covers the multiple.",
   "hintPriceToSales": "Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.",
 
-  "footnoteValuation": "The fair range is a heuristic: {low}–{high} times the latest year's {basis}, widened for revenue growth, less net debt. It is a frame for the price, not a target.",
+  "footnoteValuation": "The fair range is a heuristic: {low}–{high} times the latest year's {basis}, widened for revenue growth. That cash flow is already after interest, so the debt is not subtracted a second time. It is a frame for the price, not a target.",
   "@footnoteValuation": {
     "placeholders": {
       "low": { "type": "String" },

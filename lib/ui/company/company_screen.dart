@@ -6,6 +6,7 @@ import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/snapshot_body.dart';
 import 'package:pickstock/ui/widgets/theme_toggle_button.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// One company's report, on its own screen.
@@ -57,7 +58,7 @@ class _BackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      tooltip: TooltipContainer(child: Text(context.strings.backToList)).call,
+      tooltip: HintTooltip(context.strings.backToList).call,
       child: GhostButton(
         density: ButtonDensity.icon,
         onPressed: Navigator.of(context).pop,

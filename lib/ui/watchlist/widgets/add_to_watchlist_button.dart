@@ -6,6 +6,7 @@ import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_dot.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_editor.dart';
 import 'package:pickstock/ui/widgets/app_dialog.dart';
+import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -30,12 +31,14 @@ class AddToWatchlistButton extends StatelessWidget {
     final viewModel = context.read<WatchlistViewModel>();
 
     return Tooltip(
-      tooltip: TooltipContainer(child: Text(context.strings.watchlistAddTo))
-          .call,
+      tooltip: HintTooltip(context.strings.watchlistAddTo).call,
       child: OutlineButton(
-        // Square and properly padded once the label is gone, rather than
-        // shrinking to a 15-pixel target around a bare icon.
-        density: context.isCompact ? ButtonDensity.icon : ButtonDensity.compact,
+        // The default density where the label is shown: compact collapsed the
+        // padding to nothing, leaving the icon flush against the button's left
+        // edge and the text touching top and bottom, an 18-pixel pill beside a
+        // 38-pixel one. Square and properly padded once the label is gone,
+        // rather than shrinking to a 15-pixel target around a bare icon.
+        density: context.isCompact ? ButtonDensity.icon : ButtonDensity.normal,
         onPressed: () => showDropdown(
           context: context,
           builder: (menuContext) => DropdownMenu(

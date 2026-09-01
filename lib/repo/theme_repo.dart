@@ -49,6 +49,10 @@ class ThemeRepo {
   static const double watchlistSwatchSize = 28;
   static const double watchlistSwatchRing = 2;
 
+  /// A tooltip wraps at about a comfortable line length rather than running
+  /// the width of the window.
+  static const double tooltipMaxWidth = 380;
+
   /// A form dialog wide enough for a name field without stretching to the
   /// window.
   static const double dialogWidth = 340;
@@ -60,6 +64,13 @@ class ThemeRepo {
 
   /// How many list dots a tile shows before it stops.
   static const int watchlistDotsPerTile = 3;
+
+  /// Between the company card and the tabs under it. Half a section's spacing:
+  /// the two are one block of chrome, not two sections.
+  static const double reportTabsGap = spaceSmall + spaceXSmall;
+
+  /// Figures in the worked example are set apart from the prose around them.
+  static const FontWeight napkinFigureWeight = FontWeight.w600;
 
   /// The numbered bullet beside each step of the worked example.
   static const double napkinStepSize = 22;
@@ -100,13 +111,16 @@ class ThemeRepo {
   static const Duration stagePulseDuration = Duration(milliseconds: 900);
 
   static const double filterFieldMaxWidth = 320;
-  static const double sortSelectMaxWidth = 280;
   static const double sortPopupMaxHeight = 320;
 
-  /// The sort popup is sized to its longest option — "Revenue growth, 10-year
-  /// annualised" — rather than to the button, which wrapped every option over
-  /// three lines.
-  static const double sortPopupMinWidth = 300;
+  /// The most the sort control may take, however long its longest label
+  /// measures.
+  static const double sortSelectMaxWidth = 400;
+
+  /// What a `Select` costs around its label: the padding either side, the gap
+  /// before the chevron, and the chevron. Added to the measured width of the
+  /// longest option to size the control.
+  static const double selectChromeWidth = 56;
 
   /// Tiles are twice as wide as tall: the symbol and name stack on the left
   /// with the ranked figure on the right, which packs far more of them into a

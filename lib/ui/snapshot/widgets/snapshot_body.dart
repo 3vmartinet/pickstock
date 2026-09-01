@@ -27,18 +27,38 @@ class SnapshotBody extends StatelessWidget {
       (viewModel) => viewModel.reportTab,
     );
 
+    // The loaded report scrolls itself, so its header and tabs can stay pinned
+    // above the part that moves. The other states are a single card and scroll
+    // as a whole.
+    if (state is SnapshotLoaded) {
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: ThemeRepo.contentMaxWidth,
+          ),
+          // No fade of its own: the pinned header would blink on every tab
+          // change, and the tab body underneath already animates itself.
+          child: KeyedSubtree(
+            // A new key builds a new scroll position, so opening a tab starts
+            // at the top of it rather than wherever the last one was left.
+            key: ValueKey(tab),
+            child: const SnapshotReport(),
+          ),
+        ),
+      );
+    }
+
     final body = switch (state) {
-      SnapshotIdle() => const SnapshotIdleView(),
       SnapshotLoading() => const SnapshotLoadingView(),
       SnapshotFailed() => const SnapshotFailureView(),
-      SnapshotLoaded() => const SnapshotReport(),
+      _ => const SnapshotIdleView(),
     };
 
     return SingleChildScrollView(
-      // Keyed on the tab as well as the state: a new key builds a new scroll
-      // position, so opening a tab starts at the top of it rather than
-      // wherever the last one was left.
-      key: ValueKey((state.runtimeType, tab)),
+      // Keyed on the state's runtime type so switching states replays the
+      // entrance rather than morphing one layout into the next.
+      key: ValueKey(state.runtimeType),
       padding: context.pagePadding,
       child: Align(
         alignment: Alignment.topCenter,
@@ -46,8 +66,6 @@ class SnapshotBody extends StatelessWidget {
           constraints: const BoxConstraints(
             maxWidth: ThemeRepo.contentMaxWidth,
           ),
-          // Keyed on the state's runtime type so switching states replays the
-          // entrance rather than morphing one layout into the next.
           child: body.animate().fadeIn(duration: ThemeRepo.entranceDuration),
         ),
       ),

@@ -180,6 +180,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sortRevenueRising(int years) {
+    return 'Revenue up $years years running';
+  }
+
+  @override
   String get sortFreeCashFlowOneYear => 'Free cash flow growth, 1 year';
 
   @override
@@ -462,7 +467,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hintNetDebt =>
-      'Total borrowings minus cash, equivalents and short-term investments. A negative figure is a net cash position: the company holds more than it owes. Short-term investments count because treasuries and commercial paper settle a debt as readily as cash — Microsoft keeps three quarters of its money there.';
+      'Total borrowings minus cash, equivalents and short-term investments. A negative figure is net cash: the company holds more than it owes. Treasuries and commercial paper count, because they settle a debt as readily as cash does.';
 
   @override
   String deltaVersusPriorYear(String year) {
@@ -476,6 +481,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabValuation => 'Valuation';
 
   @override
+  String get tabExpectations => 'Expectations';
+
+  @override
   String get sectionValuation => 'Fair value';
 
   @override
@@ -483,7 +491,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hintSharePrice =>
-      'The price one share trades at. Quoted from Finnhub where a key is configured; click the price to type your own. Everything else in this report comes from the filings.';
+      'The price one share trades at. Quoted from Finnhub where a key is configured. Click the price to type your own.';
 
   @override
   String get placeholderSharePrice => '0.00';
@@ -604,7 +612,7 @@ class AppLocalizationsEn extends AppLocalizations {
     String amount,
     String shares,
   ) {
-    return '$low× to $high× $basis of $amount, less net debt, over $shares shares';
+    return '$low× to $high× $basis of $amount, over $shares shares';
   }
 
   @override
@@ -807,35 +815,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String napkinStep2Body(String revenue, String freeCashFlow) {
-    return 'Last year the company collected $revenue and, after every bill including new equipment, kept $freeCashFlow. That leftover is the money the owners could actually take out.';
+    return 'In one year the company took in $revenue and, after every bill including new equipment, had $freeCashFlow left over. That is one year\'s spare cash — what it earns annually, not a pile it has saved up.';
   }
 
   @override
-  String get napkinStep3TitleDebt => 'You also inherit the debts';
+  String get napkinStep3TitleDebt =>
+      'It owes money, and that is already counted';
 
   @override
-  String get napkinStep3TitleCash => 'You also get the cash pile';
+  String get napkinStep3TitleCash => 'It holds spare cash';
 
   @override
-  String napkinStep3BodyDebt(String netDebt, String enterpriseValue) {
-    return 'It owes $netDebt more than it holds. Buy the company and you owe that too, so the real cost is $enterpriseValue.';
+  String napkinStep3BodyDebt(String netDebt, String freeCashFlow) {
+    return 'The company owes $netDebt more than it holds. Its lenders are paid before the owners are, and that interest already came out of the $freeCashFlow above — so the cash figure is what is left for you after the debt has taken its cut.';
   }
 
   @override
-  String napkinStep3BodyCash(String netCash, String enterpriseValue) {
-    return 'It holds $netCash more than it owes. That cash comes with the company, so the real cost is only $enterpriseValue.';
+  String napkinStep3BodyCash(String netCash, String freeCashFlow) {
+    return 'The company holds $netCash more than it owes, so nothing is being siphoned off to lenders. The whole $freeCashFlow above belongs to the owners.';
   }
 
   @override
   String get napkinStep4Title => 'How many years of cash is that?';
 
   @override
-  String napkinStep4Body(
-    String enterpriseValue,
-    String freeCashFlow,
-    String years,
-  ) {
-    return '$enterpriseValue ÷ $freeCashFlow a year = $years years to earn the purchase price back, if nothing ever grows.';
+  String napkinStep4Body(String marketCap, String freeCashFlow, String years) {
+    return '$marketCap to buy every share, ÷ $freeCashFlow earned each year = $years years to get your money back, if the company never grows. The same question as asking how many years\' rent a flat costs.';
   }
 
   @override
@@ -852,7 +857,7 @@ class AppLocalizationsEn extends AppLocalizations {
     String low,
     String high,
   ) {
-    return 'A business going nowhere is worth roughly 12 to 18 years of its cash. This one grows $growth a year, which buys it another $premium years: $low to $high.';
+    return 'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is growing $growth a year, so next year\'s cash is bigger than this year\'s and you get your money back sooner than the plain sum suggests. That is worth paying more for, so the fair range moves up by $premium years to $low to $high.';
   }
 
   @override
@@ -869,7 +874,7 @@ class AppLocalizationsEn extends AppLocalizations {
     String rangeLow,
     String rangeHigh,
   ) {
-    return '$low to $high years of $basis is $valueLow to $valueHigh. Settle the debts, divide by $shares shares, and one share is worth $rangeLow to $rangeHigh.';
+    return '$low to $high years of $basis is $valueLow to $valueHigh for the whole company. Divide by $shares shares, and one share is worth $rangeLow to $rangeHigh.';
   }
 
   @override
@@ -911,7 +916,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelPriceEarnings => 'P/E';
 
   @override
-  String get labelEnterpriseValueToFreeCashFlow => 'EV/FCF';
+  String get labelPriceToFreeCashFlow => 'P/FCF';
 
   @override
   String get labelFreeCashFlowYield => 'FCF yield';
@@ -927,8 +932,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Price divided by earnings per share: years of current profit the price costs. Blank at a loss, where the ratio means nothing.';
 
   @override
-  String get hintEnterpriseValueToFreeCashFlow =>
-      'Enterprise value over free cash flow. Unlike P/E it counts debt, so a company that borrowed to buy its earnings looks dearer.';
+  String get hintPriceToFreeCashFlow =>
+      'Years of spare cash the shares cost. Market value, not enterprise value, because this cash flow is already after interest.';
 
   @override
   String get hintFreeCashFlowYield =>
@@ -944,7 +949,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String footnoteValuation(String low, String high, String basis) {
-    return 'The fair range is a heuristic: $low–$high times the latest year\'s $basis, widened for revenue growth, less net debt. It is a frame for the price, not a target.';
+    return 'The fair range is a heuristic: $low–$high times the latest year\'s $basis, widened for revenue growth. That cash flow is already after interest, so the debt is not subtracted a second time. It is a frame for the price, not a target.';
   }
 
   @override

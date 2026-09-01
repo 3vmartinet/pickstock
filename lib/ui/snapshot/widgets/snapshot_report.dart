@@ -7,6 +7,7 @@ import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
@@ -32,11 +33,57 @@ class SnapshotReport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    // The company and its tabs stay put while the report scrolls under them:
+    // on a long tab you would otherwise lose both the name of what you are
+    // reading and the way to the other tab.
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [CompanyHeader(), ReportTabs(), _TabBody(), _Footnotes()],
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            context.pageGutter,
+            context.pageGutter,
+            context.pageGutter,
+            0,
+          ),
+          child: const _Pinned(),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              context.pageGutter,
+              0,
+              context.pageGutter,
+              context.pageGutter,
+            ),
+            child: const ReportTabBody(),
+          ),
+        ),
+      ],
     );
   }
+}
+
+/// What stays on screen however far the report scrolls.
+class _Pinned extends StatelessWidget {
+  const _Pinned();
+
+  @override
+  Widget build(BuildContext context) => const Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [CompanyHeader(), ReportTabs()],
+  );
+}
+
+/// Everything that scrolls: the open tab, and the notes belonging to it.
+class ReportTabBody extends StatelessWidget {
+  const ReportTabBody({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [_TabBody(), _Footnotes()],
+  );
 }
 
 /// The tab bar, under the company and above everything it applies to.
@@ -56,7 +103,7 @@ class ReportTabs extends StatelessWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),
+      padding: const EdgeInsets.only(top: ThemeRepo.reportTabsGap),
       child: Tabs(
         index: current.index,
         expand: true,
@@ -70,7 +117,9 @@ class ReportTabs extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 spacing: ThemeRepo.spaceSmall,
                 children: [
-                  Icon(tab.icon).iconXSmall(),
+                  // Dropped on a narrow window: three labels and three icons
+                  // leave the labels no room to be read.
+                  if (!context.isCompact) Icon(tab.icon).iconXSmall(),
                   Flexible(
                     child: Text(tab.getLabel(context.strings)).singleLine(),
                   ),
@@ -99,10 +148,8 @@ class _TabBody extends StatelessWidget {
         _HighlightsSection(),
         _HistorySection(),
       ],
-      ReportTab.valuation => const <Widget>[
-        _ValuationSection(),
-        _ExpectationsSection(),
-      ],
+      ReportTab.valuation => const <Widget>[_ValuationSection()],
+      ReportTab.expectations => const <Widget>[_ExpectationsSection()],
     };
 
     // Keyed on the tab so switching replays the entrance instead of morphing
@@ -282,7 +329,15 @@ class _ExpectationsSection extends StatelessWidget {
     final hasExpectation = context.select<SnapshotViewModel, bool>(
       (viewModel) => viewModel.growthExpectation != null,
     );
-    if (!hasExpectation) return const SizedBox.shrink();
+    // On its own tab now, so an absent price leaves an empty screen rather
+    // than a gap under the valuation. Same way in as the valuation offers.
+    if (!hasExpectation) {
+      return _Section(
+        icon: LucideIcons.target,
+        title: context.strings.sectionExpectations,
+        child: const _NoPriceYet(),
+      );
+    }
 
     return _Section(
       icon: LucideIcons.target,
@@ -373,11 +428,14 @@ class _Footnotes extends StatelessWidget {
         context.select<SnapshotViewModel, bool>(
           (viewModel) => viewModel.historyPeriod == HistoryPeriod.quarterly,
         );
-    final valuation = tab != ReportTab.valuation
+    final valuation = tab == ReportTab.overview
         ? null
         : context.select<SnapshotViewModel, Valuation?>(
             (viewModel) => viewModel.valuation,
           );
+    // How the band was struck belongs under the band, not under the growth it
+    // is being compared with.
+    final valuationBasis = tab == ReportTab.valuation ? valuation?.basis : null;
 
     return Padding(
       padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),
@@ -386,11 +444,11 @@ class _Footnotes extends StatelessWidget {
         spacing: ThemeRepo.spaceXSmall,
         children: [
           Text(context.strings.footnoteNegatives).muted().xSmall(),
-          if (valuation != null) ...[
+          if (valuation != null)
             Text(context.strings.footnotePriceSource).muted().xSmall(),
+          if (tab == ReportTab.expectations && valuation != null)
             Text(context.strings.footnoteExpectations).muted().xSmall(),
-          ],
-          if (valuation?.basis case final basis?)
+          if (valuationBasis case final basis?)
             Text(
               context.strings.footnoteValuation(
                 _formatRepo.ratio(valuation!.lowMultiple),

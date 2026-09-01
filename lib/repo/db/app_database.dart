@@ -351,29 +351,45 @@ class AppDatabase extends _$AppDatabase {
   Future<Map<String, GrowthSample>> growthSamples({
     required GrowthMetric metric,
     required int years,
+    bool unbrokenOnly = false,
   }) async {
-    // A constant per metric, never anything caller-supplied.
-    final value = switch (metric) {
-      GrowthMetric.revenue => 'revenue',
+    // A constant per metric and per table alias, never anything
+    // caller-supplied.
+    String valueOf(String alias) => switch (metric) {
+      GrowthMetric.revenue => '$alias.revenue',
       GrowthMetric.freeCashFlow =>
-        '(operating_cash_flow - capital_expenditure)',
+        '($alias.operating_cash_flow - $alias.capital_expenditure)',
     };
 
     // The window ends at the company's latest fiscal year, whether or not it
     // reports this figure — the same year the report headlines. Picking the
     // latest year that happens to have a figure would rank a company on a
     // window its own report cannot corroborate.
+    //
+    // `rising_steps` counts the year-on-year steps inside the window that went
+    // up. An unbroken run needs every step in the window present and every one
+    // of them rising, so a gap in the filings breaks the run rather than being
+    // read through.
     final rows = await customSelect(
       'WITH latest AS ('
       '  SELECT cik, MAX(fiscal_year) AS end_year FROM fiscal_years'
       '  GROUP BY cik'
       ') '
       'SELECT l.cik AS cik, '
-      '  (SELECT $value FROM fiscal_years f '
+      '  (SELECT ${valueOf('f')} FROM fiscal_years f '
       '     WHERE f.cik = l.cik AND f.fiscal_year = l.end_year) AS end_value, '
-      '  (SELECT $value FROM fiscal_years f '
+      '  (SELECT ${valueOf('f')} FROM fiscal_years f '
       '     WHERE f.cik = l.cik AND f.fiscal_year = l.end_year - ?1) '
-      '     AS start_value '
+      '     AS start_value, '
+      '  (SELECT COUNT(*) FROM fiscal_years f '
+      '     JOIN fiscal_years p '
+      '       ON p.cik = f.cik AND p.fiscal_year = f.fiscal_year - 1 '
+      '    WHERE f.cik = l.cik '
+      '      AND f.fiscal_year > l.end_year - ?1 '
+      '      AND f.fiscal_year <= l.end_year '
+      '      AND ${valueOf('f')} IS NOT NULL '
+      '      AND ${valueOf('p')} IS NOT NULL '
+      '      AND ${valueOf('f')} > ${valueOf('p')}) AS rising_steps '
       'FROM latest l',
       variables: [Variable.withInt(years)],
       readsFrom: {fiscalYears},
@@ -382,7 +398,12 @@ class AppDatabase extends _$AppDatabase {
     return {
       for (final row in rows)
         row.read<String>('cik'): GrowthSample(
-          startValue: row.readNullable<double>('start_value'),
+          // A broken run is unrankable under this ordering rather than badly
+          // ranked: without a start value no rate can be stated, which is how
+          // every other gap in the filings already behaves.
+          startValue: unbrokenOnly && row.read<int>('rising_steps') < years
+              ? null
+              : row.readNullable<double>('start_value'),
           endValue: row.readNullable<double>('end_value'),
           years: years,
         ),

@@ -122,12 +122,19 @@ class Valuation extends Equatable {
     return cash / equity * 100;
   }
 
-  /// Enterprise value over free cash flow: the debt-adjusted cash multiple.
-  double? get enterpriseValueToFreeCashFlow {
+  /// Market value over free cash flow: the years of cash the shares cost.
+  ///
+  /// Against the market value rather than the enterprise value. Free cash flow
+  /// here is operating cash flow less capital spending, and US filers put
+  /// interest paid in the operating section — so it is already net of what the
+  /// lenders take, which makes it the shareholders' cash. Dividing enterprise
+  /// value by it charges for the debt twice: once in the numerator and again
+  /// through the interest already deducted from the denominator.
+  double? get priceToFreeCashFlow {
     final cash = freeCashFlow;
-    final value = enterpriseValue;
-    if (cash == null || value == null || cash <= 0 || value <= 0) return null;
-    return value / cash;
+    final equity = marketCap;
+    if (cash == null || equity == null || cash <= 0 || equity <= 0) return null;
+    return equity / cash;
   }
 
   double? get priceToSalesRatio {
@@ -186,10 +193,10 @@ class Valuation extends Equatable {
     final stream = basisAmount;
     final shares = sharesOutstanding;
     if (stream == null || shares == null || shares <= 0) return null;
-    // The band values the business, then hands back what the lenders own —
-    // so a debt-laden company is worth less per share at the same multiple.
-    final equity = stream * multiple - (netDebt ?? 0);
-    return equity <= 0 ? 0 : equity / shares;
+    // No net-debt adjustment: the stream is already after interest, so it is
+    // what reaches the shareholders and a multiple of it is what their shares
+    // are worth. Subtracting the debt on top would charge for it twice.
+    return stream * multiple / shares;
   }
 
   /// How far the price would have to move to reach [target], as a percentage.

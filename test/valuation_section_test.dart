@@ -86,7 +86,7 @@ void main() {
     expect(find.textContaining('free cash flow of \$98.8B'), findsOneWidget);
     // And the supporting ratios are there to be argued with.
     expect(find.text('P/E'), findsOneWidget);
-    expect(find.text('EV/FCF'), findsOneWidget);
+    expect(find.text('P/FCF'), findsOneWidget);
     expect(find.text('FCF yield'), findsOneWidget);
   });
 
@@ -203,6 +203,8 @@ void main() {
   testWidgets('says what growth the price requires', (tester) async {
     await openApple(tester);
     await enterPrice(tester, '250');
+    // On its own tab now, beside the valuation rather than under it.
+    await openReportTab(tester, ReportTab.expectations);
 
     expect(find.text('What the price is asking'), findsOneWidget);
     expect(find.text('Growth the price requires'), findsOneWidget);
@@ -220,6 +222,7 @@ void main() {
   ) async {
     await openApple(tester);
     await enterPrice(tester, '250');
+    await openReportTab(tester, ReportTab.expectations);
 
     // The fixture files three years, and a record needs more than that. The
     // required growth is still shown — it comes from the price, not the past —
