@@ -19,7 +19,16 @@ class SlowQuoteRepo implements QuoteRepo {
   final List<Completer<Quote>> pending = [];
 
   @override
-  Future<Quote> quoteFor(String ticker) {
+  Duration get timeUntilSlot => Duration.zero;
+
+  @override
+  void reserveForJob() {}
+
+  @override
+  void releaseJob() {}
+
+  @override
+  Future<Quote> quoteFor(String ticker, {bool forJob = false}) {
     asked.add(ticker);
     final completer = Completer<Quote>();
     pending.add(completer);

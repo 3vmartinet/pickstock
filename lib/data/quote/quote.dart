@@ -51,6 +51,9 @@ enum QuoteFailure {
   /// The provider accepted the connection and then said nothing.
   timedOut,
 
+  /// A bulk run holds the per-minute budget.
+  jobRunning,
+
   service;
 
   String describe(AppLocalizations strings) => switch (this) {
@@ -59,6 +62,7 @@ enum QuoteFailure {
     QuoteFailure.rateLimited => strings.quoteRateLimited,
     QuoteFailure.network => strings.quoteNetwork,
     QuoteFailure.timedOut => strings.quoteTimedOut,
+    QuoteFailure.jobRunning => strings.quoteJobRunning,
     QuoteFailure.service => strings.quoteService,
   };
 }

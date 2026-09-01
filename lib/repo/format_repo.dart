@@ -70,6 +70,14 @@ class FormatRepo {
     return isToday ? _time.format(local) : _dateTime.format(local);
   }
 
+  /// A rough remaining time, e.g. `12m` or `45s`. Rounded up to the minute
+  /// past a minute: a scan measured in tens of minutes gains nothing from a
+  /// seconds digit that changes while you read it.
+  String duration(Duration remaining) {
+    if (remaining.inMinutes < 1) return '${remaining.inSeconds}s';
+    return '${(remaining.inSeconds / 60).ceil()}m';
+  }
+
   /// A plain count at human scale, e.g. `24.1B` shares.
   String compactCount(double value) => _compactCount.format(value);
 

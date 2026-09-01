@@ -62,13 +62,35 @@ class FinnhubQuoteRepo implements QuoteRepo {
   /// When each call in the current window was made, oldest first.
   final List<DateTime> _calls = [];
 
+  bool _reservedForJob = false;
+
   @override
   bool get isConfigured => _apiKey.isNotEmpty;
 
   @override
-  Future<Quote> quoteFor(String ticker) async {
+  void reserveForJob() => _reservedForJob = true;
+
+  @override
+  void releaseJob() => _reservedForJob = false;
+
+  @override
+  Duration get timeUntilSlot {
+    final now = DateTime.now();
+    _calls.removeWhere((call) => now.difference(call) >= _window);
+    if (_calls.length < _callsPerWindow - _reservedCalls) return Duration.zero;
+    // The oldest call is the one whose expiry frees the next slot.
+    return _window - now.difference(_calls.first);
+  }
+
+  @override
+  Future<Quote> quoteFor(String ticker, {bool forJob = false}) async {
     if (!isConfigured) {
       throw const QuoteException(QuoteFailure.notConfigured);
+    }
+    // A bulk run owns the budget while it holds it, so an interactive quote is
+    // turned away with a reason rather than eating a call the run is pacing on.
+    if (_reservedForJob && !forJob) {
+      throw const QuoteException(QuoteFailure.jobRunning);
     }
     if (!_claimCall()) {
       logWarning(() => 'Quote budget spent; refusing to ask for $ticker');

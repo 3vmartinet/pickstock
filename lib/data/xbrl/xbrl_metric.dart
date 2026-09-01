@@ -78,11 +78,20 @@ enum XbrlMetric {
   /// borrowings use instead of the plain concept — Coca-Cola reports $42.1B
   /// there and nothing under either tag above it, so without it the company
   /// read as holding $1.5B of debt against $13.9B of cash.
+  ///
+  /// Convertible notes come last, so they are only read where a filer reports
+  /// no plain long-term debt concept at all. Super Micro is one: its
+  /// borrowings are entirely convertible notes, and it read as debt-free while
+  /// owing $4.6B. Where a filer reports both, the plain concept already
+  /// includes the notes and reading them again would double the debt.
   longTermDebt(
     tags: [
       'LongTermDebtNoncurrent',
       'LongTermDebtAndCapitalLeaseObligations',
       'LongTermDebt',
+      'ConvertibleDebtNoncurrent',
+      'ConvertibleLongTermNotesPayable',
+      'ConvertibleNotesPayableNoncurrent',
     ],
     isInstant: true,
   ),
@@ -91,6 +100,8 @@ enum XbrlMetric {
       'LongTermDebtCurrent',
       'LongTermDebtAndCapitalLeaseObligationsCurrent',
       'DebtCurrent',
+      'ConvertibleDebtCurrent',
+      'ConvertibleNotesPayableCurrent',
     ],
     isInstant: true,
   ),

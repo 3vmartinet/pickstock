@@ -9,6 +9,7 @@ import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/snapshot_body.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_sync.dart';
 import 'package:pickstock/ui/widgets/brand_mark.dart';
+import 'package:pickstock/ui/report/widgets/jobs_button.dart';
 import 'package:pickstock/ui/widgets/ingest_button.dart';
 import 'package:pickstock/ui/widgets/theme_toggle_button.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +69,7 @@ class _HomeAppBar extends StatelessWidget {
       subtitle: context.isCompact
           ? null
           : Text(context.strings.browseSubtitle(total)),
-      trailing: const [IngestButton(), ThemeToggleButton()],
+      trailing: const [JobsButton(), IngestButton(), ThemeToggleButton()],
     );
   }
 }

@@ -152,7 +152,7 @@ void main() {
 
     expect(find.text('11s'), findsOneWidget);
     expect(find.text('120/s'), findsOneWidget);
-    expect(find.text('Companies read'), findsOneWidget);
+    expect(find.text('Filers read'), findsOneWidget);
   });
 
   testWidgets('omits throughput until there is enough to average', (

@@ -26,7 +26,7 @@ void main() {
     expect(find.text('PickStock'), findsOneWidget);
     // Counts are grouped, not bare digits.
     expect(
-      find.text('${testTickers.length} symbols filed with SEC EDGAR'),
+      find.text("${testTickers.length} tickers in SEC's directory"),
       findsOneWidget,
     );
     expect(find.text('${testTickers.length} matches'), findsOneWidget);

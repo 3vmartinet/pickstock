@@ -8,7 +8,7 @@ part 'app_database.g.dart';
 /// Bumped whenever the XBRL extraction changes meaning. Rows written by an
 /// older extractor are discarded rather than served, because a stale row is
 /// indistinguishable from a correct one once it is in the table.
-const int extractorVersion = 5;
+const int extractorVersion = 6;
 
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
@@ -17,6 +17,9 @@ const int defaultWatchlistColourIndex = 0;
 
 /// Long enough for a descriptive name, short enough to fit a chip.
 const int watchlistNameMaxLength = 40;
+
+/// A report's name carries a filter and a date, so it needs more room.
+const int reportNameMaxLength = 80;
 
 const String _databaseName = 'pickstock';
 
@@ -116,6 +119,47 @@ class SharePrices extends Table {
   Set<Column<Object>> get primaryKey => {cik};
 }
 
+/// One finished screen of undervalued companies, kept so a run that took
+/// three quarters of an hour is not lost when the app closes.
+///
+/// User data like [Watchlists]: it cannot be downloaded again, so it sits out a
+/// schema rebuild.
+@DataClassName('ReportRow')
+class Reports extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// Renameable, and seeded from whatever the directory was filtered to.
+  TextColumn get name => text().withLength(min: 1, max: reportNameMaxLength)();
+
+  DateTimeColumn get createdAt => dateTime()();
+
+  /// How many companies the run looked at, against how many it could value.
+  IntColumn get consideredCount => integer()();
+  IntColumn get valuedCount => integer()();
+}
+
+/// One undervalued company as the report found it.
+///
+/// The figures are copied rather than referenced: a report is a record of what
+/// was true when it ran, and prices move.
+@DataClassName('ReportEntryRow')
+class ReportEntries extends Table {
+  IntColumn get reportId =>
+      integer().references(Reports, #id, onDelete: KeyAction.cascade)();
+  TextColumn get cik => text()();
+  TextColumn get ticker => text()();
+  TextColumn get name => text()();
+  RealColumn get pricePerShare => real()();
+  RealColumn get fairValueLow => real()();
+  RealColumn get fairValueHigh => real()();
+
+  /// How far the price would have to rise to reach the bottom of the range.
+  RealColumn get upsidePercent => real()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {reportId, cik};
+}
+
 /// Small choices the app remembers between launches: the theme, and whatever
 /// the directory was last filtered and ordered by.
 ///
@@ -194,6 +238,8 @@ class IngestRuns extends Table {
     Watchlists,
     WatchlistEntries,
     Settings,
+    Reports,
+    ReportEntries,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -206,7 +252,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -242,6 +288,11 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        if (from < 10) {
+          logInfo(() => 'Adding reports');
+          await migrator.createTable(reports);
+          await migrator.createTable(reportEntries);
         }
         if (from < 9) {
           logInfo(() => 'Adding settings');
@@ -280,7 +331,9 @@ class AppDatabase extends _$AppDatabase {
         if (entity == sharePrices ||
             entity == watchlists ||
             entity == watchlistEntries ||
-            entity == settings) {
+            entity == settings ||
+            entity == reports ||
+            entity == reportEntries) {
           continue;
         }
         await migrator.drop(entity);
@@ -521,6 +574,62 @@ class AppDatabase extends _$AppDatabase {
           (row) => row.watchlistId.equals(watchlistId) & row.cik.equals(cik),
         ))
         .go();
+  }
+
+  /// Every saved report, newest first, without their entries.
+  Future<List<ReportRow>> allReports() {
+    return (select(
+      reports,
+    )..orderBy([(row) => OrderingTerm.desc(row.createdAt)])).get();
+  }
+
+  /// One report's companies, most undervalued first.
+  Future<List<ReportEntryRow>> entriesForReport(int reportId) {
+    return (select(reportEntries)
+          ..where((row) => row.reportId.equals(reportId))
+          ..orderBy([(row) => OrderingTerm.desc(row.upsidePercent)]))
+        .get();
+  }
+
+  /// Stores a finished run and everything it found, in one transaction: a
+  /// report without its entries would look like a run that found nothing.
+  ///
+  /// Entries replace on conflict rather than failing. A company reached twice
+  /// in one run is a bug in the run, not a reason to throw away forty minutes
+  /// of work at the moment it finishes.
+  Future<int> saveReport({
+    required String name,
+    required int consideredCount,
+    required int valuedCount,
+    required List<ReportEntriesCompanion> entries,
+  }) {
+    return transaction(() async {
+      final id = await into(reports).insert(
+        ReportsCompanion.insert(
+          name: name,
+          createdAt: DateTime.now(),
+          consideredCount: consideredCount,
+          valuedCount: valuedCount,
+        ),
+      );
+      await batch(
+        (batch) => batch.insertAll(reportEntries, [
+          for (final entry in entries) entry.copyWith(reportId: Value(id)),
+        ], mode: InsertMode.insertOrReplace),
+      );
+      return id;
+    });
+  }
+
+  Future<void> renameReport(int id, String name) {
+    return (update(reports)..where((row) => row.id.equals(id))).write(
+      ReportsCompanion(name: Value(name)),
+    );
+  }
+
+  /// Removes a report and, through the cascade, its entries.
+  Future<void> deleteReport(int id) {
+    return (delete(reports)..where((row) => row.id.equals(id))).go();
   }
 
   /// Every remembered setting, as one read at startup.

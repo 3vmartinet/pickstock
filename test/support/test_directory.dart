@@ -17,6 +17,7 @@ import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
@@ -116,7 +117,16 @@ class FakeQuoteRepo implements QuoteRepo {
   final List<String> requested = [];
 
   @override
-  Future<Quote> quoteFor(String ticker) async {
+  Duration get timeUntilSlot => Duration.zero;
+
+  @override
+  void reserveForJob() {}
+
+  @override
+  void releaseJob() {}
+
+  @override
+  Future<Quote> quoteFor(String ticker, {bool forJob = false}) async {
     requested.add(ticker);
     final thrown = failure;
     if (thrown != null) throw QuoteException(thrown);
@@ -190,7 +200,8 @@ Future<AppDatabase> registerTestDependencies({
     // The real implementation against the in-memory database: a list is a
     // couple of tables and a cascade, all of which is worth exercising.
     ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
-    ..registerSingleton<SettingsRepo>(settingsRepo ?? LocalSettingsRepo());
+    ..registerSingleton<SettingsRepo>(settingsRepo ?? LocalSettingsRepo())
+    ..registerLazySingleton<ReportRepo>(LocalReportRepo.new);
 
   // Read before anything builds, exactly as `main` does.
   await GetIt.I.get<SettingsRepo>().load();

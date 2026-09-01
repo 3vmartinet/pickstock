@@ -39,6 +39,7 @@ edge of a narrow window — unreachable, with nothing to say there was more.
 | What the price is asking | Expectations | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
 | How this was worked out | Valuation | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
 | All tickers | — | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
+| Undervalued scans | — | A background run that prices every filtered company and reports those trading below the bottom of their fair range, most upside first. |
 | Watchlists | — | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
 
 ## Platforms
@@ -53,7 +54,8 @@ ingest has no place in a tab.
 
 Everything the app reports comes from SEC's bulk archive:
 
-* `companyfacts.zip` — **1.4 GB**, 20,290 filers, ~19 GB of JSON once expanded.
+* `companyfacts.zip` — **1.4 GB**, about 20,300 filers, ~19 GB of JSON once
+  expanded.
 * Streamed to a temp file, read one entry at a time, parsed, and written into a
   local SQLite database. The archive is deleted afterwards.
 * One request instead of twenty thousand, which is what SEC's fair-use guidance
@@ -73,6 +75,20 @@ So the first run fetches, in this order:
 2. the **industry codes** — up to four quarterly data sets, ~60 MB each;
 3. the **bulk archive** (1.4 GB), streamed to disk;
 4. then loads it all into SQLite.
+
+Three counts appear in the app and they measure different populations, which is
+worth keeping straight:
+
+| Count | What it is |
+| --- | --- |
+| ~20,300 | Filers in the archive — every entity with XBRL facts |
+| ~13,600 | Those stored, being the ones with at least one usable fiscal year |
+| 10,391 | Ticker symbols in SEC's directory |
+| ~8,000 | Distinct companies behind those tickers (`BRK-A` and `BRK-B` share one) |
+| ~5,000 | Both tickered and holding figures — what a report can be opened for |
+
+The ingest counts filers, because that is what it reads; the directory counts
+tickers, because that is what you search. The labels say which.
 
 Roughly 1.7 GB, once. After that the only network call is one HEAD
 request per launch — SEC serves the archive with a `Last-Modified` header, so the
@@ -269,6 +285,37 @@ gone.
 An enum stored by name is read back tolerantly: a value this build no longer has
 resets that filter instead of stopping the app from starting.
 
+### Scanning for undervalued companies
+
+The jobs button in the app bar starts a run over whatever the directory is
+currently filtered to. It prices each company, values it exactly as the report
+tab does, and keeps the ones trading below the bottom of their range, ranked by
+how far below.
+
+The run works on **filers, not symbols**. A company can list many times — Bank
+of America has seventeen tickers, mostly preferred shares, and a warrant shares
+its issuer's CIK and filings. Across the directory that is 2,390 duplicate rows
+over 1,445 filers, so pricing each symbol would spend three quarters of an hour
+of budget re-answering the same question, and two rows for one company cannot
+both be stored against a report.
+
+**Most companies cannot be valued at all**, and the run skips them rather than
+guessing: of 10,391 tickers only about 2,300 have a share count, revenue and a
+positive cash stream. The report says how many were skipped, so a short list is
+not mistaken for a thorough search.
+
+At 55 quotes a minute an unfiltered run takes about **42 minutes**; a sector
+filter usually brings it under ten. While it runs it **holds the whole quote
+budget** — opening a company shows "a report is using the quote allowance"
+beside the last stored price rather than competing for calls and making both
+slow. The remaining-time estimate comes from the rate actually achieved, not
+from the theoretical one.
+
+Reports are saved, renameable and deletable, and survive a schema rebuild like
+watchlists: a run that took three quarters of an hour is not something to lose.
+A running job is not resumed after a restart — the prices it collected are
+already stored, and the rest have moved on.
+
 ### Watchlists
 
 Favourites is not a separate mechanism: it is a list like any other, seeded on
@@ -400,6 +447,17 @@ groups are declared apart in `XbrlMetric` and each has a test.
 Debt also covers `LongTermDebtAndCapitalLeaseObligations`, used by filers who
 fold leases into borrowings. Without it Coca-Cola reported $1.5B of debt — its
 commercial paper alone — instead of $45.4B.
+
+Debt also covers **convertible notes**, last in the list so they are read only
+where a filer reports no plain long-term concept at all. Super Micro is one: its
+borrowings are entirely convertible notes and it read as debt-free while owing
+$4.66B. Where a filer reports both, the plain concept already includes the notes
+and reading them again would double the debt.
+
+`DebtLongtermAndShorttermCombinedAmount` looks like the obvious answer for such
+filers and is not: for Super Micro it tracks the long-term debt maturity
+schedule, which excludes the convertible notes entirely — $0.11B at FY2025
+against $4.65B genuinely owed.
 
 Some filers tag debt only with company-specific concepts, which the bulk archive
 does not carry. Ford is one: nothing under any us-gaap debt concept, so its net

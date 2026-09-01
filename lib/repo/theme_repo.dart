@@ -49,6 +49,16 @@ class ThemeRepo {
   static const double watchlistSwatchSize = 28;
   static const double watchlistSwatchRing = 2;
 
+  /// Columns of a report row.
+  static const double reportRankWidth = 28;
+  static const double reportTickerWidth = 72;
+  static const double reportFigureWidth = 128;
+
+  /// The jobs panel: wide enough for a report's name and its date on one
+  /// line, and capped so a long history scrolls rather than filling the app.
+  static const double jobsPanelWidth = 360;
+  static const double jobsPanelMaxListHeight = 260;
+
   /// A tooltip wraps at about a comfortable line length rather than running
   /// the width of the window.
   static const double tooltipMaxWidth = 380;

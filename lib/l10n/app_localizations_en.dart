@@ -22,7 +22,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statDownloaded => 'Downloaded';
 
   @override
-  String get statLoaded => 'Companies read';
+  String get statLoaded => 'Filers read';
 
   @override
   String get statDataSets => 'Data sets';
@@ -58,7 +58,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stageLoadLabel => 'Local database';
 
   @override
-  String get stageLoadDetail => 'Reading filings for every company';
+  String get stageLoadDetail =>
+      'Every filer in the archive — most have no ticker';
 
   @override
   String get ingestPreparing => 'Preparing your data';
@@ -151,6 +152,146 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
 
   @override
+  String get jobsTooltip => 'Reports and running jobs';
+
+  @override
+  String get jobsTitle => 'Reports';
+
+  @override
+  String get jobsEmpty => 'No reports yet.';
+
+  @override
+  String get jobsEmptyBody =>
+      'Scan the companies you have filtered to find the ones priced below what their filings support.';
+
+  @override
+  String jobsStart(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Scan $countString companies';
+  }
+
+  @override
+  String get jobsRunningOne => 'A scan is already running.';
+
+  @override
+  String jobsProgress(int done, int total) {
+    final intl.NumberFormat doneNumberFormat = intl.NumberFormat.decimalPattern(
+      localeName,
+    );
+    final String doneString = doneNumberFormat.format(done);
+    final intl.NumberFormat totalNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String totalString = totalNumberFormat.format(total);
+
+    return '$doneString of $totalString';
+  }
+
+  @override
+  String jobsFound(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count undervalued',
+      one: '1 undervalued',
+      zero: 'nothing yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String jobsRemaining(String duration) {
+    return '$duration left';
+  }
+
+  @override
+  String get jobsCancel => 'Stop';
+
+  @override
+  String get jobsCancelled => 'Stopped early';
+
+  @override
+  String jobsDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count undervalued',
+      one: '1 undervalued',
+      zero: 'Nothing undervalued',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get jobsOpen => 'Open';
+
+  @override
+  String get reportRename => 'Rename';
+
+  @override
+  String get reportDelete => 'Delete';
+
+  @override
+  String reportDeleteConfirm(String name) {
+    return 'Delete “$name”? The companies in it are not affected.';
+  }
+
+  @override
+  String get reportNameLabel => 'Name';
+
+  @override
+  String reportSubtitle(int found, int valued, int considered) {
+    final intl.NumberFormat valuedNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String valuedString = valuedNumberFormat.format(valued);
+    final intl.NumberFormat consideredNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String consideredString = consideredNumberFormat.format(considered);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      found,
+      locale: localeName,
+      other: '$found of',
+      one: '1 of',
+    );
+    return '$_temp0 $valuedString valued, from $consideredString filtered';
+  }
+
+  @override
+  String get reportEmptyTitle => 'Nothing was undervalued';
+
+  @override
+  String get reportEmptyBody =>
+      'Every company that could be valued was priced at or above the bottom of its range.';
+
+  @override
+  String get reportColumnUpside => 'Upside to low';
+
+  @override
+  String get reportColumnPrice => 'Price';
+
+  @override
+  String get reportColumnRange => 'Fair range';
+
+  @override
+  String reportSkippedNote(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString companies could not be valued and were skipped',
+      one: 'One company could not be valued and was skipped',
+      zero: '',
+    );
+    return '$_temp0 — no share count, no revenue, or no positive cash stream.';
+  }
+
+  @override
   String get toggleTheme => 'Toggle light / dark theme';
 
   @override
@@ -162,10 +303,10 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countString symbols',
-      one: '1 symbol',
+      other: '$countString tickers',
+      one: '1 ticker',
     );
-    return '$_temp0 filed with SEC EDGAR';
+    return '$_temp0 in SEC\'s directory';
   }
 
   @override
@@ -541,6 +682,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quoteNetwork => 'Could not reach the quote service.';
+
+  @override
+  String get quoteJobRunning =>
+      'A report is using the quote allowance. This price will refresh when it finishes.';
 
   @override
   String get quoteTimedOut => 'The quote service did not answer in time.';

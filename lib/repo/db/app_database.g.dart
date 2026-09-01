@@ -3565,6 +3565,907 @@ class SettingsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $ReportsTable extends Reports with TableInfo<$ReportsTable, ReportRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReportsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _consideredCountMeta = const VerificationMeta(
+    'consideredCount',
+  );
+  @override
+  late final GeneratedColumn<int> consideredCount = GeneratedColumn<int>(
+    'considered_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valuedCountMeta = const VerificationMeta(
+    'valuedCount',
+  );
+  @override
+  late final GeneratedColumn<int> valuedCount = GeneratedColumn<int>(
+    'valued_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    createdAt,
+    consideredCount,
+    valuedCount,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reports';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReportRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('considered_count')) {
+      context.handle(
+        _consideredCountMeta,
+        consideredCount.isAcceptableOrUnknown(
+          data['considered_count']!,
+          _consideredCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_consideredCountMeta);
+    }
+    if (data.containsKey('valued_count')) {
+      context.handle(
+        _valuedCountMeta,
+        valuedCount.isAcceptableOrUnknown(
+          data['valued_count']!,
+          _valuedCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_valuedCountMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReportRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReportRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      consideredCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}considered_count'],
+      )!,
+      valuedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}valued_count'],
+      )!,
+    );
+  }
+
+  @override
+  $ReportsTable createAlias(String alias) {
+    return $ReportsTable(attachedDatabase, alias);
+  }
+}
+
+class ReportRow extends DataClass implements Insertable<ReportRow> {
+  final int id;
+
+  /// Renameable, and seeded from whatever the directory was filtered to.
+  final String name;
+  final DateTime createdAt;
+
+  /// How many companies the run looked at, against how many it could value.
+  final int consideredCount;
+  final int valuedCount;
+  const ReportRow({
+    required this.id,
+    required this.name,
+    required this.createdAt,
+    required this.consideredCount,
+    required this.valuedCount,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['considered_count'] = Variable<int>(consideredCount);
+    map['valued_count'] = Variable<int>(valuedCount);
+    return map;
+  }
+
+  ReportsCompanion toCompanion(bool nullToAbsent) {
+    return ReportsCompanion(
+      id: Value(id),
+      name: Value(name),
+      createdAt: Value(createdAt),
+      consideredCount: Value(consideredCount),
+      valuedCount: Value(valuedCount),
+    );
+  }
+
+  factory ReportRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReportRow(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      consideredCount: serializer.fromJson<int>(json['consideredCount']),
+      valuedCount: serializer.fromJson<int>(json['valuedCount']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'consideredCount': serializer.toJson<int>(consideredCount),
+      'valuedCount': serializer.toJson<int>(valuedCount),
+    };
+  }
+
+  ReportRow copyWith({
+    int? id,
+    String? name,
+    DateTime? createdAt,
+    int? consideredCount,
+    int? valuedCount,
+  }) => ReportRow(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    createdAt: createdAt ?? this.createdAt,
+    consideredCount: consideredCount ?? this.consideredCount,
+    valuedCount: valuedCount ?? this.valuedCount,
+  );
+  ReportRow copyWithCompanion(ReportsCompanion data) {
+    return ReportRow(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      consideredCount: data.consideredCount.present
+          ? data.consideredCount.value
+          : this.consideredCount,
+      valuedCount: data.valuedCount.present
+          ? data.valuedCount.value
+          : this.valuedCount,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportRow(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('consideredCount: $consideredCount, ')
+          ..write('valuedCount: $valuedCount')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, name, createdAt, consideredCount, valuedCount);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReportRow &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.createdAt == this.createdAt &&
+          other.consideredCount == this.consideredCount &&
+          other.valuedCount == this.valuedCount);
+}
+
+class ReportsCompanion extends UpdateCompanion<ReportRow> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<DateTime> createdAt;
+  final Value<int> consideredCount;
+  final Value<int> valuedCount;
+  const ReportsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.consideredCount = const Value.absent(),
+    this.valuedCount = const Value.absent(),
+  });
+  ReportsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    required DateTime createdAt,
+    required int consideredCount,
+    required int valuedCount,
+  }) : name = Value(name),
+       createdAt = Value(createdAt),
+       consideredCount = Value(consideredCount),
+       valuedCount = Value(valuedCount);
+  static Insertable<ReportRow> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<DateTime>? createdAt,
+    Expression<int>? consideredCount,
+    Expression<int>? valuedCount,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (createdAt != null) 'created_at': createdAt,
+      if (consideredCount != null) 'considered_count': consideredCount,
+      if (valuedCount != null) 'valued_count': valuedCount,
+    });
+  }
+
+  ReportsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<DateTime>? createdAt,
+    Value<int>? consideredCount,
+    Value<int>? valuedCount,
+  }) {
+    return ReportsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      createdAt: createdAt ?? this.createdAt,
+      consideredCount: consideredCount ?? this.consideredCount,
+      valuedCount: valuedCount ?? this.valuedCount,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (consideredCount.present) {
+      map['considered_count'] = Variable<int>(consideredCount.value);
+    }
+    if (valuedCount.present) {
+      map['valued_count'] = Variable<int>(valuedCount.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('consideredCount: $consideredCount, ')
+          ..write('valuedCount: $valuedCount')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ReportEntriesTable extends ReportEntries
+    with TableInfo<$ReportEntriesTable, ReportEntryRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReportEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _reportIdMeta = const VerificationMeta(
+    'reportId',
+  );
+  @override
+  late final GeneratedColumn<int> reportId = GeneratedColumn<int>(
+    'report_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reports (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _cikMeta = const VerificationMeta('cik');
+  @override
+  late final GeneratedColumn<String> cik = GeneratedColumn<String>(
+    'cik',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tickerMeta = const VerificationMeta('ticker');
+  @override
+  late final GeneratedColumn<String> ticker = GeneratedColumn<String>(
+    'ticker',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pricePerShareMeta = const VerificationMeta(
+    'pricePerShare',
+  );
+  @override
+  late final GeneratedColumn<double> pricePerShare = GeneratedColumn<double>(
+    'price_per_share',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fairValueLowMeta = const VerificationMeta(
+    'fairValueLow',
+  );
+  @override
+  late final GeneratedColumn<double> fairValueLow = GeneratedColumn<double>(
+    'fair_value_low',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fairValueHighMeta = const VerificationMeta(
+    'fairValueHigh',
+  );
+  @override
+  late final GeneratedColumn<double> fairValueHigh = GeneratedColumn<double>(
+    'fair_value_high',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _upsidePercentMeta = const VerificationMeta(
+    'upsidePercent',
+  );
+  @override
+  late final GeneratedColumn<double> upsidePercent = GeneratedColumn<double>(
+    'upside_percent',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    reportId,
+    cik,
+    ticker,
+    name,
+    pricePerShare,
+    fairValueLow,
+    fairValueHigh,
+    upsidePercent,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'report_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReportEntryRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('report_id')) {
+      context.handle(
+        _reportIdMeta,
+        reportId.isAcceptableOrUnknown(data['report_id']!, _reportIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reportIdMeta);
+    }
+    if (data.containsKey('cik')) {
+      context.handle(
+        _cikMeta,
+        cik.isAcceptableOrUnknown(data['cik']!, _cikMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cikMeta);
+    }
+    if (data.containsKey('ticker')) {
+      context.handle(
+        _tickerMeta,
+        ticker.isAcceptableOrUnknown(data['ticker']!, _tickerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tickerMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('price_per_share')) {
+      context.handle(
+        _pricePerShareMeta,
+        pricePerShare.isAcceptableOrUnknown(
+          data['price_per_share']!,
+          _pricePerShareMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_pricePerShareMeta);
+    }
+    if (data.containsKey('fair_value_low')) {
+      context.handle(
+        _fairValueLowMeta,
+        fairValueLow.isAcceptableOrUnknown(
+          data['fair_value_low']!,
+          _fairValueLowMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fairValueLowMeta);
+    }
+    if (data.containsKey('fair_value_high')) {
+      context.handle(
+        _fairValueHighMeta,
+        fairValueHigh.isAcceptableOrUnknown(
+          data['fair_value_high']!,
+          _fairValueHighMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fairValueHighMeta);
+    }
+    if (data.containsKey('upside_percent')) {
+      context.handle(
+        _upsidePercentMeta,
+        upsidePercent.isAcceptableOrUnknown(
+          data['upside_percent']!,
+          _upsidePercentMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_upsidePercentMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {reportId, cik};
+  @override
+  ReportEntryRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReportEntryRow(
+      reportId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}report_id'],
+      )!,
+      cik: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cik'],
+      )!,
+      ticker: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ticker'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      pricePerShare: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price_per_share'],
+      )!,
+      fairValueLow: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fair_value_low'],
+      )!,
+      fairValueHigh: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}fair_value_high'],
+      )!,
+      upsidePercent: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}upside_percent'],
+      )!,
+    );
+  }
+
+  @override
+  $ReportEntriesTable createAlias(String alias) {
+    return $ReportEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class ReportEntryRow extends DataClass implements Insertable<ReportEntryRow> {
+  final int reportId;
+  final String cik;
+  final String ticker;
+  final String name;
+  final double pricePerShare;
+  final double fairValueLow;
+  final double fairValueHigh;
+
+  /// How far the price would have to rise to reach the bottom of the range.
+  final double upsidePercent;
+  const ReportEntryRow({
+    required this.reportId,
+    required this.cik,
+    required this.ticker,
+    required this.name,
+    required this.pricePerShare,
+    required this.fairValueLow,
+    required this.fairValueHigh,
+    required this.upsidePercent,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['report_id'] = Variable<int>(reportId);
+    map['cik'] = Variable<String>(cik);
+    map['ticker'] = Variable<String>(ticker);
+    map['name'] = Variable<String>(name);
+    map['price_per_share'] = Variable<double>(pricePerShare);
+    map['fair_value_low'] = Variable<double>(fairValueLow);
+    map['fair_value_high'] = Variable<double>(fairValueHigh);
+    map['upside_percent'] = Variable<double>(upsidePercent);
+    return map;
+  }
+
+  ReportEntriesCompanion toCompanion(bool nullToAbsent) {
+    return ReportEntriesCompanion(
+      reportId: Value(reportId),
+      cik: Value(cik),
+      ticker: Value(ticker),
+      name: Value(name),
+      pricePerShare: Value(pricePerShare),
+      fairValueLow: Value(fairValueLow),
+      fairValueHigh: Value(fairValueHigh),
+      upsidePercent: Value(upsidePercent),
+    );
+  }
+
+  factory ReportEntryRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReportEntryRow(
+      reportId: serializer.fromJson<int>(json['reportId']),
+      cik: serializer.fromJson<String>(json['cik']),
+      ticker: serializer.fromJson<String>(json['ticker']),
+      name: serializer.fromJson<String>(json['name']),
+      pricePerShare: serializer.fromJson<double>(json['pricePerShare']),
+      fairValueLow: serializer.fromJson<double>(json['fairValueLow']),
+      fairValueHigh: serializer.fromJson<double>(json['fairValueHigh']),
+      upsidePercent: serializer.fromJson<double>(json['upsidePercent']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'reportId': serializer.toJson<int>(reportId),
+      'cik': serializer.toJson<String>(cik),
+      'ticker': serializer.toJson<String>(ticker),
+      'name': serializer.toJson<String>(name),
+      'pricePerShare': serializer.toJson<double>(pricePerShare),
+      'fairValueLow': serializer.toJson<double>(fairValueLow),
+      'fairValueHigh': serializer.toJson<double>(fairValueHigh),
+      'upsidePercent': serializer.toJson<double>(upsidePercent),
+    };
+  }
+
+  ReportEntryRow copyWith({
+    int? reportId,
+    String? cik,
+    String? ticker,
+    String? name,
+    double? pricePerShare,
+    double? fairValueLow,
+    double? fairValueHigh,
+    double? upsidePercent,
+  }) => ReportEntryRow(
+    reportId: reportId ?? this.reportId,
+    cik: cik ?? this.cik,
+    ticker: ticker ?? this.ticker,
+    name: name ?? this.name,
+    pricePerShare: pricePerShare ?? this.pricePerShare,
+    fairValueLow: fairValueLow ?? this.fairValueLow,
+    fairValueHigh: fairValueHigh ?? this.fairValueHigh,
+    upsidePercent: upsidePercent ?? this.upsidePercent,
+  );
+  ReportEntryRow copyWithCompanion(ReportEntriesCompanion data) {
+    return ReportEntryRow(
+      reportId: data.reportId.present ? data.reportId.value : this.reportId,
+      cik: data.cik.present ? data.cik.value : this.cik,
+      ticker: data.ticker.present ? data.ticker.value : this.ticker,
+      name: data.name.present ? data.name.value : this.name,
+      pricePerShare: data.pricePerShare.present
+          ? data.pricePerShare.value
+          : this.pricePerShare,
+      fairValueLow: data.fairValueLow.present
+          ? data.fairValueLow.value
+          : this.fairValueLow,
+      fairValueHigh: data.fairValueHigh.present
+          ? data.fairValueHigh.value
+          : this.fairValueHigh,
+      upsidePercent: data.upsidePercent.present
+          ? data.upsidePercent.value
+          : this.upsidePercent,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportEntryRow(')
+          ..write('reportId: $reportId, ')
+          ..write('cik: $cik, ')
+          ..write('ticker: $ticker, ')
+          ..write('name: $name, ')
+          ..write('pricePerShare: $pricePerShare, ')
+          ..write('fairValueLow: $fairValueLow, ')
+          ..write('fairValueHigh: $fairValueHigh, ')
+          ..write('upsidePercent: $upsidePercent')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    reportId,
+    cik,
+    ticker,
+    name,
+    pricePerShare,
+    fairValueLow,
+    fairValueHigh,
+    upsidePercent,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReportEntryRow &&
+          other.reportId == this.reportId &&
+          other.cik == this.cik &&
+          other.ticker == this.ticker &&
+          other.name == this.name &&
+          other.pricePerShare == this.pricePerShare &&
+          other.fairValueLow == this.fairValueLow &&
+          other.fairValueHigh == this.fairValueHigh &&
+          other.upsidePercent == this.upsidePercent);
+}
+
+class ReportEntriesCompanion extends UpdateCompanion<ReportEntryRow> {
+  final Value<int> reportId;
+  final Value<String> cik;
+  final Value<String> ticker;
+  final Value<String> name;
+  final Value<double> pricePerShare;
+  final Value<double> fairValueLow;
+  final Value<double> fairValueHigh;
+  final Value<double> upsidePercent;
+  final Value<int> rowid;
+  const ReportEntriesCompanion({
+    this.reportId = const Value.absent(),
+    this.cik = const Value.absent(),
+    this.ticker = const Value.absent(),
+    this.name = const Value.absent(),
+    this.pricePerShare = const Value.absent(),
+    this.fairValueLow = const Value.absent(),
+    this.fairValueHigh = const Value.absent(),
+    this.upsidePercent = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReportEntriesCompanion.insert({
+    required int reportId,
+    required String cik,
+    required String ticker,
+    required String name,
+    required double pricePerShare,
+    required double fairValueLow,
+    required double fairValueHigh,
+    required double upsidePercent,
+    this.rowid = const Value.absent(),
+  }) : reportId = Value(reportId),
+       cik = Value(cik),
+       ticker = Value(ticker),
+       name = Value(name),
+       pricePerShare = Value(pricePerShare),
+       fairValueLow = Value(fairValueLow),
+       fairValueHigh = Value(fairValueHigh),
+       upsidePercent = Value(upsidePercent);
+  static Insertable<ReportEntryRow> custom({
+    Expression<int>? reportId,
+    Expression<String>? cik,
+    Expression<String>? ticker,
+    Expression<String>? name,
+    Expression<double>? pricePerShare,
+    Expression<double>? fairValueLow,
+    Expression<double>? fairValueHigh,
+    Expression<double>? upsidePercent,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (reportId != null) 'report_id': reportId,
+      if (cik != null) 'cik': cik,
+      if (ticker != null) 'ticker': ticker,
+      if (name != null) 'name': name,
+      if (pricePerShare != null) 'price_per_share': pricePerShare,
+      if (fairValueLow != null) 'fair_value_low': fairValueLow,
+      if (fairValueHigh != null) 'fair_value_high': fairValueHigh,
+      if (upsidePercent != null) 'upside_percent': upsidePercent,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReportEntriesCompanion copyWith({
+    Value<int>? reportId,
+    Value<String>? cik,
+    Value<String>? ticker,
+    Value<String>? name,
+    Value<double>? pricePerShare,
+    Value<double>? fairValueLow,
+    Value<double>? fairValueHigh,
+    Value<double>? upsidePercent,
+    Value<int>? rowid,
+  }) {
+    return ReportEntriesCompanion(
+      reportId: reportId ?? this.reportId,
+      cik: cik ?? this.cik,
+      ticker: ticker ?? this.ticker,
+      name: name ?? this.name,
+      pricePerShare: pricePerShare ?? this.pricePerShare,
+      fairValueLow: fairValueLow ?? this.fairValueLow,
+      fairValueHigh: fairValueHigh ?? this.fairValueHigh,
+      upsidePercent: upsidePercent ?? this.upsidePercent,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (reportId.present) {
+      map['report_id'] = Variable<int>(reportId.value);
+    }
+    if (cik.present) {
+      map['cik'] = Variable<String>(cik.value);
+    }
+    if (ticker.present) {
+      map['ticker'] = Variable<String>(ticker.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (pricePerShare.present) {
+      map['price_per_share'] = Variable<double>(pricePerShare.value);
+    }
+    if (fairValueLow.present) {
+      map['fair_value_low'] = Variable<double>(fairValueLow.value);
+    }
+    if (fairValueHigh.present) {
+      map['fair_value_high'] = Variable<double>(fairValueHigh.value);
+    }
+    if (upsidePercent.present) {
+      map['upside_percent'] = Variable<double>(upsidePercent.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReportEntriesCompanion(')
+          ..write('reportId: $reportId, ')
+          ..write('cik: $cik, ')
+          ..write('ticker: $ticker, ')
+          ..write('name: $name, ')
+          ..write('pricePerShare: $pricePerShare, ')
+          ..write('fairValueLow: $fairValueLow, ')
+          ..write('fairValueHigh: $fairValueHigh, ')
+          ..write('upsidePercent: $upsidePercent, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3579,6 +4480,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $ReportsTable reports = $ReportsTable(this);
+  late final $ReportEntriesTable reportEntries = $ReportEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3593,6 +4496,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     watchlists,
     watchlistEntries,
     settings,
+    reports,
+    reportEntries,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3602,6 +4507,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('watchlist_entries', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'reports',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('report_entries', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -6128,6 +7040,688 @@ typedef $$SettingsTableProcessedTableManager =
       SettingRow,
       PrefetchHooks Function()
     >;
+typedef $$ReportsTableCreateCompanionBuilder = ReportsCompanion Function({
+  Value<int> id,
+  required String name,
+  required DateTime createdAt,
+  required int consideredCount,
+  required int valuedCount,
+});
+typedef $$ReportsTableUpdateCompanionBuilder = ReportsCompanion Function({
+  Value<int> id,
+  Value<String> name,
+  Value<DateTime> createdAt,
+  Value<int> consideredCount,
+  Value<int> valuedCount,
+});
+
+final class $$ReportsTableReferences
+    extends BaseReferences<_$AppDatabase, $ReportsTable, ReportRow> {
+  $$ReportsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ReportEntriesTable, List<ReportEntryRow>>
+  _reportEntriesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.reportEntries,
+    aliasName: 'reports__id__report_entries__report_id',
+  );
+
+  $$ReportEntriesTableProcessedTableManager get reportEntriesRefs {
+    final manager = $$ReportEntriesTableTableManager(
+      $_db,
+      $_db.reportEntries,
+    ).filter((f) => f.reportId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_reportEntriesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$ReportsTableFilterComposer
+    extends Composer<_$AppDatabase, $ReportsTable> {
+  $$ReportsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get consideredCount => $composableBuilder(
+    column: $table.consideredCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get valuedCount => $composableBuilder(
+    column: $table.valuedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> reportEntriesRefs(
+    Expression<bool> Function($$ReportEntriesTableFilterComposer f) f,
+  ) {
+    final $$ReportEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reportEntries,
+      getReferencedColumn: (t) => t.reportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReportEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.reportEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ReportsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReportsTable> {
+  $$ReportsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get consideredCount => $composableBuilder(
+    column: $table.consideredCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get valuedCount => $composableBuilder(
+    column: $table.valuedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ReportsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReportsTable> {
+  $$ReportsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get consideredCount => $composableBuilder(
+    column: $table.consideredCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get valuedCount => $composableBuilder(
+    column: $table.valuedCount,
+    builder: (column) => column,
+  );
+
+  Expression<T> reportEntriesRefs<T extends Object>(
+    Expression<T> Function($$ReportEntriesTableAnnotationComposer a) f,
+  ) {
+    final $$ReportEntriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reportEntries,
+      getReferencedColumn: (t) => t.reportId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReportEntriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reportEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$ReportsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReportsTable,
+          ReportRow,
+          $$ReportsTableFilterComposer,
+          $$ReportsTableOrderingComposer,
+          $$ReportsTableAnnotationComposer,
+          $$ReportsTableCreateCompanionBuilder,
+          $$ReportsTableUpdateCompanionBuilder,
+          (ReportRow, $$ReportsTableReferences),
+          ReportRow,
+          PrefetchHooks Function({bool reportEntriesRefs})
+        > {
+  $$ReportsTableTableManager(_$AppDatabase db, $ReportsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReportsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReportsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReportsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> consideredCount = const Value.absent(),
+                Value<int> valuedCount = const Value.absent(),
+              }) => ReportsCompanion(
+                id: id,
+                name: name,
+                createdAt: createdAt,
+                consideredCount: consideredCount,
+                valuedCount: valuedCount,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                required DateTime createdAt,
+                required int consideredCount,
+                required int valuedCount,
+              }) => ReportsCompanion.insert(
+                id: id,
+                name: name,
+                createdAt: createdAt,
+                consideredCount: consideredCount,
+                valuedCount: valuedCount,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReportsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({reportEntriesRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (reportEntriesRefs) db.reportEntries,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (reportEntriesRefs)
+                    await $_getPrefetchedData<
+                      ReportRow,
+                      $ReportsTable,
+                      ReportEntryRow
+                    >(
+                      currentTable: table,
+                      referencedTable: $$ReportsTableReferences
+                          ._reportEntriesRefsTable(db),
+                      managerFromTypedResult: (p0) => $$ReportsTableReferences(
+                        db,
+                        table,
+                        p0,
+                      ).reportEntriesRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.reportId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReportsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReportsTable,
+      ReportRow,
+      $$ReportsTableFilterComposer,
+      $$ReportsTableOrderingComposer,
+      $$ReportsTableAnnotationComposer,
+      $$ReportsTableCreateCompanionBuilder,
+      $$ReportsTableUpdateCompanionBuilder,
+      (ReportRow, $$ReportsTableReferences),
+      ReportRow,
+      PrefetchHooks Function({bool reportEntriesRefs})
+    >;
+typedef $$ReportEntriesTableCreateCompanionBuilder =
+    ReportEntriesCompanion Function({
+      required int reportId,
+      required String cik,
+      required String ticker,
+      required String name,
+      required double pricePerShare,
+      required double fairValueLow,
+      required double fairValueHigh,
+      required double upsidePercent,
+      Value<int> rowid,
+    });
+typedef $$ReportEntriesTableUpdateCompanionBuilder =
+    ReportEntriesCompanion Function({
+      Value<int> reportId,
+      Value<String> cik,
+      Value<String> ticker,
+      Value<String> name,
+      Value<double> pricePerShare,
+      Value<double> fairValueLow,
+      Value<double> fairValueHigh,
+      Value<double> upsidePercent,
+      Value<int> rowid,
+    });
+
+final class $$ReportEntriesTableReferences
+    extends BaseReferences<_$AppDatabase, $ReportEntriesTable, ReportEntryRow> {
+  $$ReportEntriesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ReportsTable _reportIdTable(_$AppDatabase db) =>
+      db.reports.createAlias('report_entries__report_id__reports__id');
+
+  $$ReportsTableProcessedTableManager get reportId {
+    final $_column = $_itemColumn<int>('report_id')!;
+
+    final manager = $$ReportsTableTableManager(
+      $_db,
+      $_db.reports,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_reportIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ReportEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReportEntriesTable> {
+  $$ReportEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ticker => $composableBuilder(
+    column: $table.ticker,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get pricePerShare => $composableBuilder(
+    column: $table.pricePerShare,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fairValueLow => $composableBuilder(
+    column: $table.fairValueLow,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get fairValueHigh => $composableBuilder(
+    column: $table.fairValueHigh,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get upsidePercent => $composableBuilder(
+    column: $table.upsidePercent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ReportsTableFilterComposer get reportId {
+    final $$ReportsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reportId,
+      referencedTable: $db.reports,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReportsTableFilterComposer(
+            $db: $db,
+            $table: $db.reports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReportEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReportEntriesTable> {
+  $$ReportEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ticker => $composableBuilder(
+    column: $table.ticker,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get pricePerShare => $composableBuilder(
+    column: $table.pricePerShare,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get fairValueLow => $composableBuilder(
+    column: $table.fairValueLow,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get fairValueHigh => $composableBuilder(
+    column: $table.fairValueHigh,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get upsidePercent => $composableBuilder(
+    column: $table.upsidePercent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ReportsTableOrderingComposer get reportId {
+    final $$ReportsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reportId,
+      referencedTable: $db.reports,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReportsTableOrderingComposer(
+            $db: $db,
+            $table: $db.reports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReportEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReportEntriesTable> {
+  $$ReportEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cik =>
+      $composableBuilder(column: $table.cik, builder: (column) => column);
+
+  GeneratedColumn<String> get ticker =>
+      $composableBuilder(column: $table.ticker, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get pricePerShare => $composableBuilder(
+    column: $table.pricePerShare,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get fairValueLow => $composableBuilder(
+    column: $table.fairValueLow,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get fairValueHigh => $composableBuilder(
+    column: $table.fairValueHigh,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get upsidePercent => $composableBuilder(
+    column: $table.upsidePercent,
+    builder: (column) => column,
+  );
+
+  $$ReportsTableAnnotationComposer get reportId {
+    final $$ReportsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reportId,
+      referencedTable: $db.reports,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ReportsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reports,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ReportEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ReportEntriesTable,
+          ReportEntryRow,
+          $$ReportEntriesTableFilterComposer,
+          $$ReportEntriesTableOrderingComposer,
+          $$ReportEntriesTableAnnotationComposer,
+          $$ReportEntriesTableCreateCompanionBuilder,
+          $$ReportEntriesTableUpdateCompanionBuilder,
+          (ReportEntryRow, $$ReportEntriesTableReferences),
+          ReportEntryRow,
+          PrefetchHooks Function({bool reportId})
+        > {
+  $$ReportEntriesTableTableManager(_$AppDatabase db, $ReportEntriesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReportEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReportEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReportEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> reportId = const Value.absent(),
+                Value<String> cik = const Value.absent(),
+                Value<String> ticker = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> pricePerShare = const Value.absent(),
+                Value<double> fairValueLow = const Value.absent(),
+                Value<double> fairValueHigh = const Value.absent(),
+                Value<double> upsidePercent = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ReportEntriesCompanion(
+                reportId: reportId,
+                cik: cik,
+                ticker: ticker,
+                name: name,
+                pricePerShare: pricePerShare,
+                fairValueLow: fairValueLow,
+                fairValueHigh: fairValueHigh,
+                upsidePercent: upsidePercent,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int reportId,
+                required String cik,
+                required String ticker,
+                required String name,
+                required double pricePerShare,
+                required double fairValueLow,
+                required double fairValueHigh,
+                required double upsidePercent,
+                Value<int> rowid = const Value.absent(),
+              }) => ReportEntriesCompanion.insert(
+                reportId: reportId,
+                cik: cik,
+                ticker: ticker,
+                name: name,
+                pricePerShare: pricePerShare,
+                fairValueLow: fairValueLow,
+                fairValueHigh: fairValueHigh,
+                upsidePercent: upsidePercent,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ReportEntriesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({reportId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (reportId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.reportId,
+                        referencedTable: $$ReportEntriesTableReferences
+                            ._reportIdTable(db),
+                        referencedColumn: $$ReportEntriesTableReferences
+                            ._reportIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ReportEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ReportEntriesTable,
+      ReportEntryRow,
+      $$ReportEntriesTableFilterComposer,
+      $$ReportEntriesTableOrderingComposer,
+      $$ReportEntriesTableAnnotationComposer,
+      $$ReportEntriesTableCreateCompanionBuilder,
+      $$ReportEntriesTableUpdateCompanionBuilder,
+      (ReportEntryRow, $$ReportEntriesTableReferences),
+      ReportEntryRow,
+      PrefetchHooks Function({bool reportId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6150,4 +7744,8 @@ class $AppDatabaseManager {
       $$WatchlistEntriesTableTableManager(_db, _db.watchlistEntries);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$ReportsTableTableManager get reports =>
+      $$ReportsTableTableManager(_db, _db.reports);
+  $$ReportEntriesTableTableManager get reportEntries =>
+      $$ReportEntriesTableTableManager(_db, _db.reportEntries);
 }

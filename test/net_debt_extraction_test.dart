@@ -115,6 +115,34 @@ void main() {
       expect(year.holdsNetCash, isFalse);
     });
 
+    test('reads debt that is entirely convertible notes', () {
+      // Super Micro's shape: no plain long-term debt concept anywhere, so it
+      // read as owing nothing while carrying $4.6B of convertible notes.
+      final years = CompanyFactsParser.parse(
+        _facts({
+          'CashAndCashEquivalentsAtCarryingValue': 7.5e9,
+          'ConvertibleLongTermNotesPayable': 4.66e9,
+        }),
+      );
+
+      expect(years.single.totalDebt, 4.66e9);
+      expect(years.single.holdsNetCash, isTrue);
+    });
+
+    test('does not add convertible notes to debt that already counts them', () {
+      // A filer reporting both has the notes inside its long-term debt
+      // already; reading them again would double the borrowings.
+      final years = CompanyFactsParser.parse(
+        _facts({
+          'LongTermDebtNoncurrent': 30e9,
+          'ConvertibleDebtNoncurrent': 12e9,
+          'LongTermDebtCurrent': 5e9,
+        }),
+      );
+
+      expect(years.single.totalDebt, 35e9);
+    });
+
     test('prefers the plain concept where a filer reports both', () {
       final years = CompanyFactsParser.parse(
         _facts({

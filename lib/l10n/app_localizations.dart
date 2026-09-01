@@ -121,7 +121,7 @@ abstract class AppLocalizations {
   /// No description provided for @statLoaded.
   ///
   /// In en, this message translates to:
-  /// **'Companies read'**
+  /// **'Filers read'**
   String get statLoaded;
 
   /// No description provided for @statDataSets.
@@ -187,7 +187,7 @@ abstract class AppLocalizations {
   /// No description provided for @stageLoadDetail.
   ///
   /// In en, this message translates to:
-  /// **'Reading filings for every company'**
+  /// **'Every filer in the archive — most have no ticker'**
   String get stageLoadDetail;
 
   /// No description provided for @ingestPreparing.
@@ -304,6 +304,150 @@ abstract class AppLocalizations {
   /// **'This takes a few minutes. Leave the app open.'**
   String get ingestWarnLeave;
 
+  /// No description provided for @jobsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports and running jobs'**
+  String get jobsTooltip;
+
+  /// No description provided for @jobsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get jobsTitle;
+
+  /// No description provided for @jobsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports yet.'**
+  String get jobsEmpty;
+
+  /// No description provided for @jobsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the companies you have filtered to find the ones priced below what their filings support.'**
+  String get jobsEmptyBody;
+
+  /// No description provided for @jobsStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan {count} companies'**
+  String jobsStart(int count);
+
+  /// No description provided for @jobsRunningOne.
+  ///
+  /// In en, this message translates to:
+  /// **'A scan is already running.'**
+  String get jobsRunningOne;
+
+  /// No description provided for @jobsProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total}'**
+  String jobsProgress(int done, int total);
+
+  /// No description provided for @jobsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{nothing yet} =1{1 undervalued} other{{count} undervalued}}'**
+  String jobsFound(int count);
+
+  /// No description provided for @jobsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{duration} left'**
+  String jobsRemaining(String duration);
+
+  /// No description provided for @jobsCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get jobsCancel;
+
+  /// No description provided for @jobsCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped early'**
+  String get jobsCancelled;
+
+  /// No description provided for @jobsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing undervalued} =1{1 undervalued} other{{count} undervalued}}'**
+  String jobsDone(int count);
+
+  /// No description provided for @jobsOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get jobsOpen;
+
+  /// No description provided for @reportRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get reportRename;
+
+  /// No description provided for @reportDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get reportDelete;
+
+  /// No description provided for @reportDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”? The companies in it are not affected.'**
+  String reportDeleteConfirm(String name);
+
+  /// No description provided for @reportNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get reportNameLabel;
+
+  /// No description provided for @reportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{found, plural, =1{1 of} other{{found} of}} {valued} valued, from {considered} filtered'**
+  String reportSubtitle(int found, int valued, int considered);
+
+  /// No description provided for @reportEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was undervalued'**
+  String get reportEmptyTitle;
+
+  /// No description provided for @reportEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every company that could be valued was priced at or above the bottom of its range.'**
+  String get reportEmptyBody;
+
+  /// No description provided for @reportColumnUpside.
+  ///
+  /// In en, this message translates to:
+  /// **'Upside to low'**
+  String get reportColumnUpside;
+
+  /// No description provided for @reportColumnPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get reportColumnPrice;
+
+  /// No description provided for @reportColumnRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair range'**
+  String get reportColumnRange;
+
+  /// No description provided for @reportSkippedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{} =1{One company could not be valued and was skipped} other{{count} companies could not be valued and were skipped}} — no share count, no revenue, or no positive cash stream.'**
+  String reportSkippedNote(int count);
+
   /// No description provided for @toggleTheme.
   ///
   /// In en, this message translates to:
@@ -313,7 +457,7 @@ abstract class AppLocalizations {
   /// No description provided for @browseSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 symbol} other{{count} symbols}} filed with SEC EDGAR'**
+  /// **'{count, plural, =1{1 ticker} other{{count} tickers}} in SEC\'s directory'**
   String browseSubtitle(int count);
 
   /// No description provided for @sortByName.
@@ -897,6 +1041,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not reach the quote service.'**
   String get quoteNetwork;
+
+  /// No description provided for @quoteJobRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'A report is using the quote allowance. This price will refresh when it finishes.'**
+  String get quoteJobRunning;
 
   /// No description provided for @quoteTimedOut.
   ///

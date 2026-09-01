@@ -7,6 +7,7 @@ import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
+import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
@@ -161,6 +162,16 @@ class BrowseViewModel extends ChangeNotifier {
     // the tree is building rebuilds widgets that have already been laid out
     // this frame.
     scheduleMicrotask(notifyListeners);
+  }
+
+  /// What the current filter is, in a few words, to name a report after.
+  String describeFilter(AppLocalizations strings) {
+    final parts = [
+      if (_sector case final sector?) sector.getLabel(strings),
+      if (_query.isNotEmpty) '"$_query"',
+      if (_watchlistMembers != null) strings.watchlistFilterLabel,
+    ];
+    return parts.isEmpty ? strings.watchlistAll : parts.join(' · ');
   }
 
   /// Whether the grid is narrowed to a list that happens to be empty, as

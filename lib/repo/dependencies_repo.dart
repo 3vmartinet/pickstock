@@ -9,6 +9,7 @@ import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
 import 'package:pickstock/repo/sec/local_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
+import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
@@ -34,6 +35,7 @@ abstract final class DependenciesRepo {
       )
       ..registerLazySingleton<QuoteRepo>(FinnhubQuoteRepo.new)
       ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
+      ..registerLazySingleton<ReportRepo>(LocalReportRepo.new)
       ..registerLazySingleton<SettingsRepo>(
         () => usesMockData ? MemorySettingsRepo() : LocalSettingsRepo(),
       );

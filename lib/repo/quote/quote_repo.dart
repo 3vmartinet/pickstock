@@ -11,6 +11,19 @@ abstract interface class QuoteRepo {
 
   /// The current price for [ticker], as EDGAR spells the symbol.
   ///
-  /// Throws a [QuoteException] for every expected failure.
-  Future<Quote> quoteFor(String ticker);
+  /// Throws a [QuoteException] for every expected failure. [forJob] marks a
+  /// call made by a bulk run, which is allowed through while the budget is
+  /// reserved.
+  Future<Quote> quoteFor(String ticker, {bool forJob = false});
+
+  /// How long until the next call would be allowed, so a bulk run can pace
+  /// itself instead of walking into a refusal.
+  Duration get timeUntilSlot;
+
+  /// Hands the whole per-minute budget to a bulk run. Interactive quotes are
+  /// refused with [QuoteFailure.jobRunning] until it is released, which is
+  /// what makes a long run finish in a predictable time.
+  void reserveForJob();
+
+  void releaseJob();
 }

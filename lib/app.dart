@@ -6,6 +6,7 @@ import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/report/jobs_view_model.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -31,6 +32,9 @@ class PickStockApp extends StatelessWidget {
         // Also above the router: a company starred from its own screen has to
         // be starred on the list the moment you go back to it.
         ChangeNotifierProvider(create: (_) => WatchlistViewModel()),
+        // Also above the router: a scan takes tens of minutes, and navigating
+        // away from the list that started it must not abandon it.
+        ChangeNotifierProvider(create: (_) => JobsViewModel()),
       ],
       child: const _PickStockAppView(),
     );
