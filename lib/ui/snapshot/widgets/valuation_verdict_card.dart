@@ -5,6 +5,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
+import 'package:pickstock/ui/snapshot/widgets/fair_value_gauge.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -59,7 +60,7 @@ class ValuationVerdictCard extends StatelessWidget {
           ),
           if (verdict != ValuationVerdict.unknown) ...[
             const Divider(),
-            const _FairValueRow(),
+            const FairValueGauge(),
             const _WorkingsLines(),
           ],
           const Divider(),
@@ -85,47 +86,6 @@ class _VerdictGlyph extends StatelessWidget {
         borderRadius: context.theme.borderRadiusMd,
       ),
       child: Icon(icon, color: accent).iconSmall(),
-    );
-  }
-}
-
-/// The band itself, and how far the price is from the middle of it.
-class _FairValueRow extends StatelessWidget {
-  const _FairValueRow();
-
-  @override
-  Widget build(BuildContext context) {
-    final valuation = context.select<SnapshotViewModel, Valuation?>(
-      (viewModel) => viewModel.valuation,
-    );
-    final low = valuation?.fairValueLow;
-    final high = valuation?.fairValueHigh;
-    if (valuation == null || low == null || high == null) {
-      return const SizedBox.shrink();
-    }
-
-    final upside = valuation.upsidePercent;
-
-    return Wrap(
-      spacing: ThemeRepo.spaceXLarge,
-      runSpacing: ThemeRepo.spaceSmall,
-      children: [
-        _Stat(
-          label: context.strings.labelFairValueRange,
-          value: context.strings.fairValueRange(
-            _formatRepo.price(low),
-            _formatRepo.price(high),
-          ),
-          isEmphasised: true,
-        ),
-        if (upside != null)
-          _Stat(
-            label: context.strings.labelUpside,
-            value: _formatRepo.signedPercent(upside),
-            colour: _themeRepo.forOutcome(context.theme, isGood: upside >= 0),
-            isEmphasised: true,
-          ),
-      ],
     );
   }
 }
@@ -223,29 +183,17 @@ class _SizeRow extends StatelessWidget {
 
 /// A labelled figure, stacked so a row of them reads as columns.
 class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.label,
-    required this.value,
-    this.colour,
-    this.isEmphasised = false,
-  });
+  const _Stat({required this.label, required this.value});
 
   final String label;
   final String value;
-  final Color? colour;
-  final bool isEmphasised;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: ThemeRepo.spaceXSmall,
-      children: [
-        Text(label).muted().xSmall(),
-        isEmphasised
-            ? Text(value).large().semiBold(color: colour)
-            : Text(value).small().semiBold(color: colour),
-      ],
+      children: [Text(label).muted().xSmall(), Text(value).small().semiBold()],
     );
   }
 }

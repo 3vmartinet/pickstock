@@ -192,21 +192,22 @@ class Valuation extends Equatable {
     return equity <= 0 ? 0 : equity / shares;
   }
 
-  /// The middle of the band, which the upside is measured to.
-  double? get fairValueMid {
-    final low = fairValueLow;
-    final high = fairValueHigh;
-    if (low == null || high == null) return null;
-    return (low + high) / 2;
+  /// How far the price would have to move to reach [target], as a percentage.
+  /// Positive means the target is above the current price.
+  ///
+  /// Measured to each end of the band rather than to its middle: a single
+  /// figure against an invented midpoint is hard to tie back to either bound,
+  /// which is the only part of the band the arithmetic actually produced.
+  double? percentTo(double? target) {
+    if (target == null || pricePerShare <= 0) return null;
+    return (target - pricePerShare) / pricePerShare * 100;
   }
 
-  /// How far the price would have to move to reach the middle of the band,
-  /// as a percentage. Positive means there is room above the current price.
-  double? get upsidePercent {
-    final mid = fairValueMid;
-    if (mid == null || pricePerShare <= 0) return null;
-    return (mid - pricePerShare) / pricePerShare * 100;
-  }
+  /// How far the price is from the bottom of the band.
+  double? get percentToLow => percentTo(fairValueLow);
+
+  /// How far the price is from the top of the band.
+  double? get percentToHigh => percentTo(fairValueHigh);
 
   ValuationVerdict get verdict {
     final low = fairValueLow;

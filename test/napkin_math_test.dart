@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/ui/snapshot/widgets/napkin_math.dart';
 import 'package:pickstock/ui/snapshot/widgets/valuation_verdict_card.dart';
@@ -13,11 +14,6 @@ const Size _wideSize = Size(1900, 1600);
 
 /// Wide enough for the report, too narrow to split it.
 const Size _narrowSize = Size(1100, 1600);
-
-final Finder _priceField = find.ancestor(
-  of: find.text('0.00'),
-  matching: find.byType(TextField),
-);
 
 void main() {
   late AppDatabase database;
@@ -41,8 +37,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
-    await tester.enterText(_priceField, price);
-    await tester.pumpAndSettle();
+    await openReportTab(tester, ReportTab.valuation);
+    await enterPriceByHand(tester, price);
   }
 
   testWidgets('walks through the arithmetic with the real figures', (
@@ -85,8 +81,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.enterText(_priceField, '110');
-    await tester.pumpAndSettle();
+    await enterPriceByHand(tester, '110');
     expect(
       find.textContaining('You are paying \$110.00, inside the'),
       findsOneWidget,
@@ -99,8 +94,8 @@ void main() {
     await openApple(tester, _wideSize, '250');
     await tester.tap(find.text('NVIDIA CORP'));
     await tester.pumpAndSettle();
-    await tester.enterText(_priceField, '200');
-    await tester.pumpAndSettle();
+    await openReportTab(tester, ReportTab.valuation);
+    await enterPriceByHand(tester, '200');
 
     expect(find.text('Worth knowing'), findsOneWidget);
     expect(

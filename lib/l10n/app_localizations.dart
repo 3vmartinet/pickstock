@@ -724,12 +724,6 @@ abstract class AppLocalizations {
   /// **'CIK {cik}'**
   String labelCik(String cik);
 
-  /// No description provided for @labelFiscalYearsCovered.
-  ///
-  /// In en, this message translates to:
-  /// **'FY{first} – FY{last}'**
-  String labelFiscalYearsCovered(String first, String last);
-
   /// No description provided for @labelNetDebtPosition.
   ///
   /// In en, this message translates to:
@@ -784,10 +778,22 @@ abstract class AppLocalizations {
   /// **'vs FY{year}'**
   String deltaVersusPriorYear(String year);
 
-  /// No description provided for @sectionValuation.
+  /// No description provided for @tabOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get tabOverview;
+
+  /// No description provided for @tabValuation.
   ///
   /// In en, this message translates to:
   /// **'Valuation'**
+  String get tabValuation;
+
+  /// No description provided for @sectionValuation.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair value'**
   String get sectionValuation;
 
   /// No description provided for @labelSharePrice.
@@ -799,7 +805,7 @@ abstract class AppLocalizations {
   /// No description provided for @hintSharePrice.
   ///
   /// In en, this message translates to:
-  /// **'The price one share trades at. Quoted from Finnhub where a key is configured, and yours to type over either way — everything else in this report comes from the filings.'**
+  /// **'The price one share trades at. Quoted from Finnhub where a key is configured; click the price to type your own. Everything else in this report comes from the filings.'**
   String get hintSharePrice;
 
   /// No description provided for @placeholderSharePrice.
@@ -940,17 +946,41 @@ abstract class AppLocalizations {
   /// **'The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.'**
   String get detailNotValuable;
 
-  /// No description provided for @labelFairValueRange.
+  /// No description provided for @labelRangeLow.
   ///
   /// In en, this message translates to:
-  /// **'Fair range'**
-  String get labelFairValueRange;
+  /// **'Range low'**
+  String get labelRangeLow;
 
-  /// No description provided for @labelUpside.
+  /// No description provided for @labelRangeHigh.
   ///
   /// In en, this message translates to:
-  /// **'To mid-range'**
-  String get labelUpside;
+  /// **'Range high'**
+  String get labelRangeHigh;
+
+  /// No description provided for @labelPriceToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Price today'**
+  String get labelPriceToday;
+
+  /// No description provided for @priceEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the share price'**
+  String get priceEditorTitle;
+
+  /// No description provided for @priceEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Replaces the quoted price until the next refresh.'**
+  String get priceEditorHint;
+
+  /// No description provided for @priceEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a price'**
+  String get priceEnter;
 
   /// No description provided for @labelMarketCap.
   ///
@@ -969,12 +999,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Earnings per share'**
   String get labelEarningsPerShare;
-
-  /// No description provided for @fairValueRange.
-  ///
-  /// In en, this message translates to:
-  /// **'{low} – {high}'**
-  String fairValueRange(String low, String high);
 
   /// No description provided for @valuationBasisLine.
   ///

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/data/quote/quote.dart';
+import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -9,12 +10,6 @@ import 'support/test_directory.dart';
 
 /// Wide enough for the list and the report side by side.
 const Size _wideSize = Size(1600, 1400);
-
-/// The price field, told apart from the directory filter by its placeholder.
-final Finder priceField = find.ancestor(
-  of: find.text('0.00'),
-  matching: find.byType(TextField),
-);
 
 void main() {
   late AppDatabase database;
@@ -43,18 +38,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
+    await openReportTab(tester, ReportTab.valuation);
   }
 
-  Future<void> enterPrice(WidgetTester tester, String price) async {
-    await tester.enterText(priceField, price);
-    await tester.pumpAndSettle();
-  }
+  Future<void> enterPrice(WidgetTester tester, String price) =>
+      enterPriceByHand(tester, price);
 
   testWidgets('asks for a price before it will judge one', (tester) async {
     await openApple(tester);
 
-    expect(find.text('Valuation'), findsOneWidget);
-    expect(priceField, findsOneWidget);
+    expect(find.text('Fair value'), findsOneWidget);
+    // No field sitting on screen: a price is set deliberately.
+    expect(find.text('Set a price'), findsOneWidget);
     expect(
       find.textContaining('Enter the current share price'),
       findsOneWidget,
@@ -81,8 +76,11 @@ void main() {
     await openApple(tester);
     await enterPrice(tester, '250');
 
-    expect(find.text('Fair range'), findsOneWidget);
-    expect(find.text('To mid-range'), findsOneWidget);
+    // Each bound carries its own distance from the price, rather than one
+    // percentage measured to a midpoint the arithmetic never produced.
+    expect(find.text('Range low'), findsOneWidget);
+    expect(find.text('Range high'), findsOneWidget);
+    expect(find.text('Price today'), findsOneWidget);
     expect(find.text('Market value'), findsOneWidget);
     // The multiples and the stream they are struck against are on the card.
     expect(find.textContaining('free cash flow of \$98.8B'), findsOneWidget);
@@ -194,6 +192,10 @@ void main() {
 
       // Apple's stored quote is still fresh, so only NVIDIA was asked for.
       expect(quotes.requested, ['AAPL', 'NVDA']);
+
+      // Reopening a company starts on the overview, so the verdict is a tab
+      // away rather than gone.
+      await openReportTab(tester, ReportTab.valuation);
       expect(find.text('Overvalued'), findsOneWidget);
     });
   });
@@ -235,6 +237,7 @@ void main() {
     // carrying Apple's over.
     await tester.tap(find.text('NVIDIA CORP'));
     await tester.pumpAndSettle();
+    await openReportTab(tester, ReportTab.valuation);
     expect(
       find.textContaining('Enter the current share price'),
       findsOneWidget,
@@ -243,7 +246,8 @@ void main() {
     // Back to Apple, and the price it was left at is still there.
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
+    await openReportTab(tester, ReportTab.valuation);
     expect(find.text('Overvalued'), findsOneWidget);
-    expect((tester.widget(priceField) as TextField).controller?.text, '250.0');
+    expect(find.text('\$250.00'), findsOneWidget);
   });
 }

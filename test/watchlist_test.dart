@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 
@@ -16,7 +17,10 @@ void main() {
     database = AppDatabase.forTesting(NativeDatabase.memory());
     GetIt.I
       ..registerSingleton<AppDatabase>(database)
-      ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new);
+      ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
+      // The chosen list is remembered between launches, so the view model
+      // reads it on the way up.
+      ..registerSingleton<SettingsRepo>(MemorySettingsRepo());
     viewModel = WatchlistViewModel();
     // The constructor's first read is asynchronous.
     await Future<void>.delayed(Duration.zero);

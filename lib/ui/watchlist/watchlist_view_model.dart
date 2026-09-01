@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/watchlist/watchlist.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 
 WatchlistRepo get _watchlistRepo => GetIt.I.get<WatchlistRepo>();
+SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 
 /// The user's lists, live.
 ///
@@ -14,6 +16,9 @@ WatchlistRepo get _watchlistRepo => GetIt.I.get<WatchlistRepo>();
 /// and back.
 class WatchlistViewModel extends ChangeNotifier {
   WatchlistViewModel() {
+    // Read before the first frame; `_reload` drops it if the list has since
+    // been deleted, which is the one way a remembered id can go stale.
+    _selectedId = _settingsRepo.watchlistId;
     unawaited(_reload());
   }
 
@@ -28,6 +33,7 @@ class WatchlistViewModel extends ChangeNotifier {
     // that no longer exists.
     if (_selectedId != null && !lists.any((list) => list.id == _selectedId)) {
       _selectedId = null;
+      unawaited(_settingsRepo.setWatchlistId(null));
     }
     notifyListeners();
   }
@@ -86,6 +92,7 @@ class WatchlistViewModel extends ChangeNotifier {
     if (_selectedId == watchlistId) return;
     _selectedId = watchlistId;
     notifyListeners();
+    unawaited(_settingsRepo.setWatchlistId(watchlistId));
   }
 
   Future<void> toggleStar(String cik) async {

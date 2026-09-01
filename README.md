@@ -10,16 +10,31 @@ and need no network. A free Finnhub key adds live share prices for the valuation
 
 ## What it shows
 
-| Block | Content |
-| --- | --- |
-| Sanity check | Three yes/no questions about the most recent fiscal year: revenue growing, profitable, more cash than debt. |
-| Highlights | Revenue, net income, free cash flow and net debt/(cash) for the latest year, each with its year-over-year move. |
-| History | **Annual** or **Quarterly**, chosen with a tab: up to ten fiscal years or the last eight quarters, line by line. An eight-column table where all of it fits, one card per period below that. Sortable, newest first by default. |
-| Valuation | Whether the price is above or below the range the filings support, with the multiples, the cash stream and the growth premium behind it, plus P/E, EV/FCF, FCF yield, PEG and P/S. |
-| What the price is asking | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
-| How this was worked out | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
-| All tickers | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
-| Watchlists | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
+The report has two tabs — **Overview** and **Valuation** — under a fixed company
+header. In one column it ran to 3,445 pixels once a price arrived: nearly four
+screens on a laptop, with the figures table below all of it, and the whole page
+growing by 2,220 pixels the moment a quote landed.
+
+The valuation is what made it unreadable, so that is what moved. The filings —
+sanity checks, highlights and the history table — are a fixed 1,174 pixels and
+stay together on the overview, where the table sits with the summary of it. The
+valuation grows from 424 to 2,644 pixels when a price lands and no longer drags
+anything with it.
+
+The tab bar uses `Tabs` with `expand`, so the two share the available width. The
+underlined `TabList` sizes each tab to its content, which ran past the right
+edge of a narrow window — unreachable, with nothing to say there was more.
+
+| Block | Tab | Content |
+| --- | --- | --- |
+| Sanity check | Overview | Three yes/no questions about the most recent fiscal year: revenue growing, profitable, more cash than debt. |
+| Highlights | Overview | Revenue, net income, free cash flow and net debt/(cash) for the latest year, each with its year-over-year move. |
+| History | Overview | **Annual** or **Quarterly**, chosen with a tab: up to ten fiscal years or the last eight quarters, line by line. An eight-column table where all of it fits, one card per period below that. Sortable, newest first by default. |
+| Valuation | Valuation | Whether the price is above or below the range the filings support, with the multiples, the cash stream and the growth premium behind it, plus P/E, EV/FCF, FCF yield, PEG and P/S. |
+| What the price is asking | Valuation | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
+| How this was worked out | Valuation | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
+| All tickers | — | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
+| Watchlists | — | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
 
 ## Platforms
 
@@ -166,11 +181,16 @@ Finnhub quotes `BRK.A`. The hyphen is translated on the way out.
 
 A fetched price is stored per company and reused for 15 minutes, so clicking
 between companies does not spend the budget and the report still opens with a
-price when the network is down — labelled `Last quote · 31 Aug 14:20` rather
-than passed off as live. Typing over the field replaces it, marked `Your price`,
-because you may know something the provider does not or simply want to ask what
-if. A failed refresh keeps the price already on screen and says why it is not
-newer.
+price when the network is down.
+
+The price lives in the fair-value gauge rather than in a field of its own: it is
+the `Price today` mark, with a refresh control and an explanation beside the
+heading, and its provenance in the slot the bounds use for their percentages —
+`Last quote · 31 Aug 14:20` rather than passed off as live. Clicking the price
+opens an editor to type one, marked `Your price`, because you may know something
+the provider does not or simply want to ask what if. Where there is no price at
+all the section says why the quote failed and offers the same editor, since the
+gauge that normally carries both does not exist yet.
 
 Everything else comes out of the filings:
 
@@ -181,6 +201,14 @@ Everything else comes out of the filings:
 | Earnings per share | net income ÷ diluted weighted-average shares, the divisor the company itself reports against |
 | Fair range | 12× to 18× the latest year's free cash flow — net income where there is no usable cash flow — **less net debt**, over the share count |
 | Growth premium | +0.6 of a turn per point of annualised revenue growth, capped at 25 points, so a fast grower is not called expensive for growing and a 300% year is not extrapolated for a decade |
+
+The band is drawn to scale with the price marked on it, and each bound carries
+its own distance from the price — `Range low $93.67, +134.2%` beside `Range
+high $133.61, +234.0%`. A single percentage to the midpoint of the range read
+as precision it did not have: the midpoint is not something the arithmetic
+produces, and it left the reader to work out which bound the number referred
+to. The figures under the bar run in value order, so they read left to right in
+the same order as the marks above them.
 
 The verdict is where the price falls: below the range is **undervalued**, inside
 it **fairly valued**, above it **overvalued**. A company that reports neither a
@@ -205,6 +233,28 @@ fvm flutter test --dart-define-from-file=env.json test/live_quote_test.dart
 **Ranking the whole directory by valuation is not offered.** At 60 calls a
 minute, pricing 10,391 companies takes about three hours, so it would have to be
 an overnight batch rather than a sort you can click.
+
+### What the app remembers
+
+The theme, the directory's ordering, the sector filter and the chosen list
+survive a restart. They live in a key/value `settings` table — one row per
+setting, so the next one is not a migration — and like prices and watchlists
+they sit out a schema rebuild.
+
+They are read **once in `main`, before `runApp`**, so every getter on
+`SettingsRepo` is synchronous and the view models can seed themselves in their
+constructors. A view model that awaited its own initial state would render the
+default first and the remembered value a frame later: a flash of the wrong
+theme, and a list that reorders itself as you look at it.
+
+Two things are deliberately not remembered. The **search text** is typed rather
+than chosen, and reopening the app filtered to `aa` with no memory of why would
+be a puzzle. A **deleted list** is forgotten rather than restored — the id is
+checked against the lists that still exist on the way up, and cleared if it is
+gone.
+
+An enum stored by name is read back tolerantly: a value this build no longer has
+resets that filter instead of stopping the app from starting.
 
 ### Watchlists
 

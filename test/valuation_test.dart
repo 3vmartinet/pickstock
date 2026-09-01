@@ -62,7 +62,8 @@ void main() {
       // 100m x 12 = 1.2bn of business, less 40m net debt, over 10m shares.
       expect(valuation.fairValueLow, closeTo(116, 0.01));
       expect(valuation.fairValueHigh, closeTo(176, 0.01));
-      expect(valuation.fairValueMid, closeTo(146, 0.01));
+      expect(valuation.percentToLow, closeTo(16, 0.01));
+      expect(valuation.percentToHigh, closeTo(76, 0.01));
     });
 
     test('places the price against the band', () {
@@ -80,10 +81,17 @@ void main() {
       );
     });
 
-    test('measures the distance to the middle of the band', () {
+    test('measures the distance to each end of the band', () {
       final valuation = Valuation(snapshot: _snapshot(), pricePerShare: 100);
-      // 146 against 100 is 46% above the price.
-      expect(valuation.upsidePercent, closeTo(46, 0.01));
+
+      // The band is 116 to 176 against a price of 100.
+      expect(valuation.percentToLow, closeTo(16, 0.01));
+      expect(valuation.percentToHigh, closeTo(76, 0.01));
+
+      // Above the band both readings turn negative: the price has to fall.
+      final dear = Valuation(snapshot: _snapshot(), pricePerShare: 200);
+      expect(dear.percentToLow, closeTo(-42, 0.01));
+      expect(dear.percentToHigh, closeTo(-12, 0.01));
     });
 
     test('pays for growth, but only up to the credited ceiling', () {

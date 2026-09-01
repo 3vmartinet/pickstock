@@ -32,16 +32,18 @@ void main() {
     // Once in the list, once in the report beside it.
     expect(find.text('Apple Inc.'), findsWidgets);
     expect(find.text('CIK 0000320193'), findsOneWidget);
+    // Fiscal years read as years, not as compacted numbers. The header used to
+    // carry the span as a badge; the table below names the years it shows.
+    expect(find.text('FY2025'), findsWidgets);
     // Sanity checks, answered from the fixture's FY2025 figures.
     expect(find.text('Growing +6.4% year over year'), findsOneWidget);
     expect(find.text('Net income of \$112B'), findsOneWidget);
     expect(find.text('Net debt of \$44B'), findsOneWidget);
-    // The history table, in millions as the console report had it.
-    expect(find.text('416,161'), findsOneWidget);
-    // Fiscal years read as years, not as compacted numbers.
-    expect(find.text('FY2023 – FY2025'), findsOneWidget);
     expect(find.text('FY2025 highlights'), findsOneWidget);
+    // The history table sits with them, in millions as the console report had
+    // it.
     expect(find.byType(Table), findsOneWidget);
+    expect(find.text('416,161'), findsOneWidget);
     expect(find.text('383,285'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

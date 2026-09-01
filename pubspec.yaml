@@ -1,6 +1,6 @@
 name: pickstock
 description: "Pre-investment financial health snapshots sourced from SEC EDGAR."
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -31,10 +31,6 @@ dependencies:
   # it expected to find.
   cupertino_icons: ^1.0.8
 
-  # Local database. drift is the only mature typed-SQL layer that covers
-  # macOS, Linux, Android and iOS from one codebase; sqflite alone has no
-  # Linux support. sqlite3 3.x bundles the native library (it replaced the
-  # now end-of-life sqlite3_flutter_libs).
   drift: ^2.34.3
   drift_flutter: ^0.3.1
   sqlite3: ^3.5.2
@@ -59,4 +55,3 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
-

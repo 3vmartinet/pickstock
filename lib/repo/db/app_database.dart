@@ -116,6 +116,21 @@ class SharePrices extends Table {
   Set<Column<Object>> get primaryKey => {cik};
 }
 
+/// Small choices the app remembers between launches: the theme, and whatever
+/// the directory was last filtered and ordered by.
+///
+/// A key/value table rather than a column per setting, because each new one
+/// would otherwise be a migration. User data like [SharePrices], so it sits out
+/// a schema rebuild.
+@DataClassName('SettingRow')
+class Settings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
 /// A named list of companies the user is following.
 ///
 /// User data, like [SharePrices] and unlike everything else here, so it sits
@@ -178,6 +193,7 @@ class IngestRuns extends Table {
     SharePrices,
     Watchlists,
     WatchlistEntries,
+    Settings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -190,7 +206,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -227,6 +243,10 @@ class AppDatabase extends _$AppDatabase {
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
         }
+        if (from < 9) {
+          logInfo(() => 'Adding settings');
+          await migrator.createTable(settings);
+        }
         if (from < 8) {
           logInfo(() => 'Adding watchlists');
           await migrator.createTable(watchlists);
@@ -259,7 +279,8 @@ class AppDatabase extends _$AppDatabase {
         // creates only what is missing.
         if (entity == sharePrices ||
             entity == watchlists ||
-            entity == watchlistEntries) {
+            entity == watchlistEntries ||
+            entity == settings) {
           continue;
         }
         await migrator.drop(entity);
@@ -479,6 +500,22 @@ class AppDatabase extends _$AppDatabase {
           (row) => row.watchlistId.equals(watchlistId) & row.cik.equals(cik),
         ))
         .go();
+  }
+
+  /// Every remembered setting, as one read at startup.
+  Future<Map<String, String>> allSettings() async {
+    final rows = await select(settings).get();
+    return {for (final row in rows) row.key: row.value};
+  }
+
+  Future<void> saveSetting(String key, String value) {
+    return into(
+      settings,
+    ).insertOnConflictUpdate(SettingsCompanion.insert(key: key, value: value));
+  }
+
+  Future<void> clearSetting(String key) {
+    return (delete(settings)..where((row) => row.key.equals(key))).go();
   }
 
   /// The price last entered for [cik], or `null` if none has been.

@@ -33,6 +33,15 @@ class ThemeRepo {
   /// A price field only ever holds a handful of digits.
   static const double priceFieldWidth = 168;
 
+  /// The fair-value bar: the marker stands proud of the track it sits on.
+  static const double gaugeHeight = 22;
+  static const double gaugeTrackHeight = 10;
+  static const double gaugeMarkerWidth = 3;
+
+  /// A band narrower than this would vanish; a company priced far outside its
+  /// range still deserves to see where the range is.
+  static const double gaugeMinBand = 4;
+
   /// The coloured dot marking a list, on a chip or a tile.
   static const double watchlistDotSize = 8;
 

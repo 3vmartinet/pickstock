@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/period_figures.dart';
+import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/valuation/growth_expectation.dart';
@@ -64,6 +65,18 @@ class SnapshotViewModel extends ChangeNotifier {
   /// The year immediately before [index], for year-over-year comparisons.
   FiscalYearFigures? previousFiguresAt(int index) => figuresAt(index - 1);
 
+  ReportTab _reportTab = ReportTab.overview;
+
+  /// Which part of the report is on screen. Overview first: it answers "is
+  /// this worth a look" before the price does.
+  ReportTab get reportTab => _reportTab;
+
+  void selectReportTab(ReportTab tab) {
+    if (tab == _reportTab) return;
+    _reportTab = tab;
+    notifyListeners();
+  }
+
   HistoryPeriod _historyPeriod = HistoryPeriod.annual;
 
   /// Annual by default: the sanity checks and highlights are annual, so the
@@ -111,10 +124,6 @@ class SnapshotViewModel extends ChangeNotifier {
 
   /// How many rows the history section shows.
   int get historyRowCount => historyRows.length;
-
-  /// The price field's text, owned here so it survives the report being
-  /// rebuilt and is restored when a company is opened again.
-  final TextEditingController priceController = TextEditingController();
 
   Quote? _quote;
 
@@ -272,22 +281,12 @@ class SnapshotViewModel extends ChangeNotifier {
     return DateTime.now().difference(stored.asOf) > quoteFreshness;
   }
 
-  void _showPrice(Quote? price) {
-    _quote = price;
-    priceController.text = price == null ? '' : _priceText(price.pricePerShare);
-  }
-
-  /// Trailing zeros are dropped: `182.4` reads better than `182.40` in a field
-  /// the user is about to edit.
-  static String _priceText(double price) {
-    final text = price.toStringAsFixed(2);
-    return text.endsWith('0') ? text.substring(0, text.length - 1) : text;
-  }
+  void _showPrice(Quote? price) => _quote = price;
 
   /// Guards against a slow first request overwriting a newer one's result.
   int _requestGeneration = 0;
 
-  /// Looks up [ticker], syncing the text field so the two never disagree.
+  /// Looks up [ticker].
   Future<void> search(String ticker) async {
     final symbol = ticker.trim().toUpperCase();
     if (symbol.isEmpty) return;
@@ -299,6 +298,9 @@ class SnapshotViewModel extends ChangeNotifier {
       final snapshot = await _secRepo.fetchSnapshot(symbol);
       if (generation != _requestGeneration) return;
       _rememberTicker(symbol);
+      // A different company starts on the overview: the tab left open for the
+      // last one says nothing about this one.
+      _reportTab = ReportTab.overview;
       _setState(SnapshotLoaded(snapshot));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {
@@ -326,11 +328,5 @@ class SnapshotViewModel extends ChangeNotifier {
   void _setState(SnapshotState state) {
     _state = state;
     notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    priceController.dispose();
-    super.dispose();
   }
 }

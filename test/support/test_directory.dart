@@ -4,7 +4,12 @@ import 'dart:io' show HttpDate;
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
+import 'package:pickstock/data/snapshot/report_tab.dart';
+import 'package:pickstock/ui/snapshot/widgets/fair_value_gauge.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:pickstock/ui/snapshot/widgets/snapshot_report.dart';
 import 'package:drift/native.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/db/app_database.dart';
@@ -12,6 +17,7 @@ import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
@@ -125,6 +131,7 @@ Future<AppDatabase> registerTestDependencies({
   bool withFinancials = false,
   bool withUpdateAvailable = false,
   QuoteRepo? quoteRepo,
+  SettingsRepo? settingsRepo,
 }) async {
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
@@ -182,11 +189,57 @@ Future<AppDatabase> registerTestDependencies({
     ..registerSingleton<QuoteRepo>(quoteRepo ?? FakeQuoteRepo())
     // The real implementation against the in-memory database: a list is a
     // couple of tables and a cascade, all of which is worth exercising.
-    ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new);
+    ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
+    ..registerSingleton<SettingsRepo>(settingsRepo ?? LocalSettingsRepo());
+
+  // Read before anything builds, exactly as `main` does.
+  await GetIt.I.get<SettingsRepo>().load();
 
   if (withIngest) await directory.load();
   // Opens the database and runs `beforeOpen`, so the seeded list exists before
   // the first widget builds rather than arriving mid-test.
   await database.allWatchlists();
   return database;
+}
+
+/// Opens a tab of the report.
+///
+/// Scoped to [ReportTabs] rather than to `Tabs`: the history's annual against
+/// quarterly control is a `Tabs` as well, and both are on screen at once.
+Future<void> openReportTab(WidgetTester tester, ReportTab tab) async {
+  await tester.tap(
+    find.descendant(
+      of: find.byType(ReportTabs),
+      matching: find.text(_tabLabels[tab]!),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+/// The English labels, which is what the tests run against.
+const Map<ReportTab, String> _tabLabels = {
+  ReportTab.overview: 'Overview',
+  ReportTab.valuation: 'Valuation',
+};
+
+/// Types a share price by hand.
+///
+/// There is no field on the report any more: the price is a quote, and typing
+/// over it opens an editor. Uses the button on the empty state when there is no
+/// price yet, and the price itself once there is one.
+Future<void> enterPriceByHand(WidgetTester tester, String price) async {
+  final entryPoint = find.text('Set a price');
+  await tester.tap(
+    entryPoint.evaluate().isNotEmpty
+        ? entryPoint
+        : find.descendant(
+            of: find.byType(FairValueGauge),
+            matching: find.byKey(priceValueKey),
+          ),
+  );
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byType(TextField).last, price);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Save'));
+  await tester.pumpAndSettle();
 }

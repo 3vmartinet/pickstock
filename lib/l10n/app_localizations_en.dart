@@ -434,11 +434,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String labelFiscalYearsCovered(String first, String last) {
-    return 'FY$first – FY$last';
-  }
-
-  @override
   String get labelNetDebtPosition => 'Net debt';
 
   @override
@@ -475,14 +470,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sectionValuation => 'Valuation';
+  String get tabOverview => 'Overview';
+
+  @override
+  String get tabValuation => 'Valuation';
+
+  @override
+  String get sectionValuation => 'Fair value';
 
   @override
   String get labelSharePrice => 'Share price';
 
   @override
   String get hintSharePrice =>
-      'The price one share trades at. Quoted from Finnhub where a key is configured, and yours to type over either way — everything else in this report comes from the filings.';
+      'The price one share trades at. Quoted from Finnhub where a key is configured; click the price to type your own. Everything else in this report comes from the filings.';
 
   @override
   String get placeholderSharePrice => '0.00';
@@ -568,10 +569,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.';
 
   @override
-  String get labelFairValueRange => 'Fair range';
+  String get labelRangeLow => 'Range low';
 
   @override
-  String get labelUpside => 'To mid-range';
+  String get labelRangeHigh => 'Range high';
+
+  @override
+  String get labelPriceToday => 'Price today';
+
+  @override
+  String get priceEditorTitle => 'Set the share price';
+
+  @override
+  String get priceEditorHint =>
+      'Replaces the quoted price until the next refresh.';
+
+  @override
+  String get priceEnter => 'Set a price';
 
   @override
   String get labelMarketCap => 'Market value';
@@ -581,11 +595,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get labelEarningsPerShare => 'Earnings per share';
-
-  @override
-  String fairValueRange(String low, String high) {
-    return '$low – $high';
-  }
 
   @override
   String valuationBasisLine(

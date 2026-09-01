@@ -1,6 +1,8 @@
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
+import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
@@ -13,8 +15,8 @@ import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_table.dart';
 import 'package:pickstock/ui/snapshot/widgets/metric_grid.dart';
 import 'package:pickstock/ui/snapshot/widgets/napkin_math.dart';
+import 'package:pickstock/ui/snapshot/widgets/price_editor.dart';
 import 'package:pickstock/ui/snapshot/widgets/sanity_check_grid.dart';
-import 'package:pickstock/ui/snapshot/widgets/share_price_field.dart';
 import 'package:pickstock/ui/snapshot/widgets/valuation_grid.dart';
 import 'package:pickstock/ui/snapshot/widgets/valuation_verdict_card.dart';
 import 'package:pickstock/ui/widgets/section_header.dart';
@@ -23,34 +25,102 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
-/// The whole report for a loaded snapshot, top to bottom.
+/// The whole report for a loaded snapshot: who the company is, then one tab
+/// per question asked of it.
 class SnapshotReport extends StatelessWidget {
   const SnapshotReport({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Sections rise into place one after the other so the eye is led down the
-    // page in reading order rather than everything landing at once.
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children:
-          const <Widget>[
-                CompanyHeader(),
-                _SanityCheckSection(),
-                _HighlightsSection(),
-                _ValuationSection(),
-                _ExpectationsSection(),
-                _HistorySection(),
-                _Footnotes(),
-              ]
-              .animate(interval: ThemeRepo.entranceStagger)
-              .fadeIn(duration: ThemeRepo.entranceDuration)
-              .slideY(
-                begin: ThemeRepo.entranceSlide,
-                end: 0,
-                duration: ThemeRepo.entranceDuration,
-                curve: Curves.easeOutCubic,
+      children: [CompanyHeader(), ReportTabs(), _TabBody(), _Footnotes()],
+    );
+  }
+}
+
+/// The tab bar, under the company and above everything it applies to.
+///
+/// `Tabs` with `expand`, so the two share whatever width there is. The
+/// underlined `TabList` sizes each tab to its own content instead, which ran
+/// past the right edge of a narrow window — unreachable, with nothing to say
+/// there was more. Filling the width also tells this control apart from the
+/// small pill that switches the history between annual and quarterly.
+class ReportTabs extends StatelessWidget {
+  const ReportTabs({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final current = context.select<SnapshotViewModel, ReportTab>(
+      (viewModel) => viewModel.reportTab,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),
+      child: Tabs(
+        index: current.index,
+        expand: true,
+        onChanged: (index) => context.read<SnapshotViewModel>().selectReportTab(
+          ReportTab.values[index],
+        ),
+        children: [
+          for (final tab in ReportTab.values)
+            TabItem(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: ThemeRepo.spaceSmall,
+                children: [
+                  Icon(tab.icon).iconXSmall(),
+                  Flexible(
+                    child: Text(tab.getLabel(context.strings)).singleLine(),
+                  ),
+                ],
               ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Whichever tab is open.
+class _TabBody extends StatelessWidget {
+  const _TabBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final tab = context.select<SnapshotViewModel, ReportTab>(
+      (viewModel) => viewModel.reportTab,
+    );
+
+    final sections = switch (tab) {
+      ReportTab.overview => const <Widget>[
+        _SanityCheckSection(),
+        _HighlightsSection(),
+        _HistorySection(),
+      ],
+      ReportTab.valuation => const <Widget>[
+        _ValuationSection(),
+        _ExpectationsSection(),
+      ],
+    };
+
+    // Keyed on the tab so switching replays the entrance instead of morphing
+    // one layout into the next; the sections inside still stagger.
+    return KeyedSubtree(
+      key: ValueKey(tab),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: sections
+            .animate(interval: ThemeRepo.entranceStagger)
+            .fadeIn(duration: ThemeRepo.entranceDuration)
+            .slideY(
+              begin: ThemeRepo.entranceSlide,
+              end: 0,
+              duration: ThemeRepo.entranceDuration,
+              curve: Curves.easeOutCubic,
+            ),
+      ),
     );
   }
 }
@@ -144,7 +214,6 @@ class _ValuationSection extends StatelessWidget {
     return _Section(
       icon: LucideIcons.scale,
       title: context.strings.sectionValuation,
-      trailing: const SharePriceField(),
       child: const _ValuationContent(),
     );
   }
@@ -165,9 +234,7 @@ class _ValuationContent extends StatelessWidget {
     final hasPrice = context.select<SnapshotViewModel, bool>(
       (viewModel) => viewModel.pricePerShare != null,
     );
-    if (!hasPrice) {
-      return Text(context.strings.valuationIdle).muted().small();
-    }
+    if (!hasPrice) return const _NoPriceYet();
 
     // The verdict and its ratios on the left, the worked example on the right,
     // so a reader can follow the arithmetic beside the answer it produced —
@@ -225,6 +292,44 @@ class _ExpectationsSection extends StatelessWidget {
   }
 }
 
+/// The valuation with nothing to value: why there is no price, and the way to
+/// supply one.
+///
+/// The gauge carries both of those once a price exists, but it does not exist
+/// yet — so a failed quote would otherwise leave the reader looking at an
+/// invitation to type with no hint that anything had been tried.
+class _NoPriceYet extends StatelessWidget {
+  const _NoPriceYet();
+
+  @override
+  Widget build(BuildContext context) {
+    final isQuoting = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.isQuoting,
+    );
+    final failure = context.select<SnapshotViewModel, QuoteFailure?>(
+      (viewModel) => viewModel.quoteFailure,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: ThemeRepo.spaceMedium,
+      children: [
+        Text(switch ((isQuoting, failure)) {
+          (true, _) => context.strings.quoteFetching,
+          (_, final QuoteFailure reason?) => reason.describe(context.strings),
+          _ => context.strings.valuationIdle,
+        }).muted().small(),
+        OutlineButton(
+          density: ButtonDensity.compact,
+          leading: const Icon(LucideIcons.dollarSign).iconXSmall(),
+          onPressed: () => showPriceEditor(context),
+          child: Text(context.strings.priceEnter),
+        ),
+      ],
+    );
+  }
+}
+
 class _HistorySection extends StatelessWidget {
   const _HistorySection();
 
@@ -258,13 +363,21 @@ class _Footnotes extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The quarterly caveat is only shown where it applies.
-    final isQuarterly = context.select<SnapshotViewModel, bool>(
-      (viewModel) => viewModel.historyPeriod == HistoryPeriod.quarterly,
+    // Each caveat is shown on the tab it applies to and nowhere else: a
+    // footnote about quarters under a valuation is noise.
+    final tab = context.select<SnapshotViewModel, ReportTab>(
+      (viewModel) => viewModel.reportTab,
     );
-    final valuation = context.select<SnapshotViewModel, Valuation?>(
-      (viewModel) => viewModel.valuation,
-    );
+    final isQuarterly =
+        tab == ReportTab.overview &&
+        context.select<SnapshotViewModel, bool>(
+          (viewModel) => viewModel.historyPeriod == HistoryPeriod.quarterly,
+        );
+    final valuation = tab != ReportTab.valuation
+        ? null
+        : context.select<SnapshotViewModel, Valuation?>(
+            (viewModel) => viewModel.valuation,
+          );
 
     return Padding(
       padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),

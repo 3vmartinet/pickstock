@@ -148,13 +148,6 @@
   "labelNetDebt": "Net debt",
   "labelCik": "CIK {cik}",
   "@labelCik": { "placeholders": { "cik": { "type": "String" } } },
-  "labelFiscalYearsCovered": "FY{first} – FY{last}",
-  "@labelFiscalYearsCovered": {
-    "placeholders": {
-      "first": { "type": "String" },
-      "last": { "type": "String" }
-    }
-  },
 
   "labelNetDebtPosition": "Net debt",
   "priorNetDebt": "was net debt of {amount}",
@@ -171,9 +164,11 @@
   "deltaVersusPriorYear": "vs FY{year}",
   "@deltaVersusPriorYear": { "placeholders": { "year": { "type": "String" } } },
 
-  "sectionValuation": "Valuation",
+  "tabOverview": "Overview",
+  "tabValuation": "Valuation",
+  "sectionValuation": "Fair value",
   "labelSharePrice": "Share price",
-  "hintSharePrice": "The price one share trades at. Quoted from Finnhub where a key is configured, and yours to type over either way — everything else in this report comes from the filings.",
+  "hintSharePrice": "The price one share trades at. Quoted from Finnhub where a key is configured; click the price to type your own. Everything else in this report comes from the filings.",
   "placeholderSharePrice": "0.00",
   "valuationIdle": "Enter the current share price to see how it compares with what the filings say the business earns.",
   "footnotePriceSource": "Prices come from Finnhub and are cached until they go stale; typing over one replaces it. Everything else is from the filings.",
@@ -202,18 +197,15 @@
   "detailOvervalued": "The price is above the range these earnings support.",
   "detailNotValuable": "The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.",
 
-  "labelFairValueRange": "Fair range",
-  "labelUpside": "To mid-range",
+  "labelRangeLow": "Range low",
+  "labelRangeHigh": "Range high",
+  "labelPriceToday": "Price today",
+  "priceEditorTitle": "Set the share price",
+  "priceEditorHint": "Replaces the quoted price until the next refresh.",
+  "priceEnter": "Set a price",
   "labelMarketCap": "Market value",
   "labelEnterpriseValue": "Enterprise value",
   "labelEarningsPerShare": "Earnings per share",
-  "fairValueRange": "{low} – {high}",
-  "@fairValueRange": {
-    "placeholders": {
-      "low": { "type": "String" },
-      "high": { "type": "String" }
-    }
-  },
   "valuationBasisLine": "{low}× to {high}× {basis} of {amount}, less net debt, over {shares} shares",
   "@valuationBasisLine": {
     "placeholders": {

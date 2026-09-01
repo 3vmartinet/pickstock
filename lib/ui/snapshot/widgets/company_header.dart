@@ -8,7 +8,7 @@ import 'package:pickstock/ui/watchlist/widgets/watchlist_star.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Who the report is about: registrant name, symbol, CIK and years covered.
+/// Who the report is about, and whether you are following them.
 class CompanyHeader extends StatelessWidget {
   const CompanyHeader({super.key});
 
@@ -16,18 +16,14 @@ class CompanyHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       padding: context.cardPadding,
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      // Following sits on the title's own row, hard right: it is about the
+      // company rather than about the report, and a row of its own underneath
+      // read as a third piece of content.
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         spacing: ThemeRepo.spaceMedium,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: ThemeRepo.spaceMedium,
-            children: [
-              Expanded(child: _CompanyIdentity()),
-              _CoverageBadge(),
-            ],
-          ),
+          Expanded(child: _CompanyIdentity()),
           _FollowRow(),
         ],
       ),
@@ -79,29 +75,6 @@ class _FollowRow extends StatelessWidget {
         WatchlistStar(cik: cik),
         AddToWatchlistButton(cik: cik),
       ],
-    );
-  }
-}
-
-class _CoverageBadge extends StatelessWidget {
-  const _CoverageBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final years = context.select<SnapshotViewModel, (String, String)?>((
-      viewModel,
-    ) {
-      final reported = viewModel.snapshot?.years;
-      if (reported == null || reported.isEmpty) return null;
-      return (
-        reported.first.fiscalYear.toString(),
-        reported.last.fiscalYear.toString(),
-      );
-    });
-    if (years == null) return const SizedBox.shrink();
-
-    return OutlineBadge(
-      child: Text(context.strings.labelFiscalYearsCovered(years.$1, years.$2)),
     );
   }
 }

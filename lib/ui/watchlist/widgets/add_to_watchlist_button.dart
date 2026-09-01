@@ -1,6 +1,7 @@
 import 'package:pickstock/data/watchlist/watchlist.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_dot.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_editor.dart';
@@ -32,7 +33,9 @@ class AddToWatchlistButton extends StatelessWidget {
       tooltip: TooltipContainer(child: Text(context.strings.watchlistAddTo))
           .call,
       child: OutlineButton(
-        density: ButtonDensity.compact,
+        // Square and properly padded once the label is gone, rather than
+        // shrinking to a 15-pixel target around a bare icon.
+        density: context.isCompact ? ButtonDensity.icon : ButtonDensity.compact,
         onPressed: () => showDropdown(
           context: context,
           builder: (menuContext) => DropdownMenu(
@@ -62,11 +65,17 @@ class AddToWatchlistButton extends StatelessWidget {
           spacing: ThemeRepo.spaceSmall,
           children: [
             const Icon(LucideIcons.listPlus).iconXSmall(),
-            Text(
-              memberships.isEmpty
-                  ? context.strings.watchlistNotInAny
-                  : context.strings.watchlistInLists(memberships.length),
-            ).small(),
+            // Dropped where the header has no room for it: the icon and the
+            // dots already say whether the company is in a list, and a wrapped
+            // label was making the header two and a half times taller.
+            if (!context.isCompact)
+              Flexible(
+                child: Text(
+                  memberships.isEmpty
+                      ? context.strings.watchlistNotInAny
+                      : context.strings.watchlistInLists(memberships.length),
+                ).small().singleLine(),
+              ),
             for (final list in memberships.take(ThemeRepo.watchlistDotsPerTile))
               WatchlistDot(colourIndex: list.colourIndex),
           ],

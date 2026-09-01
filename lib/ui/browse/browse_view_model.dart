@@ -9,10 +9,12 @@ import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 
 AppDatabase get _database => GetIt.I.get<AppDatabase>();
 TickerDirectoryRepo get _tickerDirectoryRepo =>
     GetIt.I.get<TickerDirectoryRepo>();
+SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 
 /// Drives the browsable list of every symbol EDGAR knows about.
 ///
@@ -21,6 +23,10 @@ TickerDirectoryRepo get _tickerDirectoryRepo =>
 /// database, once per ordering rather than once per row.
 class BrowseViewModel extends ChangeNotifier {
   BrowseViewModel() {
+    // Both are read before the first frame, so the list is ordered and
+    // filtered from the outset rather than rearranging itself once loaded.
+    _sort = _settingsRepo.browseSort;
+    _sector = _settingsRepo.sector;
     _directoryRevision = _tickerDirectoryRepo.revision;
     _results = _tickerDirectoryRepo.allCompanies;
     _loadSamples();
@@ -39,7 +45,7 @@ class BrowseViewModel extends ChangeNotifier {
   String _query = '';
   String get query => _query;
 
-  BrowseSort _sort = BrowseSort.name;
+  late BrowseSort _sort;
   BrowseSort get sort => _sort;
 
   SicSector? _sector;
@@ -60,6 +66,7 @@ class BrowseViewModel extends ChangeNotifier {
     _sector = sector;
     _reorder();
     notifyListeners();
+    _settingsRepo.setSector(sector);
   }
 
   /// Growth window ends for the figure the current ordering shows, by CIK.
@@ -90,6 +97,7 @@ class BrowseViewModel extends ChangeNotifier {
   Future<void> selectSort(BrowseSort sort) async {
     if (sort == _sort) return;
     _sort = sort;
+    unawaited(_settingsRepo.setBrowseSort(sort));
     // The window changes with the ordering, so the samples do too.
     await _loadSamples();
   }
