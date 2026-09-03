@@ -2,25 +2,25 @@ import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
-import 'package:pickstock/data/snapshot/growth_metric.dart';
+import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 
 /// How many years of revenue history the growth premium looks back over.
 const int _growthWindowYears = 5;
 
-/// The multiple range a no-growth company is worth, before any premium.
+/// The multiple is no longer a rule of thumb with a growth premium bolted on.
 ///
-/// Twelve to eighteen times owner earnings is the long-run range the broad US
-/// market has traded in. It is a stake in the ground, not a law: the band is
-/// shown with its own multiples so the number can be argued with.
-const double _baseLowMultiple = 12;
-const double _baseHighMultiple = 18;
-
-/// Growth is paid for, so the band widens with it — but only up to a point,
-/// since no company compounds at 40% for the decade a multiple implies.
-const double _maxCreditedGrowthPercent = 25;
-const double _multiplePerGrowthPoint = 0.6;
+/// Twelve to eighteen times earnings, plus six tenths of a turn per point of
+/// growth, priced Nextpower at 28 years of its cash while the discounted cash
+/// flow on the tab beside it — at the 14.7% its own beta asks for — said 18.
+/// Two models, one company, two answers, and no way for a reader to know
+/// which to believe. The multiple now comes out of that same model, so there
+/// is only one.
+///
+/// The old range was not wrong so much as unstated: at 9% and no growth the
+/// model returns 14.1 years, which is the middle of it. What it could not do
+/// was move with the return a particular company has to earn.
 
 /// A share price judged against what the filings say the business earns.
 ///
@@ -31,6 +31,7 @@ class Valuation extends Equatable {
   factory Valuation({
     required FinancialSnapshot snapshot,
     required double pricePerShare,
+    double? discountRatePercent,
   }) {
     final latest = snapshot.latest;
     // The cover-page count is the current one; the annual diluted average is
@@ -48,11 +49,15 @@ class Valuation extends Equatable {
       sharesLastFiled: snapshot.company.sharesLastFiled,
       dilutedShares: diluted,
       netIncome: latest.netIncome,
+      operatingIncome: latest.operatingIncome,
       freeCashFlow: latest.freeCashFlow,
       revenue: latest.revenue,
       netDebt: latest.netDebt,
       fiscalYear: latest.fiscalYear,
       revenueGrowthPercent: _revenueGrowthPercent(snapshot),
+      discountRatePercent:
+          discountRatePercent ?? CashFlowModel.defaultDiscountRate * 100,
+      windowYears: _growthRates(snapshot).length,
     );
   }
 
@@ -63,11 +68,14 @@ class Valuation extends Equatable {
     required this.sharesLastFiled,
     required this.dilutedShares,
     required this.netIncome,
+    required this.operatingIncome,
     required this.freeCashFlow,
     required this.revenue,
     required this.netDebt,
     required this.fiscalYear,
     required this.revenueGrowthPercent,
+    required this.discountRatePercent,
+    required this._windowYears,
   });
 
   final double pricePerShare;
@@ -96,6 +104,11 @@ class Valuation extends Equatable {
   final double? dilutedShares;
 
   final double? netIncome;
+
+  /// Profit from the business itself, before interest and tax. The ceiling
+  /// on what the earnings basis may credit.
+  final double? operatingIncome;
+
   final double? freeCashFlow;
   final double? revenue;
   final double? netDebt;
@@ -105,6 +118,12 @@ class Valuation extends Equatable {
 
   /// Annualised revenue growth over the window the band's premium uses.
   final double? revenueGrowthPercent;
+
+  /// The return a buyer is assumed to want, which is what turns a stream
+  /// of cash into a number of years' worth of it.
+  final double discountRatePercent;
+
+  final int _windowYears;
 
   /// Price times shares: what the market says the equity is worth.
   double? get marketCap {
@@ -179,7 +198,7 @@ class Valuation extends Equatable {
   /// profit, or `null` where the company generates neither.
   ValuationBasis? get basis {
     if ((freeCashFlow ?? 0) > 0) return ValuationBasis.freeCashFlow;
-    if ((netIncome ?? 0) > 0) return ValuationBasis.earnings;
+    if ((_earningsFromOperations ?? 0) > 0) return ValuationBasis.earnings;
     return null;
   }
 
@@ -187,23 +206,66 @@ class Valuation extends Equatable {
   /// having to know which stream was chosen.
   double? get basisAmount => switch (basis) {
     ValuationBasis.freeCashFlow => freeCashFlow,
-    ValuationBasis.earnings => netIncome,
+    ValuationBasis.earnings => _earningsFromOperations,
     null => null,
   };
+
+  /// Profit, but no more of it than the business itself produced.
+  ///
+  /// Operating income is struck before tax and before financing, so for a
+  /// company earning its way it sits above net income and this changes
+  /// nothing. Where net income is the larger, the difference did not come
+  /// from selling anything — and a multiple of it values something the
+  /// company does not do.
+  ///
+  /// Lyft is why. In FY2025 it lost $53M before tax and released $2.9B of
+  /// deferred tax, reporting $2,844M of net income against an operating loss
+  /// of $188M. Valued on that, its shares were worth $203 to $248 against a
+  /// price of $17 — a thirteen-fold upside, on a year the business lost
+  /// money. Held to operating income the figure is negative, there is no
+  /// stream to value, and the report says so instead.
+  double? get _earningsFromOperations {
+    final profit = netIncome;
+    if (profit == null) return null;
+    final operating = operatingIncome;
+    return operating == null ? profit : math.min(profit, operating);
+  }
 
   /// Growth credited to the multiple, in percentage points.
   double get creditedGrowthPercent => math.min(
     math.max(revenueGrowthPercent ?? 0, 0),
-    _maxCreditedGrowthPercent,
+    CashFlowModel.maximumCreditedGrowth * 100,
   );
 
-  /// Turns of multiple added for growth, on top of the no-growth range.
-  double get growthPremiumMultiple =>
-      creditedGrowthPercent * _multiplePerGrowthPoint;
+  /// The years of cash a buyer wanting no growth would pay, at this rate.
+  ///
+  /// Shown beside the range so a reader can see what the growth is worth: the
+  /// difference between the two is the premium, stated rather than assumed.
+  double get flatMultiple =>
+      CashFlowModel.multipleFor(growth: 0, discountRate: _discountRate);
 
-  double get lowMultiple => _baseLowMultiple + growthPremiumMultiple;
+  /// What the growth is worth, at the rate itself: the same stream valued
+  /// with and without it. Compared against [flatMultiple], which is struck at
+  /// the same rate — the band either side of it is a separate question.
+  double get centralMultiple => CashFlowModel.multipleFor(
+    growth: creditedGrowthPercent / 100,
+    discountRate: _discountRate,
+  );
 
-  double get highMultiple => _baseHighMultiple + growthPremiumMultiple;
+  /// The band is drawn across the required return rather than the growth: it
+  /// is the least certain input and the one the answer moves most with, and
+  /// the growth is already read three ways on the tab next door.
+  double get lowMultiple => CashFlowModel.multipleFor(
+    growth: creditedGrowthPercent / 100,
+    discountRate: _discountRate + CashFlowModel.discountRateBand,
+  );
+
+  double get highMultiple => CashFlowModel.multipleFor(
+    growth: creditedGrowthPercent / 100,
+    discountRate: _discountRate - CashFlowModel.discountRateBand,
+  );
+
+  double get _discountRate => discountRatePercent / 100;
 
   /// The bottom of the fair range, per share.
   double? get fairValueLow => _fairValueAt(lowMultiple);
@@ -247,21 +309,47 @@ class Valuation extends Equatable {
     return ValuationVerdict.fairlyValued;
   }
 
-  /// Annualised revenue growth over the longest window up to
-  /// [_growthWindowYears] the filings support.
+  /// The growth the multiple is allowed to pay for: the company's middle
+  /// year, not its average one.
+  ///
+  /// A median over the window rather than the rate from one end of it to the
+  /// other. Zoom is why. Its revenue went from $2.65B to $4.87B over five
+  /// years, which annualises to 12.9% — but all of that is the tail of one
+  /// pandemic year, and its last four years grew 7.1%, 3.1%, 3.1% and 4.4%.
+  /// On the annualised rate it earned nearly eight extra turns of multiple
+  /// for growth it has not had since 2022, on a report whose own overview
+  /// said 4.4% at the top of the page. Its middle year is 4.4%.
+  ///
+  /// A median rather than the latest year, which would be just as blind the
+  /// other way: one flat year in a long climb would price the climb away.
+  /// The middle year survives an exceptional year at either end, which is
+  /// what a multiple is supposed to be paid on.
   static double? _revenueGrowthPercent(FinancialSnapshot snapshot) {
+    final rates = _growthRates(snapshot);
+    if (rates.isEmpty) return null;
+    final middle = rates.length ~/ 2;
+    return rates.length.isOdd
+        ? rates[middle]
+        : (rates[middle - 1] + rates[middle]) / 2;
+  }
+
+  /// How many year-on-year changes the median was taken over, so the worked
+  /// example can say what "typical" was measured across.
+  int get growthWindowYears => _windowYears;
+
+  /// The year-on-year changes inside the window, in order, smallest first.
+  ///
+  /// Read off each year's own growth, which is the figure the report prints
+  /// beside its revenue — so the worked example and the overview above it
+  /// cannot state different rates for the same company.
+  static List<double> _growthRates(FinancialSnapshot snapshot) {
     final years = snapshot.years;
-    if (years.length < 2) return null;
-    final span = math.min(_growthWindowYears, years.length - 1);
-    for (var window = span; window >= 1; window--) {
-      final growth = GrowthSample(
-        startValue: years[years.length - 1 - window].revenue,
-        endValue: years.last.revenue,
-        years: window,
-      ).annualisedPercent;
-      if (growth != null) return growth;
-    }
-    return null;
+    if (years.length < 2) return const [];
+    final window = math.min(_growthWindowYears, years.length - 1);
+    return [
+      for (final year in years.skip(years.length - window))
+        ?year.revenueGrowthPercent,
+    ]..sort();
   }
 
   @override
@@ -272,10 +360,13 @@ class Valuation extends Equatable {
     sharesLastFiled,
     dilutedShares,
     netIncome,
+    operatingIncome,
     freeCashFlow,
     revenue,
     netDebt,
     fiscalYear,
     revenueGrowthPercent,
+    discountRatePercent,
+    _windowYears,
   ];
 }

@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/format_repo.dart';
+import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/finnhub_quote_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
@@ -34,6 +35,11 @@ abstract final class DependenciesRepo {
         () => usesMockData ? MemoryPriceRepo() : const LocalPriceRepo(),
       )
       ..registerLazySingleton<QuoteRepo>(FinnhubQuoteRepo.new)
+      ..registerLazySingleton<MarketRatesRepo>(
+        () => usesMockData
+            ? const UnavailableMarketRatesRepo()
+            : LiveMarketRatesRepo(),
+      )
       ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
       ..registerLazySingleton<ReportRepo>(LocalReportRepo.new)
       ..registerLazySingleton<SettingsRepo>(

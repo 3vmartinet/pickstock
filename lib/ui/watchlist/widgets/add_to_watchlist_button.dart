@@ -47,9 +47,10 @@ class AddToWatchlistButton extends StatelessWidget {
               for (final list in lists)
                 MenuCheckbox(
                   value: memberships.contains(list),
-                  // Left open: adding one company to three lists should not
-                  // mean opening the menu three times.
-                  autoClose: false,
+                  // Closed on the press, like every other menu in the app:
+                  // picking a list is one decision, and a menu that stays up
+                  // afterwards leaves the reader to work out that it is done.
+                  // Adding to a second list is a second press on the button.
                   onChanged: (_, _) => viewModel.toggle(list.id, cik),
                   trailing: WatchlistDot(colourIndex: list.colourIndex),
                   child: Text(list.name),

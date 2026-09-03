@@ -152,10 +152,15 @@ List<_Step> _stepsFor(
     (
       title: strings.napkinStep5Title,
       body: valuation.creditedGrowthPercent <= 0
-          ? strings.napkinStep5BodyFlat
+          ? strings.napkinStep5BodyFlat(
+              _formatRepo.percent(valuation.discountRatePercent),
+              years(valuation.flatMultiple),
+            )
           : strings.napkinStep5BodyGrowing(
+              _formatRepo.percent(valuation.discountRatePercent),
+              years(valuation.flatMultiple),
               _formatRepo.percent(valuation.creditedGrowthPercent),
-              years(valuation.growthPremiumMultiple),
+              '${valuation.growthWindowYears}',
               years(valuation.lowMultiple),
               years(valuation.highMultiple),
             ),

@@ -72,14 +72,21 @@ void main() {
       find.textContaining('owes \$44B more than it holds'),
       findsOneWidget,
     );
-    // The growth premium says what it buys and why, rather than leaving
-    // "another 2.5 years" to be interpreted.
+    // The no-growth multiple is stated rather than asserted: at the 9.0% a
+    // buyer is assumed to want, a flat business is worth 14.1 years of its
+    // cash, and the range either side is what a point of that return does.
     expect(
-      find.textContaining('the fair range moves up by 2.5 years'),
+      find.textContaining('worth about 14.1 years of its cash'),
+      findsOneWidget,
+    );
+    // Step five states the range; step six restates it on the way to a
+    // price, so the phrase either side pins which one this is.
+    expect(
+      find.textContaining('worth more: 14.7 to 20.2 years'),
       findsOneWidget,
     );
     expect(
-      find.textContaining('one share is worth \$96.64 to \$136.57'),
+      find.textContaining('one share is worth \$98.11 to \$134.29'),
       findsOneWidget,
     );
     expect(

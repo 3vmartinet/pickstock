@@ -108,6 +108,43 @@ void main() {
     expect(selectedTile('AAPL'), findsNothing);
   });
 
+  testWidgets('a one-column pane gets flatter tiles, not taller ones', (
+    tester,
+  ) async {
+    await openBrowser(tester, _wideSize);
+
+    Rect firstTile() => tester.getRect(
+      find
+          .descendant(of: find.byType(GridView), matching: find.byType(Button))
+          .first,
+    );
+
+    final wide = firstTile();
+    // Two across at the default width, each twice as wide as it is tall.
+    expect(wide.width / wide.height, closeTo(2, 0.1));
+
+    // Dragged in until only one tile fits across.
+    final pane = tester.getRect(find.byType(TickerGrid));
+    await tester.dragFrom(
+      Offset(pane.right + 2, pane.center.dy),
+      const Offset(-400, 0),
+    );
+    await tester.pumpAndSettle();
+
+    final narrow = firstTile();
+    // A single column takes the whole pane, so at the old shape each tile
+    // would be half the pane tall and the list would hold a handful. Flatter
+    // instead — but not so flat that a two-line registrant name runs out of
+    // the bottom of it, which four to one did.
+    expect(narrow.width, greaterThan(wide.width));
+    expect(narrow.width / narrow.height, closeTo(3, 0.1));
+    expect(narrow.height, lessThan(wide.height));
+
+    // Nothing overflows: a long name ends in an ellipsis rather than being
+    // cut through, which is what the flexible line in the tile is for.
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the list pane can be dragged wider to fit more columns', (
     tester,
   ) async {

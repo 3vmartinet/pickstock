@@ -5,6 +5,7 @@ import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
+import 'package:pickstock/data/valuation/price_target.dart';
 
 /// How the growth a price requires compares with the growth a company has
 /// actually produced.
@@ -58,6 +59,7 @@ class GrowthExpectation extends Equatable {
     required this.deliveredOverYears,
     required this.operatingMarginPercent,
     required this.marginChangePoints,
+    required this.growthRatesOnFile,
   });
 
   /// Builds the comparison, or `null` where the company cannot support one.
@@ -77,6 +79,7 @@ class GrowthExpectation extends Equatable {
       deliveredOverYears: record?.years,
       operatingMarginPercent: margin?.latest,
       marginChangePoints: margin?.change,
+      growthRatesOnFile: _growthRates(snapshot, record?.years),
     );
   }
 
@@ -118,6 +121,14 @@ class GrowthExpectation extends Equatable {
   /// company can compound sales for a decade while its margin drains away.
   /// This is the check on the record the verdict leans on.
   final double? marginChangePoints;
+
+  /// Every year-on-year revenue change inside the record window, smallest
+  /// first.
+  ///
+  /// Each year's own growth, which is the figure the report prints beside its
+  /// revenue — so the targets and the history above them are read off one set
+  /// of numbers rather than two.
+  final List<double> growthRatesOnFile;
 
   /// Whether growth has come at the cost of profitability, by enough to be
   /// worth saying out loud.
@@ -183,6 +194,76 @@ class GrowthExpectation extends Equatable {
               shares,
         ),
     ];
+  }
+
+  /// What a share is worth under each reading of the company's own record.
+  ///
+  /// One discounted cash flow, run three times: the worst year the company has
+  /// had, its middle year, and its best.
+  ///
+  /// The ends are the actual worst and best years rather than quartiles.
+  /// Quartiles kept the middle honest but left nothing at the edges: Adobe
+  /// grew 10.2, 10.5, 10.8, 11.5 and 22.7 per cent, and its upper quartile is
+  /// 11.5 — so its best year was thrown away and bear, neutral and bull landed
+  /// within a point of each other, which is three ways of saying one thing.
+  /// The extremes are what a bull and a bear case are for; the caps in
+  /// [_targetAt] keep them from becoming fiction, and the middle is still the
+  /// median, so the neutral case is unmoved by either end. Held at one discount rate, because
+  /// bundling a pessimistic return into the bear case and an optimistic one
+  /// into the bull compounds two guesses into a spread so wide it says
+  /// nothing — the rate's own effect is reported separately, across the band.
+  ///
+  /// Empty where the filings carry too little to read a record from.
+  List<PriceTarget> priceTargets(
+    double shares, {
+    double discountRate = CashFlowModel.defaultDiscountRate,
+  }) {
+    if (shares <= 0) return const [];
+    final rates = growthRatesOnFile;
+    if (rates.isEmpty) return const [];
+
+    return [
+      for (final (scenario, rate) in [
+        (PriceCase.bear, rates.first),
+        (PriceCase.neutral, _median(rates)),
+        (PriceCase.bull, rates.last),
+      ])
+        _targetAt(scenario, rate, shares, discountRate),
+    ];
+  }
+
+  PriceTarget _targetAt(
+    PriceCase scenario,
+    double growthPercent,
+    double shares,
+    double discountRate,
+  ) {
+    // Credited only so far in either direction: a decade at 45% is a wish,
+    // and a decade at -40% is a liquidation rather than a business.
+    final growth = math.max(
+      math.min(growthPercent / 100, CashFlowModel.maximumCreditedGrowth),
+      CashFlowModel.minimumCreditedGrowth,
+    );
+    return PriceTarget(
+      scenario: scenario,
+      growthPercent: growth * 100,
+      valuePerShare:
+          CashFlowModel.presentValue(
+            normalisedCashFlow,
+            growth: growth,
+            discountRate: discountRate,
+          ) /
+          shares,
+    );
+  }
+
+  /// The middle of [sorted], averaging the two middle years where there is an
+  /// even number of them.
+  static double _median(List<double> sorted) {
+    final middle = sorted.length ~/ 2;
+    return sorted.length.isOdd
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
   /// Whether the price asks for less, about the same, or more than the record.
@@ -255,6 +336,16 @@ class GrowthExpectation extends Equatable {
   }
 
   /// Annualised revenue growth over the longest window the filings support.
+  /// The year-on-year changes across the record window, smallest first.
+  static List<double> _growthRates(FinancialSnapshot snapshot, int? window) {
+    if (window == null) return const [];
+    final years = snapshot.years;
+    return [
+      for (final year in years.skip(math.max(0, years.length - window)))
+        ?year.revenueGrowthPercent,
+    ]..sort();
+  }
+
   static ({double growth, int years})? _delivered(FinancialSnapshot snapshot) {
     final years = snapshot.years;
     for (final window in _recordWindows) {
@@ -279,5 +370,6 @@ class GrowthExpectation extends Equatable {
     deliveredOverYears,
     operatingMarginPercent,
     marginChangePoints,
+    growthRatesOnFile,
   ];
 }

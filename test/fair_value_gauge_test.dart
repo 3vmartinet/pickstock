@@ -44,19 +44,19 @@ void main() {
   testWidgets('states each bound and how far the price is from it', (
     tester,
   ) async {
-    // Apple's band is $93.67 to $133.61 on the fixture.
+    // Apple's band is \$98.11 to \$134.29 on the fixture.
     await priceApple(tester, '250');
 
     expect(find.text('Range low'), findsOneWidget);
     expect(find.text('Range high'), findsOneWidget);
     expect(find.text('Price today'), findsOneWidget);
-    expect(find.text('\$96.64'), findsOneWidget);
-    expect(find.text('\$136.57'), findsOneWidget);
+    expect(find.text('\$98.11'), findsOneWidget);
+    expect(find.text('\$134.29'), findsOneWidget);
     expect(find.text('\$250.00'), findsOneWidget);
     // Both bounds are below the price, so both readings are negative: this is
     // how far it would have to fall, per bound, with no midpoint invented.
-    expect(find.text('-61.3%'), findsOneWidget);
-    expect(find.text('-45.4%'), findsOneWidget);
+    expect(find.text('-60.8%'), findsOneWidget);
+    expect(find.text('-46.3%'), findsOneWidget);
   });
 
   testWidgets('puts the marker inside the band when the price is fair', (

@@ -11,6 +11,7 @@ import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
+import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_order_toggle.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_table.dart';
@@ -342,7 +343,14 @@ class _ExpectationsSection extends StatelessWidget {
     return _Section(
       icon: LucideIcons.target,
       title: context.strings.sectionExpectations,
-      child: const ExpectationCard(),
+      // The targets first: what a share is worth is the question a reader
+      // came with. The verdict below sets it against what the price already
+      // asks, which is the check on taking any single target seriously.
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: ThemeRepo.spaceMedium,
+        children: [PriceTargetCard(), ExpectationCard()],
+      ),
     );
   }
 }

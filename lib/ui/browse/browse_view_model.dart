@@ -123,6 +123,13 @@ class BrowseViewModel extends ChangeNotifier {
     _applyNarrowing(sector, narrowed);
   }
 
+  /// Narrows [sector] to [sic] alone, dropping whatever else was picked.
+  ///
+  /// What a plain press means: one industry, chosen outright. Adding to a
+  /// selection is the shift-press, and goes through [toggleIndustry].
+  void selectOnlyIndustry(SicSector sector, int sic) =>
+      _applyNarrowing(sector, {sic});
+
   /// Widens [sector] back to every industry in it.
   void clearNarrowing(SicSector sector) => _applyNarrowing(sector, const {});
 

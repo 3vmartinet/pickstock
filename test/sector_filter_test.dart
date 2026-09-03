@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
@@ -305,6 +306,14 @@ void main() {
     await pumpMenu(tester);
   }
 
+  /// Taps [finder] with shift held, which is how a selection is added to.
+  Future<void> shiftTap(WidgetTester tester, Finder finder) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(finder);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await pumpMenu(tester);
+  }
+
   Future<void> openApp(WidgetTester tester) async {
     database = await registerTestDependencies(withFinancials: true);
     tester.view
@@ -364,16 +373,13 @@ void main() {
       expect(find.text('All industries'), findsOneWidget);
       expect(find.text('Semiconductors & Related Devices'), findsOneWidget);
 
-      await tester.tap(find.text('Semiconductors & Related Devices'));
-      await pumpMenu(tester);
-
-      // Still open, so a second industry can be picked without reopening.
+      // Shift held, so the menu stays up and the picks accumulate.
+      await shiftTap(tester, find.text('Semiconductors & Related Devices'));
       expect(find.text('All industries'), findsOneWidget);
       // And the chip says it is carrying less than its label.
       expect(find.text('1/3'), findsOneWidget);
 
-      await tester.tap(find.text('Electronic Computers'));
-      await pumpMenu(tester);
+      await shiftTap(tester, find.text('Electronic Computers'));
       expect(find.text('2/3'), findsOneWidget);
 
       await tester.tap(techArrow);
@@ -383,6 +389,91 @@ void main() {
       expect(find.text('NVIDIA CORP'), findsOneWidget);
       expect(find.text('Apple Inc.'), findsOneWidget);
       expect(find.text('MICROSOFT CORP'), findsNothing);
+    });
+  });
+
+  testWidgets('a plain press picks one industry and is done', (tester) async {
+    await onDesktop(() async {
+      await openApp(tester);
+
+      await tester.tap(techArrow);
+      await pumpMenu(tester);
+      // The header says how to pick more than one, since a plain press does
+      // not.
+      expect(find.textContaining('to pick several'), findsOneWidget);
+      expect(find.text('Apply selection'), findsNothing);
+
+      await tester.tap(find.text('Semiconductors & Related Devices'));
+      await pumpMenu(tester);
+
+      // Chosen outright and the menu is gone: one press, one industry.
+      expect(find.text('All industries'), findsNothing);
+      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('NVIDIA CORP'), findsOneWidget);
+      expect(find.text('Apple Inc.'), findsNothing);
+
+      // And a second plain press replaces it rather than adding to it.
+      await tester.tap(techArrow);
+      await pumpMenu(tester);
+      await tester.tap(find.text('Electronic Computers'));
+      await pumpMenu(tester);
+      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('Apple Inc.'), findsOneWidget);
+      expect(find.text('NVIDIA CORP'), findsNothing);
+    });
+  });
+
+  testWidgets('a second pick offers the way out of the menu', (tester) async {
+    await onDesktop(() async {
+      await openApp(tester);
+
+      await tester.tap(techArrow);
+      await pumpMenu(tester);
+
+      // One is not yet a selection to apply, so nothing is offered.
+      await shiftTap(tester, find.text('Semiconductors & Related Devices'));
+      expect(find.text('Apply selection'), findsNothing);
+
+      await shiftTap(tester, find.text('Electronic Computers'));
+      expect(find.text('Apply selection'), findsOneWidget);
+
+      await tester.tap(find.text('Apply selection'));
+      await pumpMenu(tester);
+      expect(find.text('All industries'), findsNothing);
+      expect(find.text('2/3'), findsOneWidget);
+    });
+  });
+
+  testWidgets('narrowing by sector puts the chosen list away', (tester) async {
+    await onDesktop(() async {
+      await openApp(tester);
+
+      // On a list to begin with.
+      await tester.tap(find.text('All companies'));
+      await pumpMenu(tester);
+      await tester.tap(find.text('Favourites').last);
+      await pumpMenu(tester);
+      expect(find.text('Favourites'), findsOneWidget);
+
+      // A sector and a list are two answers to the same question, so the
+      // sector takes over rather than intersecting with the list.
+      await tester.tap(find.text('Tech'));
+      await tester.pumpAndSettle();
+      expect(find.text('All companies'), findsOneWidget);
+      expect(find.text('3 matches'), findsOneWidget);
+
+      // And so does an industry inside one.
+      await tester.tap(find.text('All companies'));
+      await pumpMenu(tester);
+      await tester.tap(find.text('Favourites').last);
+      await pumpMenu(tester);
+      await tester.tap(techArrow);
+      await pumpMenu(tester);
+      await tester.tap(find.text('Semiconductors & Related Devices'));
+      await pumpMenu(tester);
+      expect(find.text('All companies'), findsOneWidget);
+      expect(find.text('1 match'), findsOneWidget);
+      expect(find.text('NVIDIA CORP'), findsOneWidget);
     });
   });
 
@@ -439,8 +530,8 @@ void main() {
       await pumpMenu(tester);
 
       // Last of the three by title, so the one that would need scrolling to.
-      await tester.tap(find.text('Services-Prepackaged Software'));
-      await pumpMenu(tester);
+      // Shift-held, so the menu stays up to be looked at.
+      await shiftTap(tester, find.text('Services-Prepackaged Software'));
 
       // It stays put while the menu is open: a row that jumped as it was
       // ticked would move the next one out from under the pointer.

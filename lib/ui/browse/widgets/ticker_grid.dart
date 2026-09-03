@@ -55,17 +55,33 @@ class _TickerGridState extends State<TickerGrid> {
     );
     if (count == 0) return const _NoMatches();
 
-    return GridView.builder(
-      controller: _controller,
-      padding: context.pagePadding,
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: ThemeRepo.tickerTileMaxWidth,
-        childAspectRatio: ThemeRepo.tickerTileAspectRatio,
-        crossAxisSpacing: ThemeRepo.spaceSmall,
-        mainAxisSpacing: ThemeRepo.spaceSmall,
-      ),
-      itemCount: count,
-      itemBuilder: (context, index) => _TickerTile(index),
+    // The tile's shape depends on how many fit across, so the width has to be
+    // known before the delegate is built.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final padding = context.pagePadding;
+        final available = constraints.maxWidth - padding.horizontal;
+        // The delegate's own arithmetic, so the shape chosen here is the
+        // shape it lays out: it divides by the tile's width plus the gap
+        // between two of them, not by the width alone.
+        const stride = ThemeRepo.tickerTileMaxWidth + ThemeRepo.spaceSmall;
+        final columns = (available / stride).ceil();
+
+        return GridView.builder(
+          controller: _controller,
+          padding: padding,
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: ThemeRepo.tickerTileMaxWidth,
+            childAspectRatio: columns == 1
+                ? ThemeRepo.tickerTileWideAspectRatio
+                : ThemeRepo.tickerTileAspectRatio,
+            crossAxisSpacing: ThemeRepo.spaceSmall,
+            mainAxisSpacing: ThemeRepo.spaceSmall,
+          ),
+          itemCount: count,
+          itemBuilder: (context, index) => _TickerTile(index),
+        );
+      },
     );
   }
 }
@@ -113,7 +129,7 @@ class _TickerTile extends StatelessWidget {
       // is what the list is sorted by, so it lines up down the right edge for
       // comparison rather than sitting under each name.
       child: Row(
-        spacing: ThemeRepo.spaceSmall,
+        spacing: ThemeRepo.spaceMedium,
         children: [
           Expanded(
             child: Column(
@@ -134,11 +150,17 @@ class _TickerTile extends StatelessWidget {
                     _WatchlistMarkers(cik: company.cik),
                   ],
                 ),
-                Text(
-                  company.name,
-                  maxLines: ThemeRepo.tickerNameMaxLines,
-                  overflow: TextOverflow.ellipsis,
-                ).muted().xSmall().textStart(),
+                // Flexible so the name yields when the tile is short rather
+                // than running out of the bottom of it: given less room than
+                // two lines need, the text ends in an ellipsis instead of
+                // being cut through the middle of a letter.
+                Flexible(
+                  child: Text(
+                    company.name,
+                    maxLines: ThemeRepo.tickerNameMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ).muted().xSmall().textStart(),
+                ),
               ],
             ),
           ),

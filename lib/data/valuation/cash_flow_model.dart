@@ -26,7 +26,42 @@ abstract final class CashFlowModel {
 
   /// No company compounds at a hypergrowth rate for a decade, so a rate read
   /// off history is credited only this far when valuing forwards.
-  static const double maximumCreditedGrowth = 0.20;
+  ///
+  /// Raised from 20% once the fade was doing the work it was meant to. The
+  /// cap and the fade were limiting the same thing twice: a start of 30%
+  /// fading to 2.5% compounds to 5.0x over the decade — 17% a year averaged,
+  /// not 30 — so 20% was cutting real bull cases off at the knee. Nextpower
+  /// grew 18, 20, 22, 30 and 31 per cent; capped at 20 its worst, typical and
+  /// best years all came out within a point and a half of each other, which
+  /// is not three cases.
+  static const double maximumCreditedGrowth = 0.30;
+
+  /// How far either side of the required return the fair range is drawn.
+  ///
+  /// The rate is the least certain input and the one the answer moves most
+  /// with, so the band is drawn across it rather than around the growth —
+  /// which the expectations tab already reads three ways.
+  static const double discountRateBand = 0.01;
+
+  /// What a stream growing at [growth] is worth, as a number of years of
+  /// itself.
+  ///
+  /// The same discounted cash flow, run against one unit of cash flow: a
+  /// multiple is a present value with the amount divided back out. Derived
+  /// rather than picked so that a multiple and a discounted cash flow cannot
+  /// disagree about the same company, which is what a rule of thumb bolted to
+  /// a growth premium was doing — pricing Nextpower at 28 years of its cash
+  /// while the model beside it discounted at 14.7% and said 18.
+  static double multipleFor({
+    required double growth,
+    required double discountRate,
+  }) => presentValue(1, growth: growth, discountRate: discountRate);
+
+  /// And no going concern shrinks at this rate for one either. A bear case is
+  /// a bad decade, not a wind-up: past this the model is valuing a company
+  /// that has stopped existing, which is a question for the balance sheet
+  /// rather than for a cash flow.
+  static const double minimumCreditedGrowth = -0.10;
 
   /// What a stream of [baseFlow] is worth today if it grows at [growth],
   /// fading to [terminalGrowth] across the horizon.

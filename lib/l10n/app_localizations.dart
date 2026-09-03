@@ -586,6 +586,18 @@ abstract class AppLocalizations {
   /// **'SEC industries'**
   String get sectorIndustriesHeader;
 
+  /// No description provided for @sectorIndustriesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold ⇧ to pick several'**
+  String get sectorIndustriesHint;
+
+  /// No description provided for @sectorApplySelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply selection'**
+  String get sectorApplySelection;
+
   /// No description provided for @sectorAllIndustries.
   ///
   /// In en, this message translates to:
@@ -1267,14 +1279,19 @@ abstract class AppLocalizations {
   /// No description provided for @valuationGrowthPremium.
   ///
   /// In en, this message translates to:
-  /// **'Includes {points} points of multiple for {growth} annual revenue growth.'**
-  String valuationGrowthPremium(String points, String growth);
+  /// **'{flat} years at {discount}, {premium} more for growing {growth} a year'**
+  String valuationGrowthPremium(
+    String flat,
+    String discount,
+    String premium,
+    String growth,
+  );
 
   /// No description provided for @valuationNoGrowthPremium.
   ///
   /// In en, this message translates to:
-  /// **'No growth premium: revenue is not growing on these filings.'**
-  String get valuationNoGrowthPremium;
+  /// **'{flat} years at {discount}, with nothing added for growth'**
+  String valuationNoGrowthPremium(String flat, String discount);
 
   /// No description provided for @basisFreeCashFlow.
   ///
@@ -1621,16 +1638,18 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep5BodyFlat.
   ///
   /// In en, this message translates to:
-  /// **'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.'**
-  String get napkinStep5BodyFlat;
+  /// **'Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash — that is simply what those years add up to once each one is discounted. This one is not growing, so it gets no more than that.'**
+  String napkinStep5BodyFlat(String discount, String flat);
 
   /// No description provided for @napkinStep5BodyGrowing.
   ///
   /// In en, this message translates to:
-  /// **'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is growing {growth} a year, so next year\'s cash is bigger than this year\'s and you get your money back sooner than the plain sum suggests. That is worth paying more for, so the fair range moves up by {premium} years to {low} to {high}.'**
+  /// **'Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one grew {growth} in its middle year of the last {years} — the median, so one exceptional year cannot set the price. Next year\'s cash should be bigger than this year\'s, so it is worth more: {low} to {high} years, the range being what a point either side of {discount} does to the answer.'**
   String napkinStep5BodyGrowing(
+    String discount,
+    String flat,
     String growth,
-    String premium,
+    String years,
     String low,
     String high,
   );
@@ -1679,6 +1698,179 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You are paying {price}, above the {rangeLow}–{rangeHigh} the earnings support. You are paying for growth that has not happened yet.'**
   String napkinStep7BodyOver(String price, String rangeLow, String rangeHigh);
+
+  /// No description provided for @targetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What a share is worth if the record repeats'**
+  String get targetsTitle;
+
+  /// No description provided for @targetsBear.
+  ///
+  /// In en, this message translates to:
+  /// **'Bear'**
+  String get targetsBear;
+
+  /// No description provided for @targetsNeutral.
+  ///
+  /// In en, this message translates to:
+  /// **'Neutral'**
+  String get targetsNeutral;
+
+  /// No description provided for @targetsBull.
+  ///
+  /// In en, this message translates to:
+  /// **'Bull'**
+  String get targetsBull;
+
+  /// No description provided for @targetsGrowthAssumed.
+  ///
+  /// In en, this message translates to:
+  /// **'{growth} a year assumed'**
+  String targetsGrowthAssumed(String growth);
+
+  /// No description provided for @targetsAgainstPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'vs {price} today'**
+  String targetsAgainstPrice(String price);
+
+  /// No description provided for @targetsHowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How these are worked out'**
+  String get targetsHowTitle;
+
+  /// No description provided for @targetsHowStep1Title.
+  ///
+  /// In en, this message translates to:
+  /// **'A year of cash to start from'**
+  String get targetsHowStep1Title;
+
+  /// No description provided for @targetsHowStep1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash, so the sum starts from {flow} — its own typical conversion, not one unusual year.'**
+  String targetsHowStep1Body(String revenue, String margin, String flow);
+
+  /// No description provided for @targetsHowStep2Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Three rates it has actually managed'**
+  String get targetsHowStep2Title;
+
+  /// No description provided for @targetsHowStep2Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Its revenue grew {rates} in the {years} years on file. Its worst year gives the bear case at {bear}, its middle year the neutral at {neutral}, and its best year the bull at {bull}. Nothing here is forecast — these are years it has already had.'**
+  String targetsHowStep2Body(
+    String rates,
+    String years,
+    String bear,
+    String neutral,
+    String bull,
+  );
+
+  /// No description provided for @targetsHowStep3Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Ten years of it, then the long run'**
+  String get targetsHowStep3Title;
+
+  /// No description provided for @targetsHowStep3Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Each rate is grown out for ten years, fading to {terminal} a year by the end — nothing outgrows the economy for ever. Every year\'s cash is then discounted at {discount}, because money you get later is worth less than money you have now: a dollar arriving in ten years counts as {tenYear} today. The years after that are valued as one lump on the same terms.'**
+  String targetsHowStep3Body(String terminal, String discount, String tenYear);
+
+  /// No description provided for @targetsHowStep4Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Split across the shares'**
+  String get targetsHowStep4Title;
+
+  /// No description provided for @targetsHowStep4Body.
+  ///
+  /// In en, this message translates to:
+  /// **'That total, divided by {shares} shares, is what one share is worth under each reading: {bear} bear, {neutral} neutral, {bull} bull.'**
+  String targetsHowStep4Body(
+    String shares,
+    String bear,
+    String neutral,
+    String bull,
+  );
+
+  /// No description provided for @targetsRateComputed.
+  ///
+  /// In en, this message translates to:
+  /// **'Discounted at {rate}, this company\'s own required return'**
+  String targetsRateComputed(String rate);
+
+  /// No description provided for @targetsRateAssumed.
+  ///
+  /// In en, this message translates to:
+  /// **'Discounted at {rate}, assumed'**
+  String targetsRateAssumed(String rate);
+
+  /// No description provided for @targetsRateWhat.
+  ///
+  /// In en, this message translates to:
+  /// **'What a buyer should want back each year for holding this share rather than a government bond.'**
+  String get targetsRateWhat;
+
+  /// No description provided for @targetsRateRiskFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk-free'**
+  String get targetsRateRiskFree;
+
+  /// No description provided for @targetsRateRiskFreeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'10-year US Treasury, {date}'**
+  String targetsRateRiskFreeNote(String date);
+
+  /// No description provided for @targetsRateBeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Beta'**
+  String get targetsRateBeta;
+
+  /// No description provided for @targetsRateBetaNote.
+  ///
+  /// In en, this message translates to:
+  /// **'How much the share swings against the market. 1.0 is the market itself.'**
+  String get targetsRateBetaNote;
+
+  /// No description provided for @targetsRatePremium.
+  ///
+  /// In en, this message translates to:
+  /// **'Equity premium'**
+  String get targetsRatePremium;
+
+  /// No description provided for @targetsRatePremiumNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The extra wanted for holding shares at all. An estimate, the same for every company.'**
+  String get targetsRatePremiumNote;
+
+  /// No description provided for @targetsRateTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Required return'**
+  String get targetsRateTotal;
+
+  /// No description provided for @targetsRateCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Held to {rate} — beyond the band a borrowed beta says more than the company does.'**
+  String targetsRateCapped(String rate);
+
+  /// No description provided for @targetsRateAssumedWhy.
+  ///
+  /// In en, this message translates to:
+  /// **'A reasonable return to want, not this company\'s own. Its cost of equity needs a Treasury yield and a beta, neither of which is in SEC filings — and neither could be reached.'**
+  String get targetsRateAssumedWhy;
 
   /// No description provided for @napkinCaveatTitle.
   ///

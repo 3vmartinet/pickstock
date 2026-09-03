@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/services.dart';
 import 'package:pickstock/data/snapshot/sic_industry.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
@@ -109,6 +110,16 @@ class _SectorChipState extends State<_SectorChip> {
 
   void _close() => _menu.close();
 
+  /// Filters by sector, and drops the list filter on the way.
+  ///
+  /// A list and a sector are two answers to the same question — which of the
+  /// directory am I looking at — so narrowing by one puts the other away
+  /// rather than quietly intersecting with it and showing neither.
+  void _select(BuildContext context, bool isWhole, SicSector sector) {
+    context.read<BrowseViewModel>().selectSector(isWhole ? null : sector);
+    context.read<WatchlistViewModel>().select(null);
+  }
+
   void _open() {
     final viewModel = context.read<BrowseViewModel>();
     final theme = Theme.of(context);
@@ -190,11 +201,7 @@ class _SectorChipState extends State<_SectorChip> {
       // guard rather than the mechanism — but it is the guard that keeps a
       // press meant to close the menu from also refiltering the list under
       // it, which is worth keeping against a change in that consumption.
-      onPressed: isOpen
-          ? _close
-          : () => context.read<BrowseViewModel>().selectSector(
-              isWhole ? null : sector,
-            ),
+      onPressed: isOpen ? _close : () => _select(context, isWhole, sector),
       leading: Icon(sector.icon).iconXSmall(),
       // Set smaller than the label rather than in another colour: the chip
       // has a light and a dark variant and two states, and a size reads as
@@ -265,10 +272,33 @@ class _IndustryMenuState extends State<_IndustryMenu> {
     _rest = options.whereNot(isPicked).toList();
   }
 
+  /// Whether the press that is being handled was made with shift held.
+  ///
+  /// Read from the keyboard rather than tracked, because a menu item hands on
+  /// no modifiers with its callback. Live state, so it has to be read inside
+  /// the press and not before it.
+  static bool get _isAdding {
+    final held = HardwareKeyboard.instance.logicalKeysPressed;
+    return held.contains(LogicalKeyboardKey.shiftLeft) ||
+        held.contains(LogicalKeyboardKey.shiftRight) ||
+        held.contains(LogicalKeyboardKey.shift);
+  }
+
+  /// Picks industries, and drops the list filter on the way.
+  ///
+  /// A list and a sector are two answers to the same question — which of the
+  /// directory am I looking at — so narrowing by one puts the other away
+  /// rather than quietly intersecting with it and showing neither.
+  void _narrow(void Function(BrowseViewModel) pick) {
+    pick(context.read<BrowseViewModel>());
+    context.read<WatchlistViewModel>().select(null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<BrowseViewModel>();
     final sector = widget.sector;
+    final picked = viewModel.narrowedCountIn(sector);
 
     return ConstrainedBox(
       // Capped downwards only: a sector can hold forty industries, and SEC's
@@ -279,13 +309,35 @@ class _IndustryMenuState extends State<_IndustryMenu> {
       ),
       child: DropdownMenu(
         children: [
-          MenuLabel(child: Text(context.strings.sectorIndustriesHeader)),
+          MenuLabel(
+            // The shift hint sits under the title rather than beside it: it
+            // is an instruction, and a reader who already knows it should be
+            // able to skip the line rather than read past it.
+            trailing: picked > 1
+                ? Button(
+                    style: const ButtonStyle.primary(
+                      size: ButtonSize.small,
+                      density: ButtonDensity.dense,
+                    ),
+                    onPressed: () => closeOverlay(context),
+                    child: Text(context.strings.sectorApplySelection),
+                  )
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(context.strings.sectorIndustriesHeader),
+                Text(context.strings.sectorIndustriesHint).muted().xSmall(),
+              ],
+            ),
+          ),
           // The row that carries the unnarrowed state, so an unticked list
           // never reads as a filter that has excluded everything.
           MenuCheckbox(
-            value: viewModel.narrowedCountIn(sector) == 0,
+            value: picked == 0,
             autoClose: false,
-            onChanged: (_, _) => viewModel.clearNarrowing(sector),
+            onChanged: (_, _) =>
+                _narrow((model) => model.clearNarrowing(sector)),
             child: Text(context.strings.sectorAllIndustries).singleLine(),
           ),
           const MenuDivider(),
@@ -300,10 +352,20 @@ class _IndustryMenuState extends State<_IndustryMenu> {
   MenuCheckbox _checkbox(BrowseViewModel viewModel, SicIndustryOption option) {
     return MenuCheckbox(
       value: viewModel.isIndustrySelected(widget.sector, option.sic),
-      // Picking industries is a handful of taps, and a menu that shut after
-      // each one would have to be reopened between them.
+      // Closed by hand rather than by the menu, so that a plain press can
+      // shut it and a shift-press cannot.
       autoClose: false,
-      onChanged: (_, _) => viewModel.toggleIndustry(widget.sector, option.sic),
+      onChanged: (itemContext, _) {
+        if (_isAdding) {
+          // Building a selection: the menu stays up, and the header offers
+          // the way out once there is more than one industry in it.
+          _narrow((model) => model.toggleIndustry(widget.sector, option.sic));
+          return;
+        }
+        // One industry, chosen outright, and done with the menu.
+        _narrow((model) => model.selectOnlyIndustry(widget.sector, option.sic));
+        closeOverlay(itemContext);
+      },
       // The menu is only as wide as its longest title, so on that row the
       // count would otherwise sit flush against it.
       trailing: Padding(

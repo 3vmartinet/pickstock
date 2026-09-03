@@ -112,6 +112,8 @@
   "sectorNarrowedCount": "{selected}/{total}",
   "@sectorNarrowedCount": { "placeholders": { "selected": { "type": "int" }, "total": { "type": "int" } } },
   "sectorIndustriesHeader": "SEC industries",
+  "sectorIndustriesHint": "Hold ⇧ to pick several",
+  "sectorApplySelection": "Apply selection",
   "sectorAllIndustries": "All industries",
   "sectorIndustryCount": "{count, plural, =1{1 company} other{{count} companies}}",
   "@sectorIndustryCount": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
@@ -277,14 +279,10 @@
       "shares": { "type": "String" }
     }
   },
-  "valuationGrowthPremium": "Includes {points} points of multiple for {growth} annual revenue growth.",
-  "@valuationGrowthPremium": {
-    "placeholders": {
-      "points": { "type": "String" },
-      "growth": { "type": "String" }
-    }
-  },
-  "valuationNoGrowthPremium": "No growth premium: revenue is not growing on these filings.",
+  "valuationGrowthPremium": "{flat} years at {discount}, {premium} more for growing {growth} a year",
+  "@valuationGrowthPremium": { "placeholders": { "flat": { "type": "String" }, "discount": { "type": "String" }, "premium": { "type": "String" }, "growth": { "type": "String" } } },
+  "valuationNoGrowthPremium": "{flat} years at {discount}, with nothing added for growth",
+  "@valuationNoGrowthPremium": { "placeholders": { "flat": { "type": "String" }, "discount": { "type": "String" } } },
   "basisFreeCashFlow": "free cash flow",
   "basisEarnings": "net income",
 
@@ -403,12 +401,15 @@
   },
 
   "napkinStep5Title": "How many years is fair?",
-  "napkinStep5BodyFlat": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.",
-  "napkinStep5BodyGrowing": "A business going nowhere is worth roughly 12 to 18 years of its cash. This one is growing {growth} a year, so next year's cash is bigger than this year's and you get your money back sooner than the plain sum suggests. That is worth paying more for, so the fair range moves up by {premium} years to {low} to {high}.",
+  "napkinStep5BodyFlat": "Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash — that is simply what those years add up to once each one is discounted. This one is not growing, so it gets no more than that.",
+  "@napkinStep5BodyFlat": { "placeholders": { "discount": { "type": "String" }, "flat": { "type": "String" } } },
+  "napkinStep5BodyGrowing": "Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one grew {growth} in its middle year of the last {years} — the median, so one exceptional year cannot set the price. Next year's cash should be bigger than this year's, so it is worth more: {low} to {high} years, the range being what a point either side of {discount} does to the answer.",
   "@napkinStep5BodyGrowing": {
     "placeholders": {
+      "discount": { "type": "String" },
+      "flat": { "type": "String" },
       "growth": { "type": "String" },
-      "premium": { "type": "String" },
+      "years": { "type": "String" },
       "low": { "type": "String" },
       "high": { "type": "String" }
     }
@@ -455,6 +456,43 @@
     }
   },
 
+  "targetsTitle": "What a share is worth if the record repeats",
+  "targetsBear": "Bear",
+  "targetsNeutral": "Neutral",
+  "targetsBull": "Bull",
+  "targetsGrowthAssumed": "{growth} a year assumed",
+  "@targetsGrowthAssumed": { "placeholders": { "growth": { "type": "String" } } },
+  "targetsAgainstPrice": "vs {price} today",
+  "@targetsAgainstPrice": { "placeholders": { "price": { "type": "String" } } },
+  "targetsHowTitle": "How these are worked out",
+  "targetsHowStep1Title": "A year of cash to start from",
+  "targetsHowStep1Body": "Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash, so the sum starts from {flow} — its own typical conversion, not one unusual year.",
+  "@targetsHowStep1Body": { "placeholders": { "revenue": { "type": "String" }, "margin": { "type": "String" }, "flow": { "type": "String" } } },
+  "targetsHowStep2Title": "Three rates it has actually managed",
+  "targetsHowStep2Body": "Its revenue grew {rates} in the {years} years on file. Its worst year gives the bear case at {bear}, its middle year the neutral at {neutral}, and its best year the bull at {bull}. Nothing here is forecast — these are years it has already had.",
+  "@targetsHowStep2Body": { "placeholders": { "rates": { "type": "String" }, "years": { "type": "String" }, "bear": { "type": "String" }, "neutral": { "type": "String" }, "bull": { "type": "String" } } },
+  "targetsHowStep3Title": "Ten years of it, then the long run",
+  "targetsHowStep3Body": "Each rate is grown out for ten years, fading to {terminal} a year by the end — nothing outgrows the economy for ever. Every year's cash is then discounted at {discount}, because money you get later is worth less than money you have now: a dollar arriving in ten years counts as {tenYear} today. The years after that are valued as one lump on the same terms.",
+  "@targetsHowStep3Body": { "placeholders": { "terminal": { "type": "String" }, "discount": { "type": "String" }, "tenYear": { "type": "String" } } },
+  "targetsHowStep4Title": "Split across the shares",
+  "targetsHowStep4Body": "That total, divided by {shares} shares, is what one share is worth under each reading: {bear} bear, {neutral} neutral, {bull} bull.",
+  "@targetsHowStep4Body": { "placeholders": { "shares": { "type": "String" }, "bear": { "type": "String" }, "neutral": { "type": "String" }, "bull": { "type": "String" } } },
+  "targetsRateComputed": "Discounted at {rate}, this company's own required return",
+  "@targetsRateComputed": { "placeholders": { "rate": { "type": "String" } } },
+  "targetsRateAssumed": "Discounted at {rate}, assumed",
+  "@targetsRateAssumed": { "placeholders": { "rate": { "type": "String" } } },
+  "targetsRateWhat": "What a buyer should want back each year for holding this share rather than a government bond.",
+  "targetsRateRiskFree": "Risk-free",
+  "targetsRateRiskFreeNote": "10-year US Treasury, {date}",
+  "@targetsRateRiskFreeNote": { "placeholders": { "date": { "type": "String" } } },
+  "targetsRateBeta": "Beta",
+  "targetsRateBetaNote": "How much the share swings against the market. 1.0 is the market itself.",
+  "targetsRatePremium": "Equity premium",
+  "targetsRatePremiumNote": "The extra wanted for holding shares at all. An estimate, the same for every company.",
+  "targetsRateTotal": "Required return",
+  "targetsRateCapped": "Held to {rate} — beyond the band a borrowed beta says more than the company does.",
+  "@targetsRateCapped": { "placeholders": { "rate": { "type": "String" } } },
+  "targetsRateAssumedWhy": "A reasonable return to want, not this company's own. Its cost of equity needs a Treasury yield and a beta, neither of which is in SEC filings — and neither could be reached.",
   "napkinCaveatTitle": "Worth knowing",
   "napkinCaveatBuilding": "It spent {ratio}× more on equipment than wore out, so last year's leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.",
   "@napkinCaveatBuilding": { "placeholders": { "ratio": { "type": "String" } } },

@@ -381,6 +381,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectorIndustriesHeader => 'SEC industries';
 
   @override
+  String get sectorIndustriesHint => 'Hold ⇧ to pick several';
+
+  @override
+  String get sectorApplySelection => 'Apply selection';
+
+  @override
   String get sectorAllIndustries => 'All industries';
 
   @override
@@ -836,13 +842,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String valuationGrowthPremium(String points, String growth) {
-    return 'Includes $points points of multiple for $growth annual revenue growth.';
+  String valuationGrowthPremium(
+    String flat,
+    String discount,
+    String premium,
+    String growth,
+  ) {
+    return '$flat years at $discount, $premium more for growing $growth a year';
   }
 
   @override
-  String get valuationNoGrowthPremium =>
-      'No growth premium: revenue is not growing on these filings.';
+  String valuationNoGrowthPremium(String flat, String discount) {
+    return '$flat years at $discount, with nothing added for growth';
+  }
 
   @override
   String get basisFreeCashFlow => 'free cash flow';
@@ -1067,17 +1079,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get napkinStep5Title => 'How many years is fair?';
 
   @override
-  String get napkinStep5BodyFlat =>
-      'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is not growing, so it gets no more than that.';
+  String napkinStep5BodyFlat(String discount, String flat) {
+    return 'Wanting $discount a year back, a business going nowhere is worth about $flat years of its cash — that is simply what those years add up to once each one is discounted. This one is not growing, so it gets no more than that.';
+  }
 
   @override
   String napkinStep5BodyGrowing(
+    String discount,
+    String flat,
     String growth,
-    String premium,
+    String years,
     String low,
     String high,
   ) {
-    return 'A business going nowhere is worth roughly 12 to 18 years of its cash. This one is growing $growth a year, so next year\'s cash is bigger than this year\'s and you get your money back sooner than the plain sum suggests. That is worth paying more for, so the fair range moves up by $premium years to $low to $high.';
+    return 'Wanting $discount a year back, a business going nowhere is worth about $flat years of its cash. This one grew $growth in its middle year of the last $years — the median, so one exceptional year cannot set the price. Next year\'s cash should be bigger than this year\'s, so it is worth more: $low to $high years, the range being what a point either side of $discount does to the answer.';
   }
 
   @override
@@ -1114,6 +1129,122 @@ class AppLocalizationsEn extends AppLocalizations {
   String napkinStep7BodyOver(String price, String rangeLow, String rangeHigh) {
     return 'You are paying $price, above the $rangeLow–$rangeHigh the earnings support. You are paying for growth that has not happened yet.';
   }
+
+  @override
+  String get targetsTitle => 'What a share is worth if the record repeats';
+
+  @override
+  String get targetsBear => 'Bear';
+
+  @override
+  String get targetsNeutral => 'Neutral';
+
+  @override
+  String get targetsBull => 'Bull';
+
+  @override
+  String targetsGrowthAssumed(String growth) {
+    return '$growth a year assumed';
+  }
+
+  @override
+  String targetsAgainstPrice(String price) {
+    return 'vs $price today';
+  }
+
+  @override
+  String get targetsHowTitle => 'How these are worked out';
+
+  @override
+  String get targetsHowStep1Title => 'A year of cash to start from';
+
+  @override
+  String targetsHowStep1Body(String revenue, String margin, String flow) {
+    return 'Its last year sold $revenue. Over the years on file it has turned $margin of what it sells into spare cash, so the sum starts from $flow — its own typical conversion, not one unusual year.';
+  }
+
+  @override
+  String get targetsHowStep2Title => 'Three rates it has actually managed';
+
+  @override
+  String targetsHowStep2Body(
+    String rates,
+    String years,
+    String bear,
+    String neutral,
+    String bull,
+  ) {
+    return 'Its revenue grew $rates in the $years years on file. Its worst year gives the bear case at $bear, its middle year the neutral at $neutral, and its best year the bull at $bull. Nothing here is forecast — these are years it has already had.';
+  }
+
+  @override
+  String get targetsHowStep3Title => 'Ten years of it, then the long run';
+
+  @override
+  String targetsHowStep3Body(String terminal, String discount, String tenYear) {
+    return 'Each rate is grown out for ten years, fading to $terminal a year by the end — nothing outgrows the economy for ever. Every year\'s cash is then discounted at $discount, because money you get later is worth less than money you have now: a dollar arriving in ten years counts as $tenYear today. The years after that are valued as one lump on the same terms.';
+  }
+
+  @override
+  String get targetsHowStep4Title => 'Split across the shares';
+
+  @override
+  String targetsHowStep4Body(
+    String shares,
+    String bear,
+    String neutral,
+    String bull,
+  ) {
+    return 'That total, divided by $shares shares, is what one share is worth under each reading: $bear bear, $neutral neutral, $bull bull.';
+  }
+
+  @override
+  String targetsRateComputed(String rate) {
+    return 'Discounted at $rate, this company\'s own required return';
+  }
+
+  @override
+  String targetsRateAssumed(String rate) {
+    return 'Discounted at $rate, assumed';
+  }
+
+  @override
+  String get targetsRateWhat =>
+      'What a buyer should want back each year for holding this share rather than a government bond.';
+
+  @override
+  String get targetsRateRiskFree => 'Risk-free';
+
+  @override
+  String targetsRateRiskFreeNote(String date) {
+    return '10-year US Treasury, $date';
+  }
+
+  @override
+  String get targetsRateBeta => 'Beta';
+
+  @override
+  String get targetsRateBetaNote =>
+      'How much the share swings against the market. 1.0 is the market itself.';
+
+  @override
+  String get targetsRatePremium => 'Equity premium';
+
+  @override
+  String get targetsRatePremiumNote =>
+      'The extra wanted for holding shares at all. An estimate, the same for every company.';
+
+  @override
+  String get targetsRateTotal => 'Required return';
+
+  @override
+  String targetsRateCapped(String rate) {
+    return 'Held to $rate — beyond the band a borrowed beta says more than the company does.';
+  }
+
+  @override
+  String get targetsRateAssumedWhy =>
+      'A reasonable return to want, not this company\'s own. Its cost of equity needs a Treasury yield and a beta, neither of which is in SEC filings — and neither could be reached.';
 
   @override
   String get napkinCaveatTitle => 'Worth knowing';

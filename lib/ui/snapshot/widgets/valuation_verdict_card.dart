@@ -128,10 +128,17 @@ class _WorkingsLines extends StatelessWidget {
         Text(
           growth > 0
               ? context.strings.valuationGrowthPremium(
-                  _formatRepo.ratio(valuation.growthPremiumMultiple),
+                  _formatRepo.ratio(valuation.flatMultiple),
+                  _formatRepo.percent(valuation.discountRatePercent),
+                  _formatRepo.ratio(
+                    valuation.centralMultiple - valuation.flatMultiple,
+                  ),
                   _formatRepo.percent(growth),
                 )
-              : context.strings.valuationNoGrowthPremium,
+              : context.strings.valuationNoGrowthPremium(
+                  _formatRepo.ratio(valuation.flatMultiple),
+                  _formatRepo.percent(valuation.discountRatePercent),
+                ),
         ).muted().xSmall(),
       ],
     );

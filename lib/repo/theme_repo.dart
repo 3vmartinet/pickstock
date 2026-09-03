@@ -154,6 +154,18 @@ class ThemeRepo {
   /// tile to another shifts nothing in the grid.
   static const double tickerTileSelectedRing = 2;
   static const double tickerTileAspectRatio = 2;
+
+  /// Flatter where only one tile fits across. A single column takes the whole
+  /// pane, and at the ratio above that makes each tile nearly as tall as the
+  /// pane is wide — a column of near-empty boxes with a handful of companies
+  /// on screen.
+  ///
+  /// Three rather than four: four left a long registrant name with nowhere to
+  /// go, and it ran out of the bottom of the tile mid-letter. Three still
+  /// puts half as much again on screen and leaves the second line room to
+  /// finish.
+  static const double tickerTileWideAspectRatio = 3;
+
   static const int tickerNameMaxLines = 2;
 
   /// The app bar's vertical padding. Setting the gutter means setting both

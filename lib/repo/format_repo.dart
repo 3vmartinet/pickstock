@@ -6,6 +6,7 @@ const String _millionsPattern = '#,##0';
 const String _percentPattern = '0.0';
 const String _timePattern = 'HH:mm';
 const String _dateTimePattern = 'd MMM HH:mm';
+const String _shortDatePattern = 'd MMM';
 const String _currencySymbol = r'$';
 
 /// Byte scales, largest first, with how many decimals each deserves.
@@ -24,6 +25,7 @@ class FormatRepo {
   final NumberFormat _compactCount = NumberFormat.compact();
   final DateFormat _time = DateFormat(_timePattern);
   final DateFormat _dateTime = DateFormat(_dateTimePattern);
+  final DateFormat _shortDate = DateFormat(_shortDatePattern);
   final NumberFormat _price = NumberFormat.currency(
     symbol: _currencySymbol,
     decimalDigits: 2,
@@ -57,6 +59,9 @@ class FormatRepo {
     }
     return '${value.round()} ${_byteUnits.last.suffix}';
   }
+
+  /// A day on its own, for a figure published once a day: `2 Sep`.
+  String shortDate(DateTime day) => _shortDate.format(day.toLocal());
 
   /// When a price was true, as short as it can be while staying unambiguous:
   /// `14:20` for today, `31 Aug 14:20` for anything older.

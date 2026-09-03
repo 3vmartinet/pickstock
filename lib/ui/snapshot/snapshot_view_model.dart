@@ -12,6 +12,8 @@ import 'package:pickstock/data/valuation/growth_expectation.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/data/valuation/discount_rate.dart';
+import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_state.dart';
@@ -19,6 +21,7 @@ import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
+MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
 
 /// How old a stored quote may be before opening a company refetches it.
 ///
@@ -140,6 +143,24 @@ class SnapshotViewModel extends ChangeNotifier {
   /// How many rows the history section shows.
   int get historyRowCount => historyRows.length;
 
+  DiscountRate? _discountRate;
+
+  /// The company's own required return, where both figures behind it could be
+  /// reached. `null` leaves the report on its assumed rate, which is what an
+  /// offline or keyless build gets.
+  ///
+  /// Fetched beside the figures rather than with them: it comes from two
+  /// providers that have nothing to do with EDGAR, and a report should appear
+  /// whether or not either answers.
+  DiscountRate? get discountRate => _discountRate;
+
+  Future<void> _loadDiscountRate(String ticker, int generation) async {
+    final rate = await _marketRatesRepo.rateFor(ticker);
+    if (generation != _requestGeneration) return;
+    _discountRate = rate;
+    notifyListeners();
+  }
+
   Quote? _quote;
 
   /// The price on screen and where it came from, or `null` while none is known.
@@ -177,7 +198,14 @@ class SnapshotViewModel extends ChangeNotifier {
     final current = snapshot;
     final price = pricePerShare;
     if (current == null || price == null || price <= 0) return null;
-    return Valuation(snapshot: current, pricePerShare: price);
+    return Valuation(
+      snapshot: current,
+      pricePerShare: price,
+      // The same return the expectations tab discounts at, so a
+      // multiple and a discounted cash flow cannot disagree about the
+      // same company.
+      discountRatePercent: _discountRate?.percent,
+    );
   }
 
   /// What the entered price is asking of the company, set against what the
@@ -316,7 +344,9 @@ class SnapshotViewModel extends ChangeNotifier {
       // A different company starts on the overview: the tab left open for the
       // last one says nothing about this one.
       _reportTab = ReportTab.overview;
+      _discountRate = null;
       _setState(SnapshotLoaded(snapshot));
+      unawaited(_loadDiscountRate(symbol, generation));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {
       if (generation != _requestGeneration) return;
