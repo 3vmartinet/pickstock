@@ -510,6 +510,32 @@ class AppDatabase extends _$AppDatabase {
     return {for (final row in rows) row.read<String>('cik')};
   }
 
+  /// Every company whose latest filed year turned more cash from operations
+  /// than it spent on capital equipment.
+  ///
+  /// Both figures have to be on file: free cash flow is a subtraction, and a
+  /// filing missing either side says nothing about the answer. Treating a
+  /// missing capex as zero would let a company that never reported it pass
+  /// the filter on its operating cash flow alone.
+  ///
+  /// Computed in SQL for the same reason [debtFreeCiks] is: the answer covers
+  /// the whole directory.
+  Future<Set<String>> positiveFreeCashFlowCiks() async {
+    final rows = await customSelect(
+      'WITH latest AS ('
+      '  SELECT cik, MAX(fiscal_year) AS end_year FROM fiscal_years'
+      '  GROUP BY cik'
+      ') '
+      'SELECT f.cik AS cik FROM fiscal_years f '
+      'JOIN latest l ON l.cik = f.cik AND l.end_year = f.fiscal_year '
+      'WHERE f.operating_cash_flow IS NOT NULL '
+      '  AND f.capital_expenditure IS NOT NULL '
+      '  AND f.operating_cash_flow - f.capital_expenditure > 0',
+      readsFrom: {fiscalYears},
+    ).get();
+    return {for (final row in rows) row.read<String>('cik')};
+  }
+
   /// The SIC code of every company that has one, keyed by CIK.
   Future<Map<String, int>> sicByCik() async {
     final rows =

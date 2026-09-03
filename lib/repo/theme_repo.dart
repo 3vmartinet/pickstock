@@ -45,6 +45,11 @@ class ThemeRepo {
   /// The coloured dot marking a list, on a chip or a tile.
   static const double watchlistDotSize = 8;
 
+  /// The star standing in for that dot on the starred list. Larger than the
+  /// dot because a star is mostly the gaps between its points: at the dot's
+  /// own size it reads as a smudge rather than as a star.
+  static const double watchlistStarSize = 12;
+
   /// A swatch in the colour picker, big enough to tap.
   static const double watchlistSwatchSize = 28;
   static const double watchlistSwatchRing = 2;
@@ -71,6 +76,11 @@ class ThemeRepo {
   /// screen.
   static const double watchlistPopupWidth = 280;
   static const double watchlistPopupMaxHeight = 360;
+
+  /// The industry menu behind a sector chip. Height only: the menu takes the
+  /// width its longest title needs so every one of them sits on a single
+  /// line, and a sector can hold forty of them.
+  static const double industryPopupMaxHeight = 360;
 
   /// How many list dots a tile shows before it stops.
   static const int watchlistDotsPerTile = 3;
@@ -136,6 +146,13 @@ class ThemeRepo {
   /// with the ranked figure on the right, which packs far more of them into a
   /// pane than a square does.
   static const double tickerTileMaxWidth = 240;
+
+  /// The ring on the tile whose report is open beside the list. Two pixels
+  /// rather than the one every other tile carries: at a glance down a pane of
+  /// a hundred tiles, a ring the same weight as all the others is not a mark
+  /// at all. Painted inside the tile's bounds, so a selection moving from one
+  /// tile to another shifts nothing in the grid.
+  static const double tickerTileSelectedRing = 2;
   static const double tickerTileAspectRatio = 2;
   static const int tickerNameMaxLines = 2;
 

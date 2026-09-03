@@ -43,6 +43,21 @@ class SnapshotViewModel extends ChangeNotifier {
 
   bool get isLoading => _state is SnapshotLoading;
 
+  /// The symbol the report is about, whether its figures have arrived yet or
+  /// not, and `null` before anything has been looked up.
+  ///
+  /// Read by the directory beside the report to mark which of its tiles the
+  /// report belongs to. It answers while the lookup is still in flight on
+  /// purpose: a tile that only lit up once the figures landed would leave a
+  /// click looking unregistered for as long as the fetch takes, and would go
+  /// dark again if the company turned out not to be reportable.
+  String? get selectedTicker => switch (_state) {
+    SnapshotIdle() => null,
+    SnapshotLoading(:final ticker) => ticker,
+    SnapshotLoaded(:final snapshot) => snapshot.company.ticker,
+    SnapshotFailed(:final ticker) => ticker,
+  };
+
   /// The figures on screen, or `null` while idle, loading or failed.
   FinancialSnapshot? get snapshot {
     final current = _state;

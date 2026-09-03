@@ -66,11 +66,33 @@ enum XbrlMetric {
       'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations',
     ],
   ),
+
+  /// What the company spent on the assets it operates with.
+  ///
+  /// The last four are the names a filer reaches for when it reports none of
+  /// the concepts above, and are read only in that case. Without them a third
+  /// of the directory reported operating cash flow and no capital spending at
+  /// all, which left the most capital-hungry companies in it unanswerable:
+  /// Verizon tags its $17.0B under `...OtherProductiveAssets`, Eli Lilly its
+  /// $7.8B under `...OtherPropertyPlantAndEquipment`, and the oil and gas
+  /// producers under concepts of their own — EOG $6.1B, Diamondback $3.5B.
+  ///
+  /// `PaymentsToAcquireOilAndGasProperty` is deliberately not among them: it
+  /// is what a producer pays to buy acreage from someone else, which is an
+  /// acquisition rather than the cost of running what it already has.
+  /// Diamondback reports $5.9B of it beside the $3.5B it spent drilling, and
+  /// reading both would show a company that funds itself as one that cannot.
+  /// `CapitalExpendituresIncurredButNotYetPaid` is excluded for the plainer
+  /// reason that it is not a payment.
   capitalExpenditure(
     tags: [
       'PaymentsToAcquirePropertyPlantAndEquipment',
       'PaymentsForCapitalImprovements',
       'PaymentsToAcquireProductiveAssets',
+      'PaymentsToAcquireOilAndGasPropertyAndEquipment',
+      'PaymentsToExploreAndDevelopOilAndGasProperties',
+      'PaymentsToAcquireOtherProductiveAssets',
+      'PaymentsToAcquireOtherPropertyPlantAndEquipment',
     ],
   ),
 
@@ -141,10 +163,11 @@ enum XbrlMetric {
   /// concept nobody reads" — Ford, Berkshire and KKR all report no debt this
   /// parser can find and between them $9.1B of interest.
   ///
-  /// Cash interest paid is deliberately not among the tags: it is a
-  /// supplemental cash-flow line that debt-free filers report anyway for
-  /// lease and facility fees, and reading it would call Lululemon a borrower
-  /// over $1M of them.
+  /// Cash interest paid is not among these tags: it is a supplemental
+  /// cash-flow line that debt-free filers report anyway for lease and
+  /// facility fees, and reading it here would call Lululemon a borrower over
+  /// $1.0M of them. It is read separately, and only on its size — see
+  /// [interestPaid].
   interestExpense(
     tags: [
       'InterestExpense',
@@ -153,8 +176,24 @@ enum XbrlMetric {
       'InterestExpenseOperating',
       'InterestExpenseBorrowings',
       'InterestExpenseDebt',
+      // What a mortgage REIT's borrowings are called: it funds itself through
+      // repurchase agreements and reports no debt concept at all. ARMOUR
+      // Residential pays $642M of this against $21.0B of assets and read as
+      // owing nothing.
+      'InterestExpenseSecuritiesSoldUnderAgreementsToRepurchase',
     ],
   ),
+
+  /// Cash interest actually handed over during the year.
+  ///
+  /// A last resort, read only where a filer reports no accrual interest
+  /// concept at all, and then only when it is large enough to be the price of
+  /// borrowings — see `CompanyFactsParser` for the test and why it is needed.
+  /// Filers that report neither debt nor interest under any concept this
+  /// parser can see are otherwise read as owing nothing: PACCAR funds its
+  /// truck loans through a captive finance arm and paid $693M, Textron and
+  /// Ares Management the same shape.
+  interestPaid(tags: ['InterestPaidNet', 'InterestPaid']),
   cash(
     tags: [
       'CashAndCashEquivalentsAtCarryingValue',

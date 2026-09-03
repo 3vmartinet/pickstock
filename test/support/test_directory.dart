@@ -63,6 +63,10 @@ testFiscalYears = [
   ('0000789019', 2025, 380, 240, 30),
   // Berkshire: one year only, so multi-year windows cannot rank it.
   ('0001067983', 2025, 900, 500, 50),
+  // Kensington: a shell that spends more on equipment than it earns back,
+  // which is the only shape in the fixture with free cash flow below zero.
+  // One year, like Berkshire, so it cannot be ranked over a window either.
+  ('0001818605', 2025, 20, 5, 30),
 ];
 
 /// The balance-sheet side of each filer's latest year, which is what the

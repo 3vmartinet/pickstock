@@ -10,6 +10,11 @@ const String _fiscalYearKey = 'fy';
 const String _startKey = 'start';
 const String _endKey = 'end';
 const String _valueKey = 'val';
+
+/// Where the price of real borrowings starts, as a share of the assets they
+/// are carried against. The evidence for the number is in
+/// `CompanyFactsParser._borrowingInterest`.
+const double _borrowingInterestToAssets = 0.002;
 const String _accessionKey = 'accn';
 const String _entityNameKey = 'entityName';
 const String _deiKey = 'dei';
@@ -306,8 +311,40 @@ abstract final class CompanyFactsParser {
       depreciationAmortisation: valueOf(XbrlMetric.depreciationAmortisation),
       totalAssets: valueOf(XbrlMetric.totalAssets),
       shareholdersEquity: valueOf(XbrlMetric.shareholdersEquity),
-      interestExpense: valueOf(XbrlMetric.interestExpense),
+      interestExpense:
+          valueOf(XbrlMetric.interestExpense) ??
+          _borrowingInterest(
+            paid: valueOf(XbrlMetric.interestPaid),
+            assets: valueOf(XbrlMetric.totalAssets),
+          ),
     );
+  }
+
+  /// Cash interest large enough to be the price of borrowings, or `null`.
+  ///
+  /// Read only for filers that report no accrual interest concept at all,
+  /// which is the shape that used to slip past the debt-free test: PACCAR,
+  /// Textron and Ares Management each fund themselves through an arm that
+  /// tags neither its borrowings nor their cost under any concept this parser
+  /// can see, and all three read as owing nothing.
+  ///
+  /// Size is the test because a company that owes nothing still pays a little
+  /// interest — commitment fees on a revolver it has never drawn, finance
+  /// charges on leases — and any amount at all would call Lululemon a
+  /// borrower over $1.0M. Measured against the balance sheet it is carried
+  /// on, the two separate cleanly: across the directory's largest filers
+  /// reading as debt-free, the fees stop at 0.18% of assets (American Eagle)
+  /// and the smallest genuine borrower starts at 0.21% (Green Dot). Everything
+  /// above is a real lender being paid — Green Dot, NVR, First Industrial,
+  /// CubeSmart, Global Partners, PACCAR, Ares, ARMOUR — and everything below
+  /// is a retailer's facility fees.
+  static double? _borrowingInterest({
+    required double? paid,
+    required double? assets,
+  }) {
+    if (paid == null || paid <= 0) return null;
+    if (assets == null || assets <= 0) return null;
+    return paid / assets > _borrowingInterestToAssets ? paid : null;
   }
 
   /// Merges a metric's candidate tags into one series, earlier tags winning.

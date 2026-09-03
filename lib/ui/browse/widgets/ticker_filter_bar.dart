@@ -6,6 +6,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/browse/widgets/debt_free_filter.dart';
+import 'package:pickstock/ui/browse/widgets/positive_cash_flow_filter.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
@@ -36,6 +37,7 @@ class TickerFilterBar extends StatelessWidget {
           _FilterField(),
           WatchlistFilter(),
           DebtFreeFilter(),
+          PositiveCashFlowFilter(),
           _SortSelect(),
           _MatchCount(),
         ],

@@ -1,3 +1,5 @@
+import 'package:equatable/equatable.dart';
+
 /// SEC's own industry title for a filer's SIC code.
 ///
 /// EDGAR publishes no prose description of what a company does: the
@@ -17,6 +19,16 @@ abstract final class SicIndustry {
   /// The industry title for [sic], or `null` for a code SEC does not list —
   /// and for a filer whose code was never collected.
   static String? of(int? sic) => sic == null ? null : _titles[sic];
+
+  /// The title for [sic], falling back to the bare code where SEC's list does
+  /// not carry one.
+  ///
+  /// Used where a code has to be nameable rather than skippable — the industry
+  /// filter, where dropping an unlisted code would strand the filers carrying
+  /// it behind a narrowing that can never select them. Not copy in need of
+  /// translation: SEC's titles are English data, and so is the code standing
+  /// in for a missing one.
+  static String labelFor(int sic) => _titles[sic] ?? 'SIC $sic';
 
   static const Map<int, String> _titles = {
     100: 'Agricultural Production-Crops',
@@ -464,4 +476,30 @@ abstract final class SicIndustry {
     9721: 'International Affairs',
     9995: 'Non-Operating Establishments',
   };
+}
+
+/// One SEC industry present in the ingested data, with how many filers carry
+/// it.
+///
+/// Built from the SIC codes actually collected rather than from SEC's full
+/// list: a sector's ranges span dozens of codes, and offering the ones no
+/// filer uses would bury the handful that do.
+class SicIndustryOption extends Equatable {
+  const SicIndustryOption({
+    required this.sic,
+    required this.title,
+    required this.companyCount,
+  });
+
+  /// The SIC code itself, which is what the filter selects on.
+  final int sic;
+
+  /// SEC's title for [sic], or the bare code where it lists none.
+  final String title;
+
+  /// How many filers in the directory carry [sic].
+  final int companyCount;
+
+  @override
+  List<Object?> get props => [sic, title, companyCount];
 }

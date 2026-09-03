@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/test_directory.dart';
@@ -78,6 +79,25 @@ void main() {
     expect(find.text('Apple Inc.'), findsWidgets);
     expect(find.text('FY2025 highlights'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('picks up a re-ingested directory without notifying mid-build', (
+    tester,
+  ) async {
+    await _openBrowser(tester);
+
+    // What an ingest leaves behind: the directory reloaded underneath a list
+    // that was built from the revision before it.
+    await GetIt.I.get<TickerDirectoryRepo>().load();
+
+    // The next build of the home screen is where `ensureCurrent` notices, and
+    // it used to raise its loading spinner mid-build. Picking a company forces
+    // that build: the screen watches the report's loading flag.
+    await tester.tap(find.text('Apple Inc.'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('${testTickers.length} matches'), findsOneWidget);
   });
 }
 

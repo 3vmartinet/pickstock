@@ -99,18 +99,20 @@ void main() {
         matching: find.byType(Wrap),
       ),
     );
-    final chips = tester.getRect(
-      find
-          .descendant(
-            of: find.byType(SectorFilterRow),
-            matching: find.byType(Button),
-          )
-          .first,
+    // Top and bottom measured from different chips for the same reason the
+    // bar is measured from its controls: the chip row is a `Wrap` too, and a
+    // window this narrow puts the last chips on a run of their own. The first
+    // chip is the top of the row and the last one the bottom of it.
+    final chips = find.descendant(
+      of: find.byType(SectorFilterRow),
+      matching: find.byType(Button),
     );
+    final firstChip = tester.getRect(chips.first);
+    final lastChip = tester.getRect(chips.last);
     final divider = tester.getRect(find.byType(Divider).first);
 
-    final above = chips.top - bar.bottom;
-    final below = divider.top - chips.bottom;
+    final above = firstChip.top - bar.bottom;
+    final below = divider.top - lastChip.bottom;
 
     // Even space either side of the row. The row used to carry no vertical
     // padding at all, which left the divider a pixel under the chips.

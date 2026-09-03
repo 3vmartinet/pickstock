@@ -75,6 +75,39 @@ void main() {
     expect(find.text('PickStock'), findsOneWidget);
   });
 
+  testWidgets('marks which tile the report beside the list is about', (
+    tester,
+  ) async {
+    await openBrowser(tester, _wideSize);
+
+    /// The tile for [ticker], if it is the one the report is showing.
+    ///
+    /// Read off the selected semantics rather than off the tile's colours:
+    /// what matters is that exactly one tile claims to be the selected one,
+    /// and a screen reader has to be told which as much as the eye does.
+    Finder selectedTile(String ticker) => find.ancestor(
+      of: find.text(ticker),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics && (widget.properties.selected ?? false),
+      ),
+    );
+
+    // Nothing picked yet, so nothing is marked.
+    expect(selectedTile('AAPL'), findsNothing);
+
+    await tester.tap(find.text('Apple Inc.'));
+    await tester.pumpAndSettle();
+    expect(selectedTile('AAPL'), findsOneWidget);
+    expect(selectedTile('NVDA'), findsNothing);
+
+    // The mark follows the report rather than accumulating.
+    await tester.tap(find.text('NVIDIA CORP'));
+    await tester.pumpAndSettle();
+    expect(selectedTile('NVDA'), findsOneWidget);
+    expect(selectedTile('AAPL'), findsNothing);
+  });
+
   testWidgets('the list pane can be dragged wider to fit more columns', (
     tester,
   ) async {

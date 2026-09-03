@@ -368,11 +368,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectorAll => 'All';
 
   @override
+  String sectorNarrow(String sector) {
+    return 'Narrow $sector to SEC industries';
+  }
+
+  @override
+  String sectorNarrowedCount(int selected, int total) {
+    return '$selected/$total';
+  }
+
+  @override
+  String get sectorIndustriesHeader => 'SEC industries';
+
+  @override
+  String get sectorAllIndustries => 'All industries';
+
+  @override
+  String sectorIndustryCount(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString companies',
+      one: '1 company',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String browseIndustriesFilter(String sector, int count) {
+    return '$sector, $count industries';
+  }
+
+  @override
   String get browseDebtFree => 'Debt-free';
 
   @override
   String get browseDebtFreeHint =>
       'Only companies whose latest filed year reports no borrowings and no interest expense.';
+
+  @override
+  String get browsePositiveCashFlow => 'Cash generative';
+
+  @override
+  String get browsePositiveCashFlowHint =>
+      'Only companies whose latest filed year turned more cash from operations than it spent on capital equipment.';
 
   @override
   String get browseNoFigure => '—';

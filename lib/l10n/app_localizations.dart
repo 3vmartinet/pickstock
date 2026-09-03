@@ -568,6 +568,42 @@ abstract class AppLocalizations {
   /// **'All'**
   String get sectorAll;
 
+  /// No description provided for @sectorNarrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrow {sector} to SEC industries'**
+  String sectorNarrow(String sector);
+
+  /// No description provided for @sectorNarrowedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{selected}/{total}'**
+  String sectorNarrowedCount(int selected, int total);
+
+  /// No description provided for @sectorIndustriesHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC industries'**
+  String get sectorIndustriesHeader;
+
+  /// No description provided for @sectorAllIndustries.
+  ///
+  /// In en, this message translates to:
+  /// **'All industries'**
+  String get sectorAllIndustries;
+
+  /// No description provided for @sectorIndustryCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 company} other{{count} companies}}'**
+  String sectorIndustryCount(int count);
+
+  /// No description provided for @browseIndustriesFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'{sector}, {count} industries'**
+  String browseIndustriesFilter(String sector, int count);
+
   /// No description provided for @browseDebtFree.
   ///
   /// In en, this message translates to:
@@ -579,6 +615,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Only companies whose latest filed year reports no borrowings and no interest expense.'**
   String get browseDebtFreeHint;
+
+  /// No description provided for @browsePositiveCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash generative'**
+  String get browsePositiveCashFlow;
+
+  /// No description provided for @browsePositiveCashFlowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only companies whose latest filed year turned more cash from operations than it spent on capital equipment.'**
+  String get browsePositiveCashFlowHint;
 
   /// No description provided for @browseNoFigure.
   ///

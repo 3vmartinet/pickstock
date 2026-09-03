@@ -9,7 +9,7 @@ import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/data/watchlist/watchlist.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
-import 'package:pickstock/ui/watchlist/widgets/watchlist_dot.dart';
+import 'package:pickstock/ui/watchlist/widgets/watchlist_marker.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
@@ -82,10 +82,24 @@ class _TickerTile extends StatelessWidget {
     );
     if (company == null) return const SizedBox.shrink();
 
-    return Button(
+    // Which tile the report beside the list is about. Without it the pane is
+    // a hundred identical tiles and nothing says which one is open.
+    final isSelected = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.selectedTicker == company.ticker,
+    );
+
+    final tile = Button(
       // Normal density rather than compact: the tile needs room to breathe,
       // and the ranked figure was running into the edge.
-      style: const ButtonStyle.outline(),
+      //
+      // Filled when it is the one on show: against a pane of outlined tiles a
+      // filled one is findable without reading any of them. Filled rather
+      // than inverted, because the figures on a tile are coloured for a pale
+      // background — green for growth, red against it — and they stop
+      // meaning anything on a dark one.
+      style: isSelected
+          ? const ButtonStyle.secondary()
+          : const ButtonStyle.outline(),
       alignment: AlignmentDirectional.centerStart,
       onPressed: () {
         context.read<SnapshotViewModel>().search(company.ticker);
@@ -117,7 +131,7 @@ class _TickerTile extends StatelessWidget {
                           .semiBold()
                           .singleLine(),
                     ),
-                    _WatchlistDots(cik: company.cik),
+                    _WatchlistMarkers(cik: company.cik),
                   ],
                 ),
                 Text(
@@ -132,15 +146,36 @@ class _TickerTile extends StatelessWidget {
         ],
       ),
     );
+
+    if (!isSelected) return tile;
+
+    // The fill alone is close in weight to the tiles around it, so the
+    // selected one also takes a ring in the accent colour. Applied over the
+    // button's own decoration rather than by wrapping the tile in a border,
+    // which would grow it and jog the grid every time the selection moved.
+    return Semantics(
+      selected: true,
+      child: ButtonStyleOverride(
+        decoration: (context, states, value) => value is BoxDecoration
+            ? value.copyWith(
+                border: Border.all(
+                  color: context.theme.colorScheme.primary,
+                  width: ThemeRepo.tickerTileSelectedRing,
+                ),
+              )
+            : value,
+        child: tile,
+      ),
+    );
   }
 }
 
-/// The lists a company belongs to, as coloured dots beside its symbol.
+/// The lists a company belongs to, as coloured marks beside its symbol.
 ///
-/// A tile is small, so this stops at a few dots: the point is to recognise a
-/// company you are already following while scanning, not to enumerate.
-class _WatchlistDots extends StatelessWidget {
-  const _WatchlistDots({required this.cik});
+/// A tile is small, so this stops at a few of them: the point is to recognise
+/// a company you are already following while scanning, not to enumerate.
+class _WatchlistMarkers extends StatelessWidget {
+  const _WatchlistMarkers({required this.cik});
 
   final String cik;
 
@@ -156,7 +191,7 @@ class _WatchlistDots extends StatelessWidget {
       spacing: ThemeRepo.spaceXSmall,
       children: [
         for (final list in lists.take(ThemeRepo.watchlistDotsPerTile))
-          WatchlistDot(colourIndex: list.colourIndex),
+          WatchlistMarker(list: list),
       ],
     );
   }
