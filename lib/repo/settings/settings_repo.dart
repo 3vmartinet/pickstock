@@ -10,6 +10,7 @@ const String _themeKey = 'themeMode';
 const String _sortKey = 'browseSort';
 const String _sectorKey = 'browseSector';
 const String _watchlistKey = 'browseWatchlist';
+const String _debtFreeKey = 'browseDebtFree';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -35,6 +36,10 @@ abstract interface class SettingsRepo {
   /// directory. The list may since have been deleted, so the caller checks.
   int? get watchlistId;
   Future<void> setWatchlistId(int? id);
+
+  /// Whether the directory was left narrowed to companies that owe nothing.
+  bool get debtFreeOnly;
+  Future<void> setDebtFreeOnly(bool value);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -71,6 +76,13 @@ class LocalSettingsRepo implements SettingsRepo {
   Future<void> setWatchlistId(int? id) =>
       id == null ? _erase(_watchlistKey) : _write(_watchlistKey, '$id');
 
+  @override
+  bool get debtFreeOnly => _values[_debtFreeKey] == 'true';
+
+  @override
+  Future<void> setDebtFreeOnly(bool value) =>
+      value ? _write(_debtFreeKey, 'true') : _erase(_debtFreeKey);
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -100,6 +112,7 @@ class MemorySettingsRepo implements SettingsRepo {
   BrowseSort _browseSort = BrowseSort.name;
   SicSector? _sector;
   int? _watchlistId;
+  bool _debtFreeOnly = false;
 
   @override
   Future<void> load() async {}
@@ -127,4 +140,10 @@ class MemorySettingsRepo implements SettingsRepo {
 
   @override
   Future<void> setWatchlistId(int? id) async => _watchlistId = id;
+
+  @override
+  bool get debtFreeOnly => _debtFreeOnly;
+
+  @override
+  Future<void> setDebtFreeOnly(bool value) async => _debtFreeOnly = value;
 }

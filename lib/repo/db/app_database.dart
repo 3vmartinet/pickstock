@@ -8,7 +8,7 @@ part 'app_database.g.dart';
 /// Bumped whenever the XBRL extraction changes meaning. Rows written by an
 /// older extractor are discarded rather than served, because a stale row is
 /// indistinguishable from a correct one once it is in the table.
-const int extractorVersion = 6;
+const int extractorVersion = 7;
 
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
@@ -72,6 +72,11 @@ class FiscalYears extends Table {
   RealColumn get depreciationAmortisation => real().nullable()();
   RealColumn get totalAssets => real().nullable()();
   RealColumn get shareholdersEquity => real().nullable()();
+
+  /// What the year's borrowings cost. Read for its absence: it is how a
+  /// company with no debt line is told from one whose debt is filed under a
+  /// concept the parser cannot see.
+  RealColumn get interestExpense => real().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {cik, fiscalYear};
@@ -252,7 +257,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -288,6 +293,12 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        if (from < 11) {
+          // Added, not populated: the figure arrives with the next ingest,
+          // which the extractor version already insists on.
+          logInfo(() => 'Adding fiscal_years.interest_expense');
+          await migrator.addColumn(fiscalYears, fiscalYears.interestExpense);
         }
         if (from < 10) {
           logInfo(() => 'Adding reports');
@@ -461,6 +472,42 @@ class AppDatabase extends _$AppDatabase {
           years: years,
         ),
     };
+  }
+
+  /// The companies whose latest filed year shows no borrowings.
+  ///
+  /// Debt-free is read as: nothing owed on the balance sheet — either a debt
+  /// line of zero or no debt line at all, since a company that owes nothing
+  /// has nothing to tag — and no interest expense to service any. The second
+  /// half is what makes the first half safe. Ford, Berkshire and KKR report
+  /// their borrowings under concepts the parser cannot see and would
+  /// otherwise all read as debt-free; their interest gives them away.
+  ///
+  /// A balance sheet has to be there at all (`total_assets`), so a filing
+  /// thin enough to say nothing is not read as saying no.
+  ///
+  /// Two filers still slip through — Textron and NVR report both their debt
+  /// and their interest only inside dimensioned segment facts, which the bulk
+  /// company facts archive does not carry at all. There is nothing in the
+  /// archive to catch them with.
+  ///
+  /// Computed in SQL for the same reason [growthSamples] is: the answer
+  /// covers the whole directory, and the alternative is reading every
+  /// company's every fiscal year into Dart to look at one of them.
+  Future<Set<String>> debtFreeCiks() async {
+    final rows = await customSelect(
+      'WITH latest AS ('
+      '  SELECT cik, MAX(fiscal_year) AS end_year FROM fiscal_years'
+      '  GROUP BY cik'
+      ') '
+      'SELECT f.cik AS cik FROM fiscal_years f '
+      'JOIN latest l ON l.cik = f.cik AND l.end_year = f.fiscal_year '
+      'WHERE COALESCE(f.total_debt, 0) = 0 '
+      '  AND COALESCE(f.interest_expense, 0) = 0 '
+      '  AND f.total_assets IS NOT NULL',
+      readsFrom: {fiscalYears},
+    ).get();
+    return {for (final row in rows) row.read<String>('cik')};
   }
 
   /// The SIC code of every company that has one, keyed by CIK.

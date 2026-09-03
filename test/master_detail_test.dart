@@ -64,14 +64,14 @@ void main() {
 
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
-    expect(find.text('CIK 0000320193'), findsOneWidget);
+    expect(find.textContaining('CIK 0000320193'), findsOneWidget);
 
     // Straight to another company, no navigation in between.
     await tester.tap(find.text('NVIDIA CORP'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CIK 0001045810'), findsOneWidget);
-    expect(find.text('CIK 0000320193'), findsNothing);
+    expect(find.textContaining('CIK 0001045810'), findsOneWidget);
+    expect(find.textContaining('CIK 0000320193'), findsNothing);
     expect(find.text('PickStock'), findsOneWidget);
   });
 

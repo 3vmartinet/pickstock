@@ -54,11 +54,15 @@ void main() {
     expect(find.text('Net cash of \$2.14B'), findsOneWidget);
   });
 
-  testWidgets('the card says where the prior year stood', (tester) async {
+  testWidgets('the card says which way the prior year moved', (tester) async {
     await report(tester, 'AAPL');
 
     // Not a percentage: net debt turning into net cash has no sensible rate.
-    expect(find.text('was net debt of \$41.5B'), findsOneWidget);
+    // But the words have to say which way it went — Apple's net debt grew
+    // from $41.5B to $44B, and "was net debt of $41.5B" alone read as though
+    // nothing had happened.
+    expect(find.text('up from net debt of \$41.5B'), findsOneWidget);
+    expect(find.text('was net debt of \$41.5B'), findsNothing);
   });
 
   testWidgets('the table signs net debt rather than bracketing it', (

@@ -65,6 +65,22 @@ testFiscalYears = [
   ('0001067983', 2025, 900, 500, 50),
 ];
 
+/// The balance-sheet side of each filer's latest year, which is what the
+/// debt-free filter reads. Figures are in millions like the rest, and cover
+/// the four shapes the filter has to tell apart: Apple borrows and pays
+/// interest on it; NVIDIA reports no debt line at all and no interest either,
+/// which is what owing nothing looks like in EDGAR; Microsoft reports its
+/// borrowings as an explicit zero; and Berkshire reports no debt line but
+/// $5M of interest, which is the shape that reads as debt-free until the
+/// interest is looked at.
+const Map<String, ({double? assets, double? debt, double? interest})>
+testLatestBalanceSheets = {
+  '0000320193': (assets: 300, debt: 50, interest: 2),
+  '0001045810': (assets: 200, debt: null, interest: null),
+  '0000789019': (assets: 400, debt: 0, interest: null),
+  '0001067983': (assets: 900, debt: null, interest: 5),
+};
+
 /// Industry codes for the fixture's filers: two in tech, one in finance, one
 /// left unclassified.
 const Map<String, int> _testSicByCik = {
@@ -73,6 +89,17 @@ const Map<String, int> _testSicByCik = {
   '0000789019': 7372, // Microsoft — prepackaged software
   '0001067983': 6331, // Berkshire — fire, marine & casualty insurance
 };
+
+/// The balance sheet for one row, or `null` for a year that is not the
+/// filer's newest — earlier years carry no balance sheet in the fixture.
+({double? assets, double? debt, double? interest})? _balanceSheetFor(
+  String cik,
+  int year,
+  Map<String, int> latestYearByCik,
+) => latestYearByCik[cik] == year ? testLatestBalanceSheets[cik] : null;
+
+double? _scaled(double? millions) =>
+    millions == null ? null : millions * _millions;
 
 /// The fixture's figures are written in millions for readability.
 const double _millions = 1000000;
@@ -160,6 +187,13 @@ Future<AppDatabase> registerTestDependencies({
 
   if (withFinancials) {
     final ciks = {for (final row in testFiscalYears) row.$1};
+    // The balance sheet belongs to the newest year on file, which is the only
+    // one the debt-free filter looks at.
+    final latestYearByCik = <String, int>{};
+    for (final (cik, year, _, _, _) in testFiscalYears) {
+      final known = latestYearByCik[cik];
+      if (known == null || year > known) latestYearByCik[cik] = year;
+    }
     await database.batch((batch) {
       batch.insertAll(database.companies, [
         for (final cik in ciks)
@@ -177,6 +211,15 @@ Future<AppDatabase> registerTestDependencies({
             revenue: Value(revenue * _millions),
             operatingCashFlow: Value(ocf * _millions),
             capitalExpenditure: Value(capex * _millions),
+            totalAssets: Value(
+              _scaled(_balanceSheetFor(cik, year, latestYearByCik)?.assets),
+            ),
+            totalDebt: Value(
+              _scaled(_balanceSheetFor(cik, year, latestYearByCik)?.debt),
+            ),
+            interestExpense: Value(
+              _scaled(_balanceSheetFor(cik, year, latestYearByCik)?.interest),
+            ),
           ),
       ], mode: InsertMode.insertOrReplace);
     });

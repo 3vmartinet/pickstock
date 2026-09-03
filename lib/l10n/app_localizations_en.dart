@@ -368,6 +368,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectorAll => 'All';
 
   @override
+  String get browseDebtFree => 'Debt-free';
+
+  @override
+  String get browseDebtFreeHint =>
+      'Only companies whose latest filed year reports no borrowings and no interest expense.';
+
+  @override
   String get browseNoFigure => '—';
 
   @override
@@ -580,6 +587,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String labelIndustryAndCik(String industry, String cik) {
+    return '$industry · CIK $cik';
+  }
+
+  @override
   String get labelNetDebtPosition => 'Net debt';
 
   @override
@@ -590,6 +602,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String priorNetCash(String amount) {
     return 'was net cash of $amount';
+  }
+
+  @override
+  String priorNetCashUp(String amount) {
+    return 'up from net cash of $amount';
+  }
+
+  @override
+  String priorNetCashDown(String amount) {
+    return 'down from net cash of $amount';
+  }
+
+  @override
+  String priorNetDebtUp(String amount) {
+    return 'up from net debt of $amount';
+  }
+
+  @override
+  String priorNetDebtDown(String amount) {
+    return 'down from net debt of $amount';
   }
 
   @override
@@ -608,7 +640,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hintNetDebt =>
-      'Total borrowings minus cash, equivalents and short-term investments. A negative figure is net cash: the company holds more than it owes. Treasuries and commercial paper count, because they settle a debt as readily as cash does.';
+      'The gap between what the company owes and what it holds. The heading says which way round it is — Net cash when it holds more than it owes, Net debt when it owes more — so the amount itself carries no sign. What it holds counts treasuries and commercial paper, which settle a debt as readily as cash does.';
 
   @override
   String deltaVersusPriorYear(String year) {

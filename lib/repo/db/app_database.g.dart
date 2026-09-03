@@ -735,6 +735,17 @@ class $FiscalYearsTable extends FiscalYears
         type: DriftSqlType.double,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _interestExpenseMeta = const VerificationMeta(
+    'interestExpense',
+  );
+  @override
+  late final GeneratedColumn<double> interestExpense = GeneratedColumn<double>(
+    'interest_expense',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cik,
@@ -750,6 +761,7 @@ class $FiscalYearsTable extends FiscalYears
     depreciationAmortisation,
     totalAssets,
     shareholdersEquity,
+    interestExpense,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -866,6 +878,15 @@ class $FiscalYearsTable extends FiscalYears
         ),
       );
     }
+    if (data.containsKey('interest_expense')) {
+      context.handle(
+        _interestExpenseMeta,
+        interestExpense.isAcceptableOrUnknown(
+          data['interest_expense']!,
+          _interestExpenseMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -927,6 +948,10 @@ class $FiscalYearsTable extends FiscalYears
         DriftSqlType.double,
         data['${effectivePrefix}shareholders_equity'],
       ),
+      interestExpense: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}interest_expense'],
+      ),
     );
   }
 
@@ -950,6 +975,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
   final double? depreciationAmortisation;
   final double? totalAssets;
   final double? shareholdersEquity;
+
+  /// What the year's borrowings cost. Read for its absence: it is how a
+  /// company with no debt line is told from one whose debt is filed under a
+  /// concept the parser cannot see.
+  final double? interestExpense;
   const FiscalYearRow({
     required this.cik,
     required this.fiscalYear,
@@ -964,6 +994,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     this.depreciationAmortisation,
     this.totalAssets,
     this.shareholdersEquity,
+    this.interestExpense,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1005,6 +1036,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     if (!nullToAbsent || shareholdersEquity != null) {
       map['shareholders_equity'] = Variable<double>(shareholdersEquity);
     }
+    if (!nullToAbsent || interestExpense != null) {
+      map['interest_expense'] = Variable<double>(interestExpense);
+    }
     return map;
   }
 
@@ -1043,6 +1077,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       shareholdersEquity: shareholdersEquity == null && nullToAbsent
           ? const Value.absent()
           : Value(shareholdersEquity),
+      interestExpense: interestExpense == null && nullToAbsent
+          ? const Value.absent()
+          : Value(interestExpense),
     );
   }
 
@@ -1073,6 +1110,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       shareholdersEquity: serializer.fromJson<double?>(
         json['shareholdersEquity'],
       ),
+      interestExpense: serializer.fromJson<double?>(json['interestExpense']),
     );
   }
   @override
@@ -1094,6 +1132,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       ),
       'totalAssets': serializer.toJson<double?>(totalAssets),
       'shareholdersEquity': serializer.toJson<double?>(shareholdersEquity),
+      'interestExpense': serializer.toJson<double?>(interestExpense),
     };
   }
 
@@ -1111,6 +1150,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     Value<double?> depreciationAmortisation = const Value.absent(),
     Value<double?> totalAssets = const Value.absent(),
     Value<double?> shareholdersEquity = const Value.absent(),
+    Value<double?> interestExpense = const Value.absent(),
   }) => FiscalYearRow(
     cik: cik ?? this.cik,
     fiscalYear: fiscalYear ?? this.fiscalYear,
@@ -1137,6 +1177,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     shareholdersEquity: shareholdersEquity.present
         ? shareholdersEquity.value
         : this.shareholdersEquity,
+    interestExpense: interestExpense.present
+        ? interestExpense.value
+        : this.interestExpense,
   );
   FiscalYearRow copyWithCompanion(FiscalYearsCompanion data) {
     return FiscalYearRow(
@@ -1169,6 +1212,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       shareholdersEquity: data.shareholdersEquity.present
           ? data.shareholdersEquity.value
           : this.shareholdersEquity,
+      interestExpense: data.interestExpense.present
+          ? data.interestExpense.value
+          : this.interestExpense,
     );
   }
 
@@ -1187,7 +1233,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ..write('operatingIncome: $operatingIncome, ')
           ..write('depreciationAmortisation: $depreciationAmortisation, ')
           ..write('totalAssets: $totalAssets, ')
-          ..write('shareholdersEquity: $shareholdersEquity')
+          ..write('shareholdersEquity: $shareholdersEquity, ')
+          ..write('interestExpense: $interestExpense')
           ..write(')'))
         .toString();
   }
@@ -1207,6 +1254,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     depreciationAmortisation,
     totalAssets,
     shareholdersEquity,
+    interestExpense,
   );
   @override
   bool operator ==(Object other) =>
@@ -1224,7 +1272,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           other.operatingIncome == this.operatingIncome &&
           other.depreciationAmortisation == this.depreciationAmortisation &&
           other.totalAssets == this.totalAssets &&
-          other.shareholdersEquity == this.shareholdersEquity);
+          other.shareholdersEquity == this.shareholdersEquity &&
+          other.interestExpense == this.interestExpense);
 }
 
 class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
@@ -1241,6 +1290,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
   final Value<double?> depreciationAmortisation;
   final Value<double?> totalAssets;
   final Value<double?> shareholdersEquity;
+  final Value<double?> interestExpense;
   final Value<int> rowid;
   const FiscalYearsCompanion({
     this.cik = const Value.absent(),
@@ -1256,6 +1306,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.depreciationAmortisation = const Value.absent(),
     this.totalAssets = const Value.absent(),
     this.shareholdersEquity = const Value.absent(),
+    this.interestExpense = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FiscalYearsCompanion.insert({
@@ -1272,6 +1323,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.depreciationAmortisation = const Value.absent(),
     this.totalAssets = const Value.absent(),
     this.shareholdersEquity = const Value.absent(),
+    this.interestExpense = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        fiscalYear = Value(fiscalYear);
@@ -1289,6 +1341,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Expression<double>? depreciationAmortisation,
     Expression<double>? totalAssets,
     Expression<double>? shareholdersEquity,
+    Expression<double>? interestExpense,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1306,6 +1359,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
         'depreciation_amortisation': depreciationAmortisation,
       if (totalAssets != null) 'total_assets': totalAssets,
       if (shareholdersEquity != null) 'shareholders_equity': shareholdersEquity,
+      if (interestExpense != null) 'interest_expense': interestExpense,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1324,6 +1378,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Value<double?>? depreciationAmortisation,
     Value<double?>? totalAssets,
     Value<double?>? shareholdersEquity,
+    Value<double?>? interestExpense,
     Value<int>? rowid,
   }) {
     return FiscalYearsCompanion(
@@ -1341,6 +1396,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
           depreciationAmortisation ?? this.depreciationAmortisation,
       totalAssets: totalAssets ?? this.totalAssets,
       shareholdersEquity: shareholdersEquity ?? this.shareholdersEquity,
+      interestExpense: interestExpense ?? this.interestExpense,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1389,6 +1445,9 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     if (shareholdersEquity.present) {
       map['shareholders_equity'] = Variable<double>(shareholdersEquity.value);
     }
+    if (interestExpense.present) {
+      map['interest_expense'] = Variable<double>(interestExpense.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1411,6 +1470,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
           ..write('depreciationAmortisation: $depreciationAmortisation, ')
           ..write('totalAssets: $totalAssets, ')
           ..write('shareholdersEquity: $shareholdersEquity, ')
+          ..write('interestExpense: $interestExpense, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5067,6 +5127,7 @@ typedef $$FiscalYearsTableCreateCompanionBuilder =
       Value<double?> depreciationAmortisation,
       Value<double?> totalAssets,
       Value<double?> shareholdersEquity,
+      Value<double?> interestExpense,
       Value<int> rowid,
     });
 typedef $$FiscalYearsTableUpdateCompanionBuilder =
@@ -5084,6 +5145,7 @@ typedef $$FiscalYearsTableUpdateCompanionBuilder =
       Value<double?> depreciationAmortisation,
       Value<double?> totalAssets,
       Value<double?> shareholdersEquity,
+      Value<double?> interestExpense,
       Value<int> rowid,
     });
 
@@ -5175,6 +5237,11 @@ class $$FiscalYearsTableFilterComposer
 
   ColumnFilters<double> get shareholdersEquity => $composableBuilder(
     column: $table.shareholdersEquity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get interestExpense => $composableBuilder(
+    column: $table.interestExpense,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5271,6 +5338,11 @@ class $$FiscalYearsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get interestExpense => $composableBuilder(
+    column: $table.interestExpense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CompaniesTableOrderingComposer get cik {
     final $$CompaniesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5356,6 +5428,11 @@ class $$FiscalYearsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get interestExpense => $composableBuilder(
+    column: $table.interestExpense,
+    builder: (column) => column,
+  );
+
   $$CompaniesTableAnnotationComposer get cik {
     final $$CompaniesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -5421,6 +5498,7 @@ class $$FiscalYearsTableTableManager
                 Value<double?> depreciationAmortisation = const Value.absent(),
                 Value<double?> totalAssets = const Value.absent(),
                 Value<double?> shareholdersEquity = const Value.absent(),
+                Value<double?> interestExpense = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion(
                 cik: cik,
@@ -5436,6 +5514,7 @@ class $$FiscalYearsTableTableManager
                 depreciationAmortisation: depreciationAmortisation,
                 totalAssets: totalAssets,
                 shareholdersEquity: shareholdersEquity,
+                interestExpense: interestExpense,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5453,6 +5532,7 @@ class $$FiscalYearsTableTableManager
                 Value<double?> depreciationAmortisation = const Value.absent(),
                 Value<double?> totalAssets = const Value.absent(),
                 Value<double?> shareholdersEquity = const Value.absent(),
+                Value<double?> interestExpense = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion.insert(
                 cik: cik,
@@ -5468,6 +5548,7 @@ class $$FiscalYearsTableTableManager
                 depreciationAmortisation: depreciationAmortisation,
                 totalAssets: totalAssets,
                 shareholdersEquity: shareholdersEquity,
+                interestExpense: interestExpense,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

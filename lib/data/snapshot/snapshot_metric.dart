@@ -45,20 +45,57 @@ enum SnapshotMetric {
     SnapshotMetric.netCashPosition => strings.hintNetDebt,
   };
 
-  /// Where the prior year stood, for the balance-sheet card.
+  /// Where the prior year stood, for the balance-sheet card, and whether
+  /// getting from there to here was good news.
   ///
-  /// A percentage change is meaningless on a figure that crosses zero — net
-  /// debt turning into net cash is not "−140% growth" — so the comparison is
-  /// stated in words instead.
-  String? getPriorPosition(AppLocalizations strings, PeriodFigures? previous) {
+  /// Stated in words rather than as a percentage, because a percentage on
+  /// this figure is worse than useless. Net debt turning into net cash is not
+  /// "−140% growth"; and net cash merely shrinking — Adobe's $2.26B down to
+  /// $385M — is a *rise* in net debt of 83%, which the other cards' colouring
+  /// would paint green.
+  ///
+  /// The direction is in the words for the same reason: the amount is shown
+  /// unsigned under a heading that names its side of zero, so on its own it
+  /// says nothing about which way the year went.
+  ({String text, bool? isGood})? getPriorPosition(
+    AppLocalizations strings,
+    PeriodFigures figures,
+    PeriodFigures? previous,
+  ) {
     if (this != SnapshotMetric.netCashPosition) return null;
-    final netDebt = previous?.netDebt;
-    if (netDebt == null) return null;
+    final before = previous?.netDebt;
+    final now = figures.netDebt;
+    if (before == null || now == null) return null;
 
-    final amount = _formatRepo.compactCurrencyMagnitude(netDebt);
-    return netDebt < 0
-        ? strings.priorNetCash(amount)
-        : strings.priorNetDebt(amount);
+    final amount = _formatRepo.compactCurrencyMagnitude(before);
+    // Owing less, or holding more: either way the position improved.
+    final isGood = now == before ? null : now < before;
+
+    // Crossing zero renames the card, which is the whole story — "down from
+    // net debt" under a heading of Net cash would compare two different
+    // quantities.
+    final heldCashBefore = before < 0;
+    if (heldCashBefore != (now < 0) || isGood == null) {
+      return (
+        text: heldCashBefore
+            ? strings.priorNetCash(amount)
+            : strings.priorNetDebt(amount),
+        isGood: isGood,
+      );
+    }
+
+    // Same side of zero, so it is the named quantity's own size that moved.
+    final grew = now.abs() > before.abs();
+    return (
+      text: heldCashBefore
+          ? (grew
+                ? strings.priorNetCashUp(amount)
+                : strings.priorNetCashDown(amount))
+          : (grew
+                ? strings.priorNetDebtUp(amount)
+                : strings.priorNetDebtDown(amount)),
+      isGood: isGood,
+    );
   }
 
   /// Whether the headline figure is shown without its sign, because

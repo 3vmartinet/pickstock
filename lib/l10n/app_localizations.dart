@@ -568,6 +568,18 @@ abstract class AppLocalizations {
   /// **'All'**
   String get sectorAll;
 
+  /// No description provided for @browseDebtFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Debt-free'**
+  String get browseDebtFree;
+
+  /// No description provided for @browseDebtFreeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only companies whose latest filed year reports no borrowings and no interest expense.'**
+  String get browseDebtFreeHint;
+
   /// No description provided for @browseNoFigure.
   ///
   /// In en, this message translates to:
@@ -874,6 +886,12 @@ abstract class AppLocalizations {
   /// **'CIK {cik}'**
   String labelCik(String cik);
 
+  /// No description provided for @labelIndustryAndCik.
+  ///
+  /// In en, this message translates to:
+  /// **'{industry} · CIK {cik}'**
+  String labelIndustryAndCik(String industry, String cik);
+
   /// No description provided for @labelNetDebtPosition.
   ///
   /// In en, this message translates to:
@@ -891,6 +909,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'was net cash of {amount}'**
   String priorNetCash(String amount);
+
+  /// No description provided for @priorNetCashUp.
+  ///
+  /// In en, this message translates to:
+  /// **'up from net cash of {amount}'**
+  String priorNetCashUp(String amount);
+
+  /// No description provided for @priorNetCashDown.
+  ///
+  /// In en, this message translates to:
+  /// **'down from net cash of {amount}'**
+  String priorNetCashDown(String amount);
+
+  /// No description provided for @priorNetDebtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'up from net debt of {amount}'**
+  String priorNetDebtUp(String amount);
+
+  /// No description provided for @priorNetDebtDown.
+  ///
+  /// In en, this message translates to:
+  /// **'down from net debt of {amount}'**
+  String priorNetDebtDown(String amount);
 
   /// No description provided for @labelNetCashPosition.
   ///
@@ -919,7 +961,7 @@ abstract class AppLocalizations {
   /// No description provided for @hintNetDebt.
   ///
   /// In en, this message translates to:
-  /// **'Total borrowings minus cash, equivalents and short-term investments. A negative figure is net cash: the company holds more than it owes. Treasuries and commercial paper count, because they settle a debt as readily as cash does.'**
+  /// **'The gap between what the company owes and what it holds. The heading says which way round it is — Net cash when it holds more than it owes, Net debt when it owes more — so the amount itself carries no sign. What it holds counts treasuries and commercial paper, which settle a debt as readily as cash does.'**
   String get hintNetDebt;
 
   /// No description provided for @deltaVersusPriorYear.

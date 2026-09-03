@@ -1,4 +1,5 @@
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/snapshot/sic_industry.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
@@ -52,10 +53,25 @@ class _CompanyIdentity extends StatelessWidget {
             Flexible(child: Text(company.name).h3().singleLine().ellipsis()),
           ],
         ),
-        Text(context.strings.labelCik(company.cik)).muted().xSmall(),
+        Text(_subtitleOf(context, company)).muted().xSmall().ellipsis(),
       ],
     );
   }
+}
+
+/// What the company does, and the number it is filed under.
+///
+/// SEC states no prose description of a business anywhere in EDGAR, so the
+/// industry title behind the filer's SIC code stands in — it is what EDGAR's
+/// own `sicDescription` reports, and it is already on hand from the ingest.
+/// Filers the industry data sets never covered fall back to the CIK alone.
+String _subtitleOf(BuildContext context, Company company) {
+  final industry = SicIndustry.of(company.sic);
+  // One line, not two: the header is pinned above the report and every row it
+  // takes is a row the figures do not get.
+  return industry == null
+      ? context.strings.labelCik(company.cik)
+      : context.strings.labelIndustryAndCik(industry, company.cik);
 }
 
 /// Following the company: one tap for the starred list, a menu for the rest.

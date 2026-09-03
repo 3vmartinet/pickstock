@@ -10,6 +10,7 @@ const Company _apple = Company(
   ticker: 'AAPL',
   cik: '0000320193',
   name: 'Apple Inc.',
+  sic: 3571,
   sharesOutstanding: 14840390000,
 );
 
@@ -104,6 +105,7 @@ const Company _nvidia = Company(
   ticker: 'NVDA',
   cik: '0001045810',
   name: 'NVIDIA CORP',
+  sic: 3674,
   sharesOutstanding: 24300000000,
 );
 

@@ -31,7 +31,12 @@ void main() {
 
     // Once in the list, once in the report beside it.
     expect(find.text('Apple Inc.'), findsWidgets);
-    expect(find.text('CIK 0000320193'), findsOneWidget);
+    // SEC states no prose description of a business, so the industry title
+    // behind the filer's SIC code sits beside the CIK.
+    expect(
+      find.text('Electronic Computers · CIK 0000320193'),
+      findsOneWidget,
+    );
     // Fiscal years read as years, not as compacted numbers. The header used to
     // carry the span as a badge; the table below names the years it shows.
     expect(find.text('FY2025'), findsWidgets);

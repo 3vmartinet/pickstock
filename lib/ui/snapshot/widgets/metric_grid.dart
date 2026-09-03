@@ -145,10 +145,13 @@ class _MetricChange extends StatelessWidget {
     final previous = years.length > 1 ? years[years.length - 2] : null;
 
     // The balance-sheet card compares in words: a figure that crosses zero has
-    // no sensible percentage change.
-    final priorPosition = metric.getPriorPosition(context.strings, previous);
-    if (priorPosition != null) {
-      return Text(priorPosition).muted().xSmall();
+    // no sensible percentage change. Coloured like the percentages beside it,
+    // because the words are carrying the same news.
+    final prior = metric.getPriorPosition(context.strings, figures, previous);
+    if (prior != null) {
+      return Text(prior.text).xSmall(
+        color: _themeRepo.forOutcome(context.theme, isGood: prior.isGood),
+      );
     }
 
     final change = metric.getChangePercent(figures, previous);

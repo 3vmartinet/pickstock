@@ -84,6 +84,18 @@ enum XbrlMetric {
   /// borrowings are entirely convertible notes, and it read as debt-free while
   /// owing $4.6B. Where a filer reports both, the plain concept already
   /// includes the notes and reading them again would double the debt.
+  ///
+  /// The last six are the names a filer reaches for when it reports none of
+  /// the concepts above, and are read only in that case — General Motors
+  /// carries $131.6B under the combined tag and nothing under any other, so
+  /// without it the most leveraged carmaker in the directory read as holding
+  /// no debt at all. State Street ($25.1B), CNH ($26.8B), D.R. Horton
+  /// ($6.0B), Everest ($2.4B) and Raymond James ($4.2B) were the same.
+  ///
+  /// Two of them state a total including current maturities, which the
+  /// current-debt component below would count again — but only for a filer
+  /// that reports both, and none of the six above. That is a narrower error
+  /// than reporting a borrower as debt-free, which is what these fix.
   longTermDebt(
     tags: [
       'LongTermDebtNoncurrent',
@@ -92,6 +104,12 @@ enum XbrlMetric {
       'ConvertibleDebtNoncurrent',
       'ConvertibleLongTermNotesPayable',
       'ConvertibleNotesPayableNoncurrent',
+      'DebtAndCapitalLeaseObligations',
+      'LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities',
+      'DebtLongtermAndShorttermCombinedAmount',
+      'SeniorNotes',
+      'NotesPayable',
+      'LoansPayable',
     ],
     isInstant: true,
   ),
@@ -110,7 +128,33 @@ enum XbrlMetric {
   // components rather than treated as fallbacks for one another (unlike the
   // long-term/current tags above, which are alternate names for one concept).
   commercialPaper(tags: ['CommercialPaper'], isInstant: true),
-  shortTermBorrowings(tags: ['ShortTermBorrowings'], isInstant: true),
+  shortTermBorrowings(
+    tags: ['ShortTermBorrowings', 'OtherBorrowings'],
+    isInstant: true,
+  ),
+
+  /// What the borrowings cost for the year.
+  ///
+  /// Read for what its absence says: interest is the price of debt, so a
+  /// company with none of it has nothing to service. That is the only
+  /// dependable way to tell "no borrowings" from "borrowings filed under a
+  /// concept nobody reads" — Ford, Berkshire and KKR all report no debt this
+  /// parser can find and between them $9.1B of interest.
+  ///
+  /// Cash interest paid is deliberately not among the tags: it is a
+  /// supplemental cash-flow line that debt-free filers report anyway for
+  /// lease and facility fees, and reading it would call Lululemon a borrower
+  /// over $1M of them.
+  interestExpense(
+    tags: [
+      'InterestExpense',
+      'InterestExpenseNonoperating',
+      'InterestAndDebtExpense',
+      'InterestExpenseOperating',
+      'InterestExpenseBorrowings',
+      'InterestExpenseDebt',
+    ],
+  ),
   cash(
     tags: [
       'CashAndCashEquivalentsAtCarryingValue',

@@ -28,6 +28,7 @@ class BrowseViewModel extends ChangeNotifier {
     // filtered from the outset rather than rearranging itself once loaded.
     _sort = _settingsRepo.browseSort;
     _sector = _settingsRepo.sector;
+    _debtFreeOnly = _settingsRepo.debtFreeOnly;
     _directoryRevision = _tickerDirectoryRepo.revision;
     _results = _tickerDirectoryRepo.allCompanies;
     _loadSamples();
@@ -68,6 +69,28 @@ class BrowseViewModel extends ChangeNotifier {
     _reorder();
     notifyListeners();
     _settingsRepo.setSector(sector);
+  }
+
+  bool _debtFreeOnly = false;
+
+  /// Whether the list is narrowed to companies that owe nothing.
+  bool get debtFreeOnly => _debtFreeOnly;
+
+  /// The companies whose latest filed year shows no borrowings, loaded once
+  /// alongside the sectors. Empty until an ingest has run that collected the
+  /// interest expense the test depends on.
+  Set<String> _debtFreeCiks = const {};
+
+  /// Whether the debt-free filter can say anything. On a database written
+  /// before interest expense was extracted it cannot, and offering a filter
+  /// that hides the whole directory would look like a broken list.
+  bool get canFilterDebtFree => _debtFreeCiks.isNotEmpty;
+
+  void toggleDebtFree() {
+    _debtFreeOnly = !_debtFreeOnly;
+    _reorder();
+    notifyListeners();
+    _settingsRepo.setDebtFreeOnly(_debtFreeOnly);
   }
 
   /// Growth window ends for the figure the current ordering shows, by CIK.
@@ -136,6 +159,7 @@ class BrowseViewModel extends ChangeNotifier {
     notifyListeners();
 
     if (_sicByCik.isEmpty) _sicByCik = await _database.sicByCik();
+    if (_debtFreeCiks.isEmpty) _debtFreeCiks = await _database.debtFreeCiks();
     _samplesByCik = await _database.growthSamples(
       metric: _sort.displayedMetric,
       years: _sort.years,
@@ -168,6 +192,7 @@ class BrowseViewModel extends ChangeNotifier {
   String describeFilter(AppLocalizations strings) {
     final parts = [
       if (_sector case final sector?) sector.getLabel(strings),
+      if (_debtFreeOnly) strings.browseDebtFree,
       if (_query.isNotEmpty) '"$_query"',
       if (_watchlistMembers != null) strings.watchlistFilterLabel,
     ];
@@ -192,6 +217,12 @@ class BrowseViewModel extends ChangeNotifier {
     if (sector != null) {
       matches = matches
           .where((company) => SicSector.of(_sicByCik[company.cik]) == sector)
+          .toList();
+    }
+
+    if (_debtFreeOnly) {
+      matches = matches
+          .where((company) => _debtFreeCiks.contains(company.cik))
           .toList();
     }
 

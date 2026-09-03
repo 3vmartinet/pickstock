@@ -4,6 +4,7 @@ import 'package:pickstock/app.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/browse/widgets/sector_filter_row.dart';
+import 'package:pickstock/ui/browse/widgets/ticker_filter_bar.dart';
 import 'package:pickstock/ui/widgets/brand_mark.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -88,7 +89,16 @@ void main() {
   ) async {
     await openHome(tester, _wideSize);
 
-    final field = tester.getRect(find.byType(TextField).first);
+    // Measured from the bar's own controls rather than from the text field:
+    // the bar is a `Wrap`, and in a list column this narrow the field sits on
+    // the first of two runs with the count and the toggles below it. The
+    // field's bottom is then a run short of where the bar actually ends.
+    final bar = tester.getRect(
+      find.descendant(
+        of: find.byType(TickerFilterBar),
+        matching: find.byType(Wrap),
+      ),
+    );
     final chips = tester.getRect(
       find
           .descendant(
@@ -99,7 +109,7 @@ void main() {
     );
     final divider = tester.getRect(find.byType(Divider).first);
 
-    final above = chips.top - field.bottom;
+    final above = chips.top - bar.bottom;
     final below = divider.top - chips.bottom;
 
     // Even space either side of the row. The row used to carry no vertical

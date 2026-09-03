@@ -21,6 +21,7 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     this.depreciationAmortisation,
     this.totalAssets,
     this.shareholdersEquity,
+    this.interestExpense,
   });
 
   final int fiscalYear;
@@ -56,6 +57,11 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
 
   final double? totalAssets;
   final double? shareholdersEquity;
+
+  /// What the year's borrowings cost. `null` where the filer reported none of
+  /// the interest concepts, which for a company with no debt is the usual
+  /// case — see `XbrlMetric.interestExpense` for why the absence is read.
+  final double? interestExpense;
 
   /// Operating profit as a percentage of revenue. The line that says whether
   /// growth is being bought or earned.
@@ -123,6 +129,19 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
 
   bool get holdsNetCash => (netDebt ?? 0) < 0;
 
+  /// Whether the year shows no borrowings at all.
+  ///
+  /// A debt line of zero and no debt line whatsoever both qualify — a company
+  /// that owes nothing has nothing to tag — but only alongside an interest
+  /// expense that is absent or zero. Interest without debt means the
+  /// borrowings are real and filed under a concept the parser cannot see, and
+  /// EDGAR is full of those.
+  bool get isDebtFree =>
+      (totalDebt ?? 0) == 0 &&
+      (interestExpense ?? 0) == 0 &&
+      // A filing with no balance sheet in it says nothing either way.
+      totalAssets != null;
+
   @override
   List<Object?> get props => [
     fiscalYear,
@@ -138,5 +157,6 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     depreciationAmortisation,
     totalAssets,
     shareholdersEquity,
+    interestExpense,
   ];
 }

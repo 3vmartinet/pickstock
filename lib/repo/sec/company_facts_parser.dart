@@ -306,6 +306,7 @@ abstract final class CompanyFactsParser {
       depreciationAmortisation: valueOf(XbrlMetric.depreciationAmortisation),
       totalAssets: valueOf(XbrlMetric.totalAssets),
       shareholdersEquity: valueOf(XbrlMetric.shareholdersEquity),
+      interestExpense: valueOf(XbrlMetric.interestExpense),
     );
   }
 

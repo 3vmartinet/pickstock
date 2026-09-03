@@ -52,6 +52,7 @@ class LocalSecRepo implements SecRepo {
         cik: listing.cik,
         // The registrant name as filed is more current than the directory's.
         name: stored?.name ?? listing.name,
+        sic: stored?.sic,
         sharesOutstanding: stored?.sharesOutstanding,
       ),
       years: [
@@ -74,6 +75,7 @@ class LocalSecRepo implements SecRepo {
             depreciationAmortisation: row.depreciationAmortisation,
             totalAssets: row.totalAssets,
             shareholdersEquity: row.shareholdersEquity,
+            interestExpense: row.interestExpense,
           ),
       ],
       quarters: _quartersFrom(quarterRows),

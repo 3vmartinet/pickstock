@@ -51,7 +51,16 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.34.5
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   generate: true
+
+# The macOS launcher icon, generated from the app's own mark. Regenerate with
+# `fvm dart run flutter_launcher_icons` after editing assets/icon/app_icon_macos.svg
+# and re-exporting its PNG (see assets/icon/README.md).
+flutter_launcher_icons:
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon_macos.png"

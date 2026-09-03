@@ -542,6 +542,7 @@ class BulkIngestRepo {
               depreciationAmortisation: Value(year.depreciationAmortisation),
               totalAssets: Value(year.totalAssets),
               shareholdersEquity: Value(year.shareholdersEquity),
+              interestExpense: Value(year.interestExpense),
             ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalQuarters, [
