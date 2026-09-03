@@ -4,6 +4,7 @@ import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
+import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -24,8 +25,10 @@ import 'package:pickstock/ui/snapshot/widgets/valuation_verdict_card.dart';
 import 'package:pickstock/ui/widgets/section_header.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
+ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 
 /// The whole report for a loaded snapshot: who the company is, then one tab
 /// per question asked of it.
@@ -102,6 +105,12 @@ class ReportTabs extends StatelessWidget {
     final current = context.select<SnapshotViewModel, ReportTab>(
       (viewModel) => viewModel.reportTab,
     );
+    // The answer, on the tab that holds it. Once a price is in, the verdict
+    // is the one thing a reader opens a company for, and it was two clicks
+    // away behind a tab labelled with a pair of scales.
+    final verdict = context.select<SnapshotViewModel, ValuationVerdict?>(
+      (viewModel) => viewModel.valuation?.verdict,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(top: ThemeRepo.reportTabsGap),
@@ -124,12 +133,46 @@ class ReportTabs extends StatelessWidget {
                   Flexible(
                     child: Text(tab.getLabel(context.strings)).singleLine(),
                   ),
+                  if (tab == ReportTab.valuation)
+                    _VerdictMark(verdict: verdict),
                 ],
               ),
             ),
         ],
       ),
     );
+  }
+}
+
+/// The verdict, after the valuation tab's own label.
+///
+/// Trailing rather than in place of the tab's glyph: the scales say what the
+/// tab is for and the arrow says what it found, and a tab that swapped one
+/// for the other lost the first to gain the second.
+///
+/// Subtle by design — the same size as the glyph opposite it, in the colour
+/// the verdict already uses on the card inside. It says nothing at all until
+/// there is a price, where a question mark would only be noise beside two
+/// tabs that are quietly getting on with it.
+///
+/// Kept on a narrow window, where the leading glyphs are dropped for room:
+/// one mark on one tab is what those three were making way for, and it is the
+/// thing a reader opened the company to see.
+class _VerdictMark extends StatelessWidget {
+  const _VerdictMark({required this.verdict});
+
+  final ValuationVerdict? verdict;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = verdict;
+    if (shown == null || shown == ValuationVerdict.unknown) {
+      return const SizedBox.shrink();
+    }
+    return Icon(
+      shown.icon,
+      color: _themeRepo.forOutcome(context.theme, isGood: shown.isGood),
+    ).iconXSmall();
   }
 }
 

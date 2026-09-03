@@ -1,10 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+
+import 'package:pickstock/ui/snapshot/widgets/snapshot_report.dart';
 
 import 'support/test_directory.dart';
 
@@ -70,6 +73,59 @@ void main() {
 
     await enterPrice(tester, '110');
     expect(find.text('Fairly valued'), findsOneWidget);
+  });
+
+  testWidgets('the tab itself carries the verdict', (tester) async {
+    await openApple(tester);
+
+    /// The glyph in the valuation tab's own label.
+    Finder tabIcon(IconData icon) => find.descendant(
+      of: find.byType(ReportTabs),
+      matching: find.byIcon(icon),
+    );
+
+    // Nothing claimed before there is a price to judge: no mark at all,
+    // rather than a question mark beside two tabs that are quietly getting on
+    // with it.
+    expect(tabIcon(ValuationVerdict.overvalued.icon), findsNothing);
+
+    // Dear, and the tab says so without being opened — beside the glyph that
+    // says what the tab is for, not instead of it.
+    await enterPrice(tester, '250');
+    expect(find.text('Overvalued'), findsOneWidget);
+    expect(tabIcon(ValuationVerdict.overvalued.icon), findsOneWidget);
+    expect(tabIcon(LucideIcons.scale), findsOneWidget);
+
+    // And it follows the verdict rather than latching onto the first one.
+    await enterPrice(tester, '60');
+    expect(find.text('Undervalued'), findsOneWidget);
+    expect(tabIcon(ValuationVerdict.undervalued.icon), findsOneWidget);
+    expect(tabIcon(ValuationVerdict.overvalued.icon), findsNothing);
+  });
+
+  testWidgets('and keeps it on a window too narrow for the tab glyphs', (
+    tester,
+  ) async {
+    // The leading glyphs are dropped here for room. The verdict is what they
+    // were making way for, so it stays.
+    await openApple(tester, size: const Size(420, 900));
+    await enterPrice(tester, '250');
+
+    expect(
+      find.descendant(
+        of: find.byType(ReportTabs),
+        matching: find.byIcon(ValuationVerdict.overvalued.icon),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(ReportTabs),
+        matching: find.byIcon(LucideIcons.scale),
+      ),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('shows the working, not just the verdict', (tester) async {
