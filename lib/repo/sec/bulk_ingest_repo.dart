@@ -57,11 +57,16 @@ class IngestedCompany {
     required this.years,
     required this.quarters,
     this.sharesOutstanding,
+    this.sharesLastFiled,
   });
 
   final String cik;
   final String name;
   final double? sharesOutstanding;
+
+  /// When a share count was last put on a cover, used to tell a filer
+  /// that stopped from one that never started.
+  final DateTime? sharesLastFiled;
   final List<FiscalYearFigures> years;
   final List<FiscalQuarterFigures> quarters;
 }
@@ -104,6 +109,7 @@ List<IngestedCompany> parseArchiveSlice(
           years: years,
           quarters: CompanyFactsParser.parseQuarters(facts),
           sharesOutstanding: CompanyFactsParser.latestSharesOutstanding(facts),
+          sharesLastFiled: CompanyFactsParser.lastFiledShareCount(facts),
         ),
       );
     }
@@ -523,6 +529,7 @@ class BulkIngestRepo {
             name: company.name,
             sic: Value(sicByCik[company.cik]),
             sharesOutstanding: Value(company.sharesOutstanding),
+            sharesLastFiled: Value(company.sharesLastFiled),
           ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalYears, [

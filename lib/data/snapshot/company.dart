@@ -8,6 +8,7 @@ class Company extends Equatable {
     required this.name,
     this.sic,
     this.sharesOutstanding,
+    this.sharesLastFiled,
   });
 
   /// Upper-case exchange symbol, e.g. `AAPL`.
@@ -24,9 +25,21 @@ class Company extends Equatable {
   final int? sic;
 
   /// Shares on the cover of the newest filing. Multiplied by a share price
-  /// this gives a market value; `null` where none is filed.
+  /// this gives a market value; `null` where none current enough is filed.
   final double? sharesOutstanding;
 
+  /// When a share count was last put on a cover, whether or not it was recent
+  /// enough to use. Tells a filer that stopped filing one from a filer that
+  /// never did — both leave [sharesOutstanding] null.
+  final DateTime? sharesLastFiled;
+
   @override
-  List<Object?> get props => [ticker, cik, name, sic, sharesOutstanding];
+  List<Object?> get props => [
+    ticker,
+    cik,
+    name,
+    sic,
+    sharesOutstanding,
+    sharesLastFiled,
+  ];
 }

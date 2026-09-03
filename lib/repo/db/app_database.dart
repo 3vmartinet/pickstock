@@ -8,7 +8,12 @@ part 'app_database.g.dart';
 /// Bumped whenever the XBRL extraction changes meaning. Rows written by an
 /// older extractor are discarded rather than served, because a stale row is
 /// indistinguishable from a correct one once it is in the table.
-const int extractorVersion = 7;
+///
+/// 8 reads capital spending under the concepts Verizon, Eli Lilly and the oil
+/// and gas producers file it under, finds borrowings through the interest a
+/// captive finance arm pays on them, and refuses a cover-page share count
+/// that the filer stopped restating years ago.
+const int extractorVersion = 8;
 
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
@@ -36,6 +41,16 @@ class Companies extends Table {
 
   /// Shares on the cover of the newest filing, for a market value.
   RealColumn get sharesOutstanding => real().nullable()();
+
+  /// When the filer last put a share count on a cover, whether or not it is
+  /// recent enough to use.
+  ///
+  /// Kept so that a company that stopped filing one can be told from a
+  /// company that never filed one. Both leave [sharesOutstanding] null and
+  /// both fall back to the diluted average, but only the first has a year to
+  /// name — and "it stopped in 2010" is a different thing to be told than "it
+  /// does not file one".
+  DateTimeColumn get sharesLastFiled => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {cik};
@@ -257,7 +272,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -293,6 +308,11 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        if (from < 12) {
+          // Added, not populated: the date arrives with the next ingest.
+          logInfo(() => 'Adding companies.shares_last_filed');
+          await migrator.addColumn(companies, companies.sharesLastFiled);
         }
         if (from < 11) {
           // Added, not populated: the figure arrives with the next ingest,

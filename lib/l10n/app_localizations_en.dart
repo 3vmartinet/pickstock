@@ -1133,6 +1133,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.';
 
   @override
+  String get napkinCaveatShareCount =>
+      'It files no current share count, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.';
+
+  @override
+  String napkinCaveatShareCountStale(String year) {
+    return 'It last filed a share count in $year, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.';
+  }
+
+  @override
   String get labelPriceEarnings => 'P/E';
 
   @override

@@ -48,8 +48,26 @@ class $CompaniesTable extends Companies
         type: DriftSqlType.double,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _sharesLastFiledMeta = const VerificationMeta(
+    'sharesLastFiled',
+  );
   @override
-  List<GeneratedColumn> get $columns => [cik, name, sic, sharesOutstanding];
+  late final GeneratedColumn<DateTime> sharesLastFiled =
+      GeneratedColumn<DateTime>(
+        'shares_last_filed',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cik,
+    name,
+    sic,
+    sharesOutstanding,
+    sharesLastFiled,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -93,6 +111,15 @@ class $CompaniesTable extends Companies
         ),
       );
     }
+    if (data.containsKey('shares_last_filed')) {
+      context.handle(
+        _sharesLastFiledMeta,
+        sharesLastFiled.isAcceptableOrUnknown(
+          data['shares_last_filed']!,
+          _sharesLastFiledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -118,6 +145,10 @@ class $CompaniesTable extends Companies
         DriftSqlType.double,
         data['${effectivePrefix}shares_outstanding'],
       ),
+      sharesLastFiled: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}shares_last_filed'],
+      ),
     );
   }
 
@@ -138,11 +169,22 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
 
   /// Shares on the cover of the newest filing, for a market value.
   final double? sharesOutstanding;
+
+  /// When the filer last put a share count on a cover, whether or not it is
+  /// recent enough to use.
+  ///
+  /// Kept so that a company that stopped filing one can be told from a
+  /// company that never filed one. Both leave [sharesOutstanding] null and
+  /// both fall back to the diluted average, but only the first has a year to
+  /// name — and "it stopped in 2010" is a different thing to be told than "it
+  /// does not file one".
+  final DateTime? sharesLastFiled;
   const CompanyRow({
     required this.cik,
     required this.name,
     this.sic,
     this.sharesOutstanding,
+    this.sharesLastFiled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -155,6 +197,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
     if (!nullToAbsent || sharesOutstanding != null) {
       map['shares_outstanding'] = Variable<double>(sharesOutstanding);
     }
+    if (!nullToAbsent || sharesLastFiled != null) {
+      map['shares_last_filed'] = Variable<DateTime>(sharesLastFiled);
+    }
     return map;
   }
 
@@ -166,6 +211,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       sharesOutstanding: sharesOutstanding == null && nullToAbsent
           ? const Value.absent()
           : Value(sharesOutstanding),
+      sharesLastFiled: sharesLastFiled == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sharesLastFiled),
     );
   }
 
@@ -181,6 +229,7 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       sharesOutstanding: serializer.fromJson<double?>(
         json['sharesOutstanding'],
       ),
+      sharesLastFiled: serializer.fromJson<DateTime?>(json['sharesLastFiled']),
     );
   }
   @override
@@ -191,6 +240,7 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       'name': serializer.toJson<String>(name),
       'sic': serializer.toJson<int?>(sic),
       'sharesOutstanding': serializer.toJson<double?>(sharesOutstanding),
+      'sharesLastFiled': serializer.toJson<DateTime?>(sharesLastFiled),
     };
   }
 
@@ -199,6 +249,7 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
     String? name,
     Value<int?> sic = const Value.absent(),
     Value<double?> sharesOutstanding = const Value.absent(),
+    Value<DateTime?> sharesLastFiled = const Value.absent(),
   }) => CompanyRow(
     cik: cik ?? this.cik,
     name: name ?? this.name,
@@ -206,6 +257,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
     sharesOutstanding: sharesOutstanding.present
         ? sharesOutstanding.value
         : this.sharesOutstanding,
+    sharesLastFiled: sharesLastFiled.present
+        ? sharesLastFiled.value
+        : this.sharesLastFiled,
   );
   CompanyRow copyWithCompanion(CompaniesCompanion data) {
     return CompanyRow(
@@ -215,6 +269,9 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
       sharesOutstanding: data.sharesOutstanding.present
           ? data.sharesOutstanding.value
           : this.sharesOutstanding,
+      sharesLastFiled: data.sharesLastFiled.present
+          ? data.sharesLastFiled.value
+          : this.sharesLastFiled,
     );
   }
 
@@ -224,13 +281,15 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
           ..write('cik: $cik, ')
           ..write('name: $name, ')
           ..write('sic: $sic, ')
-          ..write('sharesOutstanding: $sharesOutstanding')
+          ..write('sharesOutstanding: $sharesOutstanding, ')
+          ..write('sharesLastFiled: $sharesLastFiled')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(cik, name, sic, sharesOutstanding);
+  int get hashCode =>
+      Object.hash(cik, name, sic, sharesOutstanding, sharesLastFiled);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -238,7 +297,8 @@ class CompanyRow extends DataClass implements Insertable<CompanyRow> {
           other.cik == this.cik &&
           other.name == this.name &&
           other.sic == this.sic &&
-          other.sharesOutstanding == this.sharesOutstanding);
+          other.sharesOutstanding == this.sharesOutstanding &&
+          other.sharesLastFiled == this.sharesLastFiled);
 }
 
 class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
@@ -246,12 +306,14 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
   final Value<String> name;
   final Value<int?> sic;
   final Value<double?> sharesOutstanding;
+  final Value<DateTime?> sharesLastFiled;
   final Value<int> rowid;
   const CompaniesCompanion({
     this.cik = const Value.absent(),
     this.name = const Value.absent(),
     this.sic = const Value.absent(),
     this.sharesOutstanding = const Value.absent(),
+    this.sharesLastFiled = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CompaniesCompanion.insert({
@@ -259,6 +321,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     required String name,
     this.sic = const Value.absent(),
     this.sharesOutstanding = const Value.absent(),
+    this.sharesLastFiled = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        name = Value(name);
@@ -267,6 +330,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     Expression<String>? name,
     Expression<int>? sic,
     Expression<double>? sharesOutstanding,
+    Expression<DateTime>? sharesLastFiled,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -274,6 +338,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
       if (name != null) 'name': name,
       if (sic != null) 'sic': sic,
       if (sharesOutstanding != null) 'shares_outstanding': sharesOutstanding,
+      if (sharesLastFiled != null) 'shares_last_filed': sharesLastFiled,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -283,6 +348,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     Value<String>? name,
     Value<int?>? sic,
     Value<double?>? sharesOutstanding,
+    Value<DateTime?>? sharesLastFiled,
     Value<int>? rowid,
   }) {
     return CompaniesCompanion(
@@ -290,6 +356,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
       name: name ?? this.name,
       sic: sic ?? this.sic,
       sharesOutstanding: sharesOutstanding ?? this.sharesOutstanding,
+      sharesLastFiled: sharesLastFiled ?? this.sharesLastFiled,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -309,6 +376,9 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
     if (sharesOutstanding.present) {
       map['shares_outstanding'] = Variable<double>(sharesOutstanding.value);
     }
+    if (sharesLastFiled.present) {
+      map['shares_last_filed'] = Variable<DateTime>(sharesLastFiled.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -322,6 +392,7 @@ class CompaniesCompanion extends UpdateCompanion<CompanyRow> {
           ..write('name: $name, ')
           ..write('sic: $sic, ')
           ..write('sharesOutstanding: $sharesOutstanding, ')
+          ..write('sharesLastFiled: $sharesLastFiled, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4583,6 +4654,7 @@ typedef $$CompaniesTableCreateCompanionBuilder = CompaniesCompanion Function({
   required String name,
   Value<int?> sic,
   Value<double?> sharesOutstanding,
+  Value<DateTime?> sharesLastFiled,
   Value<int> rowid,
 });
 typedef $$CompaniesTableUpdateCompanionBuilder = CompaniesCompanion Function({
@@ -4590,6 +4662,7 @@ typedef $$CompaniesTableUpdateCompanionBuilder = CompaniesCompanion Function({
   Value<String> name,
   Value<int?> sic,
   Value<double?> sharesOutstanding,
+  Value<DateTime?> sharesLastFiled,
   Value<int> rowid,
 });
 
@@ -4660,6 +4733,11 @@ class $$CompaniesTableFilterComposer
 
   ColumnFilters<double> get sharesOutstanding => $composableBuilder(
     column: $table.sharesOutstanding,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get sharesLastFiled => $composableBuilder(
+    column: $table.sharesLastFiled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4742,6 +4820,11 @@ class $$CompaniesTableOrderingComposer
     column: $table.sharesOutstanding,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get sharesLastFiled => $composableBuilder(
+    column: $table.sharesLastFiled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CompaniesTableAnnotationComposer
@@ -4764,6 +4847,11 @@ class $$CompaniesTableAnnotationComposer
 
   GeneratedColumn<double> get sharesOutstanding => $composableBuilder(
     column: $table.sharesOutstanding,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get sharesLastFiled => $composableBuilder(
+    column: $table.sharesLastFiled,
     builder: (column) => column,
   );
 
@@ -4853,12 +4941,14 @@ class $$CompaniesTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<int?> sic = const Value.absent(),
                 Value<double?> sharesOutstanding = const Value.absent(),
+                Value<DateTime?> sharesLastFiled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CompaniesCompanion(
                 cik: cik,
                 name: name,
                 sic: sic,
                 sharesOutstanding: sharesOutstanding,
+                sharesLastFiled: sharesLastFiled,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4867,12 +4957,14 @@ class $$CompaniesTableTableManager
                 required String name,
                 Value<int?> sic = const Value.absent(),
                 Value<double?> sharesOutstanding = const Value.absent(),
+                Value<DateTime?> sharesLastFiled = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CompaniesCompanion.insert(
                 cik: cik,
                 name: name,
                 sic: sic,
                 sharesOutstanding: sharesOutstanding,
+                sharesLastFiled: sharesLastFiled,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

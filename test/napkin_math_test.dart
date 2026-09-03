@@ -117,6 +117,9 @@ void main() {
       find.textContaining('more on equipment than wore out'),
       findsOneWidget,
     );
+    // NVIDIA files a current share count, so the step-one figure is the
+    // company's own and needs no qualifying.
+    expect(find.textContaining('files no current share count'), findsNothing);
   });
 
   testWidgets('sits beside the verdict, and below it when narrow', (

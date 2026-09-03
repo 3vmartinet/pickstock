@@ -51,12 +51,29 @@ abstract final class CompanyFactsParser {
   static String? entityName(Map<String, dynamic> facts) =>
       facts[_entityNameKey] as String?;
 
-  /// The newest share count on the cover of a filing, or `null` if none is
-  /// filed.
+  /// The newest share count on the cover of a filing, or `null` where none
+  /// current enough to use is filed.
   ///
   /// Taken from the `dei` namespace, which is where the cover-page figure
   /// lives; the us-gaap balance-sheet count stands in when it is absent.
+  ///
+  /// A count is only used if it is at least as recent as the newest *annual*
+  /// balance sheet. A filer that stops tagging the concept leaves its
+  /// last one behind for ever, and "newest on file" then means whatever it
+  /// said the day it stopped: Mastercard's series ends in 2010 at 122.5M
+  /// shares, before a ten-for-one split and fifteen years of buybacks, and
+  /// against a real price that stated a company a seventh of its size — which
+  /// every ratio on the valuation tab is then struck against. Rejected here,
+  /// the count falls through to the diluted average earnings are reported
+  /// against, which every filer restates every quarter.
+  ///
+  /// Measured against the annual report rather than the newest balance sheet
+  /// of any kind, which was too strict: a count filed with the 10-K is a
+  /// quarter old by the time the next 10-Q lands, and a quarter-old count of
+  /// the shares that exist beats a twelve-month average of them. Only a count
+  /// that has gone a year or more without being restated is worth refusing.
   static double? latestSharesOutstanding(Map<String, dynamic> facts) {
+    final asOf = _newestBalanceSheetDate(facts);
     final candidates = [
       facts[_factsKey]?[_deiKey]?[_sharesOutstandingTag],
       facts[_factsKey]?[_usGaapKey]?[_sharesOutstandingFallbackTag],
@@ -80,9 +97,66 @@ abstract final class CompanyFactsParser {
           newest = value.toDouble();
         }
       }
-      if (newest != null) return newest;
+      if (newest == null || newestEnd == null) continue;
+      // The cover is dated the day the filing went in, so a live count is
+      // always on or after the balance sheet it accompanies.
+      if (asOf != null && newestEnd.compareTo(asOf) < 0) continue;
+      return newest;
     }
     return null;
+  }
+
+  /// When the filer last put a share count on a cover, whether or not it is
+  /// recent enough to use, or `null` if it never did.
+  ///
+  /// Read separately from [latestSharesOutstanding] so that a filer which
+  /// stopped tagging the concept can be told from one that never tagged it.
+  /// Both fall back to the diluted average, and only the first has a year to
+  /// name for it.
+  static DateTime? lastFiledShareCount(Map<String, dynamic> facts) {
+    String? newest;
+    for (final candidate in [
+      facts[_factsKey]?[_deiKey]?[_sharesOutstandingTag],
+      facts[_factsKey]?[_usGaapKey]?[_sharesOutstandingFallbackTag],
+    ]) {
+      final units =
+          (candidate as Map<String, dynamic>?)?[_unitsKey]?[XbrlUnit.shares.key]
+              as List<dynamic>?;
+      if (units == null) continue;
+      for (final raw in units) {
+        final fact = raw as Map<String, dynamic>;
+        final end = fact[_endKey] as String?;
+        if (end == null || fact[_valueKey] == null) continue;
+        if (newest == null || end.compareTo(newest) > 0) newest = end;
+      }
+    }
+    return newest == null ? null : DateTime.tryParse(newest);
+  }
+
+  /// The newest date the payload states an annual balance sheet for.
+  ///
+  /// Read off `Assets` in the annual report, which every operating filer
+  /// restates every year, so it dates the payload without depending on a
+  /// concept a filer might have stopped tagging. `null` where the concept is absent, in which case there
+  /// is nothing to date a share count against and it is taken as filed.
+  static String? _newestBalanceSheetDate(Map<String, dynamic> facts) {
+    final units =
+        facts[_factsKey]?[_usGaapKey]?[XbrlMetric
+                .totalAssets
+                .tags
+                .first]?[_unitsKey]?[XbrlUnit.usd.key]
+            as List<dynamic>?;
+    if (units == null) return null;
+
+    String? newest;
+    for (final raw in units) {
+      final fact = raw as Map<String, dynamic>;
+      if (fact[_formKey] != _annualForm) continue;
+      final end = fact[_endKey] as String?;
+      if (end == null) continue;
+      if (newest == null || end.compareTo(newest) > 0) newest = end;
+    }
+    return newest;
   }
 
   /// Every fiscal quarter the payload covers, oldest first.

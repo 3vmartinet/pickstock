@@ -461,6 +461,9 @@
   "napkinCaveatMargin": "Its profit margin is {points} points below its own ten-year normal, so the sales growth above is being won at a lower profit.",
   "@napkinCaveatMargin": { "placeholders": { "points": { "type": "String" } } },
   "napkinCaveatEarnings": "It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.",
+  "napkinCaveatShareCount": "It files no current share count, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.",
+  "napkinCaveatShareCountStale": "It last filed a share count in {year}, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.",
+  "@napkinCaveatShareCountStale": { "placeholders": { "year": { "type": "String" } } },
 
   "labelPriceEarnings": "P/E",
   "labelPriceToFreeCashFlow": "P/FCF",

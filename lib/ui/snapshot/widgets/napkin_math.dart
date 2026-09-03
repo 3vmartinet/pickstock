@@ -204,6 +204,20 @@ List<String> _caveatsFor(
   GrowthExpectation? expectation,
 ) {
   return [
+    // First, because every figure in the derivation is struck against the
+    // share count: a market value built on the wrong one is wrong throughout,
+    // and the steps read as arithmetic whose authority their input does not
+    // have.
+    //
+    // Two ways to have no current count, and they are worth telling apart. A
+    // filer that never states one is filing the way it always has; one that
+    // stopped in 2010 has a count on record that a reader might otherwise go
+    // looking for, and naming the year says how far out of date it is.
+    if (!valuation.countIsCurrent)
+      if (valuation.sharesLastFiled case final filed?)
+        strings.napkinCaveatShareCountStale('${filed.year}')
+      else
+        strings.napkinCaveatShareCount,
     if (valuation.basis == ValuationBasis.earnings)
       strings.napkinCaveatEarnings,
     if (expectation != null && expectation.isBuildingCapacity(figures))

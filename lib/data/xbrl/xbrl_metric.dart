@@ -227,11 +227,15 @@ enum XbrlMetric {
 
   /// Diluted share count for the year, which is what earnings per share is
   /// struck against — so it is the right divisor for a per-share figure.
+  ///
+  /// `...DilutedSharesOutstandingAdjustment` was among these tags and is not a
+  /// share count: it is the increment dilution adds, which Mastercard reports
+  /// as 1M against 888M shares. Read as a count it would state a company a
+  /// thousandth of its size.
   dilutedShares(
     tags: [
       'WeightedAverageNumberOfDilutedSharesOutstanding',
       'WeightedAverageNumberOfSharesOutstandingBasic',
-      'WeightedAverageNumberOfDilutedSharesOutstandingAdjustment',
     ],
     unit: XbrlUnit.shares,
   );

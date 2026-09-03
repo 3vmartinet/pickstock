@@ -1704,6 +1704,18 @@ abstract class AppLocalizations {
   /// **'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.'**
   String get napkinCaveatEarnings;
 
+  /// No description provided for @napkinCaveatShareCount.
+  ///
+  /// In en, this message translates to:
+  /// **'It files no current share count, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.'**
+  String get napkinCaveatShareCount;
+
+  /// No description provided for @napkinCaveatShareCountStale.
+  ///
+  /// In en, this message translates to:
+  /// **'It last filed a share count in {year}, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.'**
+  String napkinCaveatShareCountStale(String year);
+
   /// No description provided for @labelPriceEarnings.
   ///
   /// In en, this message translates to:

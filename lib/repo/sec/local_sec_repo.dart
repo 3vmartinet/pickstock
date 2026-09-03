@@ -54,6 +54,7 @@ class LocalSecRepo implements SecRepo {
         name: stored?.name ?? listing.name,
         sic: stored?.sic,
         sharesOutstanding: stored?.sharesOutstanding,
+        sharesLastFiled: stored?.sharesLastFiled,
       ),
       years: [
         for (final row in reported)

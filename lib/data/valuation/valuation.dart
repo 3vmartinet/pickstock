@@ -43,6 +43,9 @@ class Valuation extends Equatable {
     return Valuation._(
       pricePerShare: pricePerShare,
       sharesOutstanding: outstanding,
+      // Whether the count multiplied by today's price is today's count.
+      countIsCurrent: snapshot.company.sharesOutstanding != null,
+      sharesLastFiled: snapshot.company.sharesLastFiled,
       dilutedShares: diluted,
       netIncome: latest.netIncome,
       freeCashFlow: latest.freeCashFlow,
@@ -56,6 +59,8 @@ class Valuation extends Equatable {
   const Valuation._({
     required this.pricePerShare,
     required this.sharesOutstanding,
+    required this.countIsCurrent,
+    required this.sharesLastFiled,
     required this.dilutedShares,
     required this.netIncome,
     required this.freeCashFlow,
@@ -69,6 +74,23 @@ class Valuation extends Equatable {
 
   /// Shares on the cover of the newest filing.
   final double? sharesOutstanding;
+
+  /// Whether [sharesOutstanding] is the count on the cover of the newest
+  /// filing, rather than the diluted average standing in for it.
+  ///
+  /// The two are different figures. The cover count is what the company had
+  /// on the day it filed; the diluted average is the divisor its earnings are
+  /// reported against — an average over the fiscal year, dilution included.
+  /// Where a filer tags no usable cover count the average is the closest
+  /// thing on file, and for Mastercard it lands within 2%. But it is a
+  /// year-old average being multiplied by a live price, and the worked example
+  /// says so rather than presenting it as the company's share count.
+  final bool countIsCurrent;
+
+  /// When the filer last put a share count on a cover. Where
+  /// [countIsCurrent] is false this says whether it stopped filing one — and
+  /// when — or never filed one at all.
+  final DateTime? sharesLastFiled;
 
   /// Diluted average shares for [fiscalYear], the earnings-per-share divisor.
   final double? dilutedShares;
@@ -246,6 +268,8 @@ class Valuation extends Equatable {
   List<Object?> get props => [
     pricePerShare,
     sharesOutstanding,
+    countIsCurrent,
+    sharesLastFiled,
     dilutedShares,
     netIncome,
     freeCashFlow,

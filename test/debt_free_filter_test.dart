@@ -198,6 +198,5 @@ void main() {
 }
 
 /// The English strings, which is what the tests read against.
-Future<AppLocalizations> _strings() => AppLocalizations.delegate.load(
-  const Locale('en'),
-);
+Future<AppLocalizations> _strings() =>
+    AppLocalizations.delegate.load(const Locale('en'));
