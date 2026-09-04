@@ -104,6 +104,10 @@ class ThemeRepo {
   /// sitting side by side; two narrow columns are worse than one wide one.
   static const double napkinSideBySideMinWidth = 900;
 
+  /// Below this the expectations tab's two cards stack: level, each would be
+  /// too narrow for the three price cases one of them lays out in a row.
+  static const double expectationsSideBySideMinWidth = 820;
+
   /// A spinner sized to sit inside a button without changing its height.
   static const double inlineSpinnerSize = 14;
 
@@ -129,6 +133,49 @@ class ThemeRepo {
   static const double glyphTint = 0.12;
   static const double stagePulseScale = 1.12;
   static const Duration stagePulseDuration = Duration(milliseconds: 900);
+
+  /// The pane a source opens in, beside the report. Wide enough for a news
+  /// page to lay out as its publisher intended rather than as a phone.
+  static const double sourcePaneWidth = 520;
+  static const double sourcePaneMinWidth = 320;
+
+  /// The most the developments panel may take of the header's row.
+  ///
+  /// Capped rather than given the slack: the panel would happily swallow a
+  /// wide window and leave the company's own name in an ellipsis, and past
+  /// this width the captions are whole anyway so the room does nothing for
+  /// them. Flexible under the cap, so on a narrow pane the two share the row
+  /// instead of the panel taking a fixed bite out of it.
+  static const double eventsPanelMaxWidth = 380;
+
+  /// How faint the developments panel's fill is against the card it sits in,
+  /// and how tightly it is packed. Tighter than a card: it shares a row with
+  /// the company's name, and every pixel of padding is a pixel a caption does
+  /// not get.
+  static const double eventsPanelTint = 0.5;
+  static const EdgeInsets eventsPanelPadding = EdgeInsets.symmetric(
+    horizontal: spaceSmall + spaceXSmall,
+    vertical: spaceSmall,
+  );
+
+  /// How old an answer is, said beside it. Small: it is a footnote on the
+  /// answer, not part of it.
+  static const double noteAgeFontSize = 11;
+
+  /// One development in the header's panel. Under the body text and under the
+  /// industry line beside it: three of these share the row with the company's
+  /// name, and they are supporting detail rather than part of the reading.
+  static const double eventFontSize = 11;
+
+  /// The stamp in the app bar saying which day's data is loaded: its type,
+  /// set below the scale's smallest step because it is a footnote on the
+  /// window rather than part of the reading, and the box it sits in.
+  static const double dataStampFontSize = 10;
+  static const double dataStampLineHeight = 1.25;
+  static const EdgeInsets dataStampPadding = EdgeInsets.symmetric(
+    horizontal: spaceSmall,
+    vertical: spaceXSmall,
+  );
 
   /// The dot that marks an update as new, and how far it sits outside the
   /// button's top-left corner. Small and unadorned: it is a mark, not a

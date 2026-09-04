@@ -73,16 +73,33 @@ void main() {
     expect(tester.getRect(find.byType(HistoryTable)), before);
   });
 
-  testWidgets('a different company starts on its own overview', (tester) async {
+  testWidgets('a different company opens on the tab left open', (tester) async {
     await openApple(tester);
     await openReportTab(tester, ReportTab.valuation);
 
     await tester.tap(find.text('NVIDIA CORP'));
     await tester.pumpAndSettle();
 
-    // The tab left open for the last company says nothing about this one.
-    expect(find.text('Sanity check'), findsOneWidget);
-    expect(find.text('Fair value'), findsNothing);
+    // Companies are read one after another with the same question in mind, so
+    // the tab holding the answer stays put rather than being picked again for
+    // every one of them.
+    expect(find.text('Fair value'), findsOneWidget);
+    expect(find.text('Sanity check'), findsNothing);
+  });
+
+  testWidgets('and keeps it through the tab that needs a price', (
+    tester,
+  ) async {
+    await openApple(tester);
+    await openReportTab(tester, ReportTab.expectations);
+
+    await tester.tap(find.text('NVIDIA CORP'));
+    await tester.pumpAndSettle();
+
+    // The new company has no price, so the tab opens on its own way in to one
+    // rather than on something empty.
+    expect(find.text('Set a price'), findsWidgets);
+    expect(find.text('Sanity check'), findsNothing);
   });
 
   testWidgets('gives the expectations a tab of their own', (tester) async {

@@ -50,6 +50,93 @@ FinancialSnapshot _snapshot({
 }
 
 void main() {
+  group('a business the listed shares only part own', () {
+    /// MarketWise's FY2025, as filed. It holds a slice of the operating
+    /// company and Class B unitholders hold the rest, so the group earned
+    /// $64.0M of which $58.4M was theirs — and its cash flow statement is the
+    /// whole group's while its 2.436M diluted shares are its own.
+    ///
+    /// No cover-page count: its series stops in July 2020 at the pre-merger
+    /// shell, which the parser refuses, so the diluted average stands in.
+    FinancialSnapshot marketWise({double? profitLoss = 64.041 * _million}) =>
+        FinancialSnapshot(
+          company: const Company(
+            ticker: 'MKTW',
+            cik: '0001805651',
+            name: 'MARKETWISE, INC.',
+          ),
+          years: [
+            const FiscalYearFigures(
+              fiscalYear: 2024,
+              revenue: 408.701 * _million,
+            ),
+            FiscalYearFigures(
+              fiscalYear: 2025,
+              revenue: 328.122 * _million,
+              priorRevenue: 408.701 * _million,
+              netIncome: 5.62 * _million,
+              operatingIncome: 62.596 * _million,
+              operatingCashFlow: 45.958 * _million,
+              capitalExpenditure: 0.391 * _million,
+              dilutedShares: 2.436 * _million,
+              profitLoss: profitLoss,
+            ),
+          ],
+        );
+
+    test('values only the cash that reaches those shares', () {
+      final valuation = Valuation(snapshot: marketWise(), pricePerShare: 11.03);
+
+      // 8.8% of the group, so 8.8% of its $45.6M of cash.
+      expect(valuation.parentStake, closeTo(0.0878, 0.0005));
+      expect(valuation.hasOutsideOwners, isTrue);
+      expect(
+        valuation.freeCashFlowToShareholders,
+        closeTo(4.0 * _million, 0.1 * _million),
+      );
+
+      // Around $20 rather than the $229 the group's whole cash flow over the
+      // parent's share count produced — a twenty-fold upside on a year revenue
+      // fell a fifth.
+      expect(valuation.fairValueLow, closeTo(20, 1));
+      expect(valuation.percentToLow, lessThan(150));
+    });
+
+    test('holds the earnings ceiling to that share too', () {
+      // Operating income is the group's $62.6M; against the parent's shares it
+      // would price something the listed company mostly does not own.
+      final valuation = Valuation(snapshot: marketWise(), pricePerShare: 11.03);
+      expect(valuation.basis, ValuationBasis.freeCashFlow);
+      // The cash is the smaller claim, and it is the one used.
+      expect(valuation.basisAmount, valuation.freeCashFlowToShareholders);
+    });
+
+    test('leaves a filer with no outside owners exactly as it was', () {
+      // The overwhelming majority: either the concept is absent, or the group
+      // and the parent earned the same thing.
+      for (final profitLoss in [null, 5.62 * _million]) {
+        final valuation = Valuation(
+          snapshot: marketWise(profitLoss: profitLoss),
+          pricePerShare: 11.03,
+        );
+        expect(valuation.parentStake, 1);
+        expect(valuation.hasOutsideOwners, isFalse);
+        expect(valuation.freeCashFlowToShareholders, valuation.freeCashFlow);
+      }
+    });
+
+    test('ignores a split the filing does not state plainly', () {
+      // A parent earning more than the group it consolidates is not a stake
+      // that can be read off, so the figures stand as filed rather than being
+      // scaled by a ratio above one.
+      final valuation = Valuation(
+        snapshot: marketWise(profitLoss: 1 * _million),
+        pricePerShare: 11.03,
+      );
+      expect(valuation.parentStake, 1);
+    });
+  });
+
   group('what counts as profit', () {
     /// Lyft's FY2025: an operating loss, a pre-tax loss, and $2.844B of net
     /// income from releasing a deferred tax allowance.

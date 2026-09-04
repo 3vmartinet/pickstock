@@ -60,6 +60,9 @@ class JobsViewModel extends ChangeNotifier {
   int _nextJobId = 1;
   Timer? _ticker;
 
+  /// Which run [_ticker] belongs to, and which run holds the quote budget.
+  int? _tickingJobId;
+
   /// Starts a run over [companies], naming the report after [name].
   ///
   /// Refuses a second run: the two would fight over one per-minute budget and
@@ -80,6 +83,7 @@ class JobsViewModel extends ChangeNotifier {
 
     // A steady tick, so the remaining-time estimate moves even between
     // companies rather than freezing on a slow one.
+    _tickingJobId = job.id;
     _ticker = Timer.periodic(jobTickInterval, (_) => notifyListeners());
     unawaited(_run(job.id, subjects));
     return true;
@@ -112,6 +116,7 @@ class JobsViewModel extends ChangeNotifier {
     _quoteRepo.reserveForJob();
     final found = <ReportEntry>[];
     var valued = 0;
+    var hasFailed = false;
 
     try {
       for (final company in companies) {
@@ -130,34 +135,65 @@ class JobsViewModel extends ChangeNotifier {
               job.copyWith(processed: job.processed + 1, found: found.length),
         );
       }
+    } on Object catch (error, trace) {
+      // The run is over either way; what matters is that it is not left
+      // looking like one still going. A job stuck at running spins the app bar
+      // and holds the scan button disabled for the rest of the session, which
+      // is a far worse failure than the one that caused it.
+      logSevere(() => 'Valuation run $jobId ended early: $error\n$trace');
+      hasFailed = true;
     } finally {
-      _quoteRepo.releaseJob();
-      _ticker?.cancel();
-      _ticker = null;
+      _releaseRun(jobId);
     }
 
     found.sort((a, b) => b.upsidePercent.compareTo(a.upsidePercent));
     final job = _jobOf(jobId);
     if (job == null) return;
 
-    final reportId = await _reportRepo.save(
-      name: job.name,
-      consideredCount: job.total,
-      valuedCount: valued,
-      entries: found,
-    );
-    await _loadReports();
+    // Kept even for a run that ended early: the companies it did price are
+    // worth as much as they would have been had it reached the end.
+    int? reportId;
+    try {
+      reportId = await _reportRepo.save(
+        name: job.name,
+        consideredCount: job.total,
+        valuedCount: valued,
+        entries: found,
+      );
+      await _loadReports();
+    } on Object catch (error) {
+      logSevere(() => 'Could not save the report for run $jobId: $error');
+      hasFailed = true;
+    }
 
     _update(
       jobId,
       (current) => current.copyWith(
-        state: current.state == JobState.cancelled
-            ? JobState.cancelled
-            : JobState.done,
+        state: switch (current.state) {
+          // A cancel is the user's decision and outranks a late failure.
+          JobState.cancelled => JobState.cancelled,
+          _ when hasFailed => JobState.failed,
+          _ => JobState.done,
+        },
         reportId: reportId,
         found: found.length,
       ),
     );
+  }
+
+  /// Hands back what the run held, but only if it is still the run holding it.
+  ///
+  /// A cancelled job's [_run] keeps going until whatever it is awaiting comes
+  /// back — up to a minute, waiting on the quote budget — and a new run can
+  /// have started by then. Unguarded, the old one's clean-up cancelled the new
+  /// one's ticker and released the budget it had just reserved, leaving the
+  /// new run with a frozen progress bar and browsing free to eat its calls.
+  void _releaseRun(int jobId) {
+    if (_tickingJobId != jobId) return;
+    _quoteRepo.releaseJob();
+    _ticker?.cancel();
+    _ticker = null;
+    _tickingJobId = null;
   }
 
   /// Values one company, or `null` where it cannot be valued or priced.
@@ -198,6 +234,13 @@ class JobsViewModel extends ChangeNotifier {
       logInfo(() => 'No quote for ${company.ticker}: ${error.failure.name}');
       return null;
     } on SecException {
+      return null;
+    } on Object catch (error, trace) {
+      // [SecRepo] is explicit that anything but a [SecException] is a bug, and
+      // over ten thousand filers there will be some. One of them should cost
+      // its own company and no more — the same bargain the bulk ingest strikes
+      // with a malformed payload.
+      logSevere(() => 'Skipping ${company.ticker}: $error\n$trace');
       return null;
     }
   }

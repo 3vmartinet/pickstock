@@ -28,6 +28,22 @@ enum XbrlMetric {
   ),
   netIncome(tags: ['NetIncomeLoss']),
 
+  /// Profit for the whole consolidated group, before any of it is attributed
+  /// to owners outside the listed company.
+  ///
+  /// Read alongside [netIncome], which is the parent's share of the same
+  /// profit, so the two together say how much of the group the shares being
+  /// priced actually own. Filers with nothing outside the parent tag it
+  /// equal to [netIncome] or not at all, so its absence means "all of it".
+  ///
+  /// MarketWise is why. It holds a small slice of the operating company and
+  /// the rest sits with Class B unitholders, so in FY2025 the group earned
+  /// $64.0M of which $58.4M was theirs. Its $45.6M of free cash flow is the
+  /// group's while its 2.4M diluted shares are the parent's, and a multiple
+  /// of the first divided by the second valued its shares at $229 against a
+  /// price of $11 — a twenty-fold upside, in a year revenue fell a fifth.
+  profitLoss(tags: ['ProfitLoss']),
+
   /// Profit from the business itself, before interest, tax and one-offs.
   ///
   /// The margin to watch: a company can grow revenue for years while operating

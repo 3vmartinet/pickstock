@@ -146,6 +146,15 @@ class IngestViewModel extends ChangeNotifier {
   /// the ingest that loaded it did not record one.
   DateTime? get loadedArchiveDate => _loadedArchiveDate;
 
+  /// How long the last database load took, or `null` if none has been timed.
+  ///
+  /// The archive and the machine are much the same from one refresh to the
+  /// next, so this is the honest answer to "how long will the app be shut?" —
+  /// far better than a guessed range, and the app says as much when it has
+  /// nothing to go on.
+  Duration? get lastLoadDuration => _lastLoadDuration;
+  Duration? _lastLoadDuration;
+
   /// Units per second through the current stage: bytes while downloading,
   /// companies while loading. `null` until there is enough to average over.
   double? get ratePerSecond {
@@ -217,6 +226,7 @@ class IngestViewModel extends ChangeNotifier {
 
     final run = await _database.lastIngest();
     if (run == null) return _setState(const IngestRequired());
+    _lastLoadDuration = _durationOf(run);
 
     await _tickerDirectoryRepo.load();
     _setState(
@@ -341,6 +351,13 @@ class IngestViewModel extends ChangeNotifier {
     }
   }
 
+  /// How long [run] spent loading, or `null` for one recorded before that was
+  /// measured.
+  Duration? _durationOf(IngestRunRow run) {
+    final seconds = run.loadSeconds;
+    return seconds == null ? null : Duration(seconds: seconds);
+  }
+
   /// Clears the throughput measurement so a new run is not averaged against
   /// the last one.
   void _beginRun() {
@@ -354,6 +371,7 @@ class IngestViewModel extends ChangeNotifier {
     await _tickerDirectoryRepo.load();
     final run = await _database.lastIngest();
     _loadedArchiveDate = run?.archiveLastModified;
+    _lastLoadDuration = run == null ? null : _durationOf(run);
     _staged = null;
     // Usually nothing is left on offer, the archive just loaded being the
     // newest there is. Not always: a download staged days ago loads data SEC

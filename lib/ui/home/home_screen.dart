@@ -1,5 +1,6 @@
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/browse/widgets/sector_filter_row.dart';
 import 'package:pickstock/ui/browse/widgets/ticker_filter_bar.dart';
@@ -7,6 +8,8 @@ import 'package:pickstock/ui/browse/widgets/ticker_grid.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/snapshot_body.dart';
+import 'package:pickstock/ui/snapshot/widgets/source_pane.dart';
+import 'package:pickstock/ui/snapshot/widgets/source_sync.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_sync.dart';
 import 'package:pickstock/ui/widgets/brand_mark.dart';
 import 'package:pickstock/ui/report/widgets/jobs_button.dart';
@@ -43,7 +46,7 @@ class HomeScreen extends StatelessWidget {
       ],
       // Side by side where there is room: picking a company then swaps the
       // report beside the list instead of navigating away from it.
-      child: const WatchlistSync(child: _Body()),
+      child: const WatchlistSync(child: SourceSync(child: _Body())),
     );
   }
 }
@@ -86,23 +89,44 @@ class _Body extends StatelessWidget {
       context.showsMasterDetail ? const _MasterDetail() : const TickerGrid();
 }
 
-/// The list beside the selected company's report.
+/// The list beside the selected company's report, and a source beside both.
 class _MasterDetail extends StatelessWidget {
   const _MasterDetail();
 
   @override
   Widget build(BuildContext context) {
-    // Draggable divider: widening the list fits more tile columns without
-    // giving up the report beside it.
-    return const ResizablePanel.horizontal(
+    // Read, not watched: the width is only needed to seed the divider, and
+    // recording a drag must not rebuild the panel that reported it.
+    final viewModel = context.read<AppViewModel>();
+    // Watched: a headline opening a source adds a pane.
+    final source = context.select<AppViewModel, String?>(
+      (model) => model.openedSource,
+    );
+
+    // Draggable dividers: widening the list fits more tile columns without
+    // giving up the report beside it. Where the first was left is remembered,
+    // so the split survives a relaunch.
+    return ResizablePanel.horizontal(
       children: [
         ResizablePane(
-          initialSize: ThemeRepo.masterListWidth,
+          initialSize: viewModel.masterPaneWidth,
           minSize: ThemeRepo.masterListMinWidth,
           maxSize: ThemeRepo.masterListMaxWidth,
-          child: TickerGrid(),
+          // On release rather than on every frame of the drag: one write at
+          // the end of a gesture instead of sixty a second.
+          onSizeChangeEnd: viewModel.rememberMasterPaneWidth,
+          child: const TickerGrid(),
         ),
-        ResizablePane.flex(child: SnapshotBody()),
+        const ResizablePane.flex(child: SnapshotBody()),
+        // Only while a source is open. Not remembered like the list's width:
+        // the pane comes and goes with a headline, and a width saved for
+        // something that is usually closed is a width nobody chose.
+        if (source != null)
+          ResizablePane(
+            initialSize: ThemeRepo.sourcePaneWidth,
+            minSize: ThemeRepo.sourcePaneMinWidth,
+            child: SourcePane(url: source),
+          ),
       ],
     );
   }

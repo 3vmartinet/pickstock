@@ -13,6 +13,17 @@ const Size _desktopSize = Size(1440, 1000);
 /// a test must not leave pending.
 const Duration _animationStart = Duration(milliseconds: 50);
 
+/// Presses "Finish update" and says yes to the confirmation behind it.
+///
+/// The database step shuts the app for minutes, so it asks first.
+Future<void> confirmFinishUpdate(WidgetTester tester) async {
+  await tester.tap(find.text('Finish update'));
+  await tester.pumpAndSettle();
+  expect(find.text('Refresh the database now?'), findsOneWidget);
+  await tester.tap(find.text('Refresh now'));
+  await tester.pump();
+}
+
 void main() {
   late AppDatabase database;
 
@@ -148,10 +159,9 @@ void main() {
     expect(find.text('Finish update'), findsOneWidget);
     expect(find.text('PickStock'), findsOneWidget);
 
-    await tester.tap(find.text('Finish update'));
+    await confirmFinishUpdate(tester);
     // Enough for flutter_animate's start timers; the panel's pulse repeats
     // forever, so settling is not an option.
-    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     // Now the app has to go: the tables are cleared before they are
@@ -173,8 +183,7 @@ void main() {
     await tester.pump(_animationStart);
     ingest.finishDownload.complete();
     await tester.pump();
-    await tester.tap(find.text('Finish update'));
-    await tester.pump();
+    await confirmFinishUpdate(tester);
     await tester.pump(_animationStart);
 
     ingest.finishLoad.complete();

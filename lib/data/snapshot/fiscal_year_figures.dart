@@ -22,6 +22,7 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     this.totalAssets,
     this.shareholdersEquity,
     this.interestExpense,
+    this.profitLoss,
   });
 
   final int fiscalYear;
@@ -62,6 +63,31 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
   /// the interest concepts, which for a company with no debt is the usual
   /// case — see `XbrlMetric.interestExpense` for why the absence is read.
   final double? interestExpense;
+
+  /// Profit for the whole group, where [netIncome] is the parent's share of
+  /// it. `null` for a filer with nothing outside the parent.
+  final double? profitLoss;
+
+  /// How much of the group the listed shares own, as a fraction, from the two
+  /// profit figures. `1` where the filing gives no reason to think otherwise.
+  ///
+  /// Group figures — cash flow, operating profit — have to be brought down to
+  /// this before they are divided by a share count that only counts the
+  /// parent's shares. Only applied where the split is unambiguous: both
+  /// figures present, the same sign, and the parent's no larger than the
+  /// group's. Anything else is used as filed rather than scaled by a ratio
+  /// that cannot be read.
+  double get parentStake {
+    final group = profitLoss;
+    final parent = netIncome;
+    if (group == null || parent == null || group == 0) return 1;
+    final stake = parent / group;
+    return stake > 0 && stake < 1 ? stake : 1;
+  }
+
+  /// Whether [parentStake] is doing anything, so the report can say that a
+  /// figure was brought down before it was valued.
+  bool get hasOutsideOwners => parentStake < 1;
 
   /// Operating profit as a percentage of revenue. The line that says whether
   /// growth is being bought or earned.
@@ -158,5 +184,6 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     totalAssets,
     shareholdersEquity,
     interestExpense,
+    profitLoss,
   ];
 }

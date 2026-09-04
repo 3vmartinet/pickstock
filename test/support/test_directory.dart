@@ -22,6 +22,10 @@ import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
+import 'package:pickstock/data/research/company_event.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
+import 'package:pickstock/repo/research/research_note_repo.dart';
+import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
@@ -45,7 +49,9 @@ const List<(String symbol, String cik, String name)> testTickers = [
 /// database seeded with [testTickers].
 ///
 /// [withIngest] false leaves the database unpopulated, which is what the app
-/// looks like before the bulk download has run.
+/// looks like before the bulk download has run. [lastLoadDuration] is how
+/// long the seeded ingest's database step took, which is what the refresh
+/// confirmation quotes back.
 /// Fiscal years for the fixture's filers, enough to rank them by growth over
 /// several windows. Values are in millions of dollars, scaled below, so every
 /// filer clears [minimumGrowthBase] and is actually rankable.
@@ -211,6 +217,78 @@ class FakeBulkIngestRepo extends BulkIngestRepo {
   }
 }
 
+/// Search that never reaches the network. Unconfigured by default, which is
+/// what a build with no Ollama key looks like — and what keeps the header's
+/// news button out of every test that is not about it.
+class FakeWebSearchRepo implements WebSearchRepo {
+  FakeWebSearchRepo({this.isConfigured = false});
+
+  @override
+  bool isConfigured;
+
+  @override
+  Future<List<SearchResult>> search(
+    String query, {
+    int maxResults = defaultSearchResults,
+  }) async => const [];
+
+  @override
+  Future<SearchResult> fetch(String url) async =>
+      const SearchResult(title: '', url: '', content: '');
+}
+
+/// A local model stood in for, so a test can have it answer, fail or hang
+/// without one running.
+class FakeOllamaRepo extends OllamaRepo {
+  FakeOllamaRepo({required super.search, this.events = const [], this.failure});
+
+  /// What the next read-around returns.
+  List<CompanyEvent> events;
+
+  /// What it throws instead of answering.
+  ResearchFailure? failure;
+
+  /// What the next question is answered with.
+  ResearchAnswer answer = const ResearchAnswer(text: '', sources: []);
+
+  /// Every question asked, so a test can prove each insight sends its own.
+  final List<String> questions = [];
+
+  /// Held open by a test that wants to look at the header mid-search.
+  Completer<void>? finishEvents;
+
+  /// Held open by a test that wants to look at an insight mid-search.
+  Completer<void>? finishAsk;
+
+  /// How many times it was asked, so a test can prove a second press asks
+  /// again rather than serving the first answer.
+  int asked = 0;
+
+  @override
+  Future<bool> get isAvailable async => true;
+
+  @override
+  Future<ResearchAnswer> ask(String question, {String? context}) async {
+    questions.add(question);
+    await finishAsk?.future;
+    final thrown = failure;
+    if (thrown != null) throw ResearchException(thrown);
+    return answer;
+  }
+
+  @override
+  Future<List<CompanyEvent>> eventsFor({
+    required String ticker,
+    required String name,
+  }) async {
+    asked++;
+    await finishEvents?.future;
+    final thrown = failure;
+    if (thrown != null) throw ResearchException(thrown);
+    return events;
+  }
+}
+
 /// A quote source for tests: unconfigured by default, so the price is typed in
 /// exactly as it is in a build with no API key.
 class FakeQuoteRepo implements QuoteRepo {
@@ -253,7 +331,10 @@ Future<AppDatabase> registerTestDependencies({
   bool withIngest = true,
   bool withFinancials = false,
   bool withUpdateAvailable = false,
+  Duration? lastLoadDuration,
   BulkIngestRepo? bulkIngestRepo,
+  OllamaRepo? researchRepo,
+  ResearchNoteRepo? researchNoteRepo,
   QuoteRepo? quoteRepo,
   SettingsRepo? settingsRepo,
   MarketRatesRepo? marketRatesRepo,
@@ -270,6 +351,7 @@ Future<AppDatabase> registerTestDependencies({
     await database.recordIngest(
       testTickers.length,
       archiveLastModified: testLoadedArchiveDate,
+      loadDuration: lastLoadDuration,
     );
   }
 
@@ -322,6 +404,14 @@ Future<AppDatabase> registerTestDependencies({
     ..registerSingleton<TickerDirectoryRepo>(directory)
     ..registerLazySingleton<BulkIngestRepo>(
       () => bulkIngestRepo ?? _fakeIngestRepo(withUpdate: withUpdateAvailable),
+    )
+    // In memory by default: a test about the report has no interest in what a
+    // model said last time, and one that is says so by passing its own.
+    ..registerSingleton<ResearchNoteRepo>(
+      researchNoteRepo ?? MemoryResearchNoteRepo(),
+    )
+    ..registerLazySingleton<OllamaRepo>(
+      () => researchRepo ?? FakeOllamaRepo(search: FakeWebSearchRepo()),
     )
     ..registerLazySingleton<SecRepo>(() => const MockSecRepo())
     // The real implementation, against the in-memory database: remembering a

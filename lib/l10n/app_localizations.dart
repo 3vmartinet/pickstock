@@ -298,11 +298,17 @@ abstract class AppLocalizations {
   /// **'SEC rebuilt the archive on {date}. Download it to refresh your figures.'**
   String updateAvailableOn(DateTime date);
 
-  /// No description provided for @dataAsOf.
+  /// No description provided for @dataAsOfLabel.
   ///
   /// In en, this message translates to:
-  /// **'SEC data · {date}'**
-  String dataAsOf(DateTime date);
+  /// **'SEC data'**
+  String get dataAsOfLabel;
+
+  /// No description provided for @dataAsOfDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String dataAsOfDate(DateTime date);
 
   /// No description provided for @dataAsOfHint.
   ///
@@ -346,6 +352,42 @@ abstract class AppLocalizations {
   /// **'Finish update'**
   String get updateReady;
 
+  /// No description provided for @updateConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh the database now?'**
+  String get updateConfirmTitle;
+
+  /// No description provided for @updateConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every figure is replaced from the archive that has been downloaded, so PickStock cannot be used until it finishes. Leave the app open while it runs.'**
+  String get updateConfirmBody;
+
+  /// No description provided for @updateConfirmLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last time this took {minutes, plural, =1{about a minute} other{about {minutes} minutes}}.'**
+  String updateConfirmLast(int minutes);
+
+  /// No description provided for @updateConfirmUntimed.
+  ///
+  /// In en, this message translates to:
+  /// **'It usually takes a few minutes. Nothing has been timed on this machine yet, so that is a guess rather than a measurement.'**
+  String get updateConfirmUntimed;
+
+  /// No description provided for @updateConfirmStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh now'**
+  String get updateConfirmStart;
+
+  /// No description provided for @updateConfirmCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get updateConfirmCancel;
+
   /// No description provided for @updateReadyHint.
   ///
   /// In en, this message translates to:
@@ -369,6 +411,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This takes a few minutes. Leave the app open.'**
   String get ingestWarnLeave;
+
+  /// No description provided for @insightBusinessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What the filings do not say'**
+  String get insightBusinessTitle;
+
+  /// No description provided for @insightBusinessInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'EDGAR publishes no description of a business anywhere — the industry title above is the closest thing on file. A model on this machine can read around and say what this company actually sells, and what has been moving its revenue.'**
+  String get insightBusinessInvitation;
+
+  /// No description provided for @insightBusinessAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the business'**
+  String get insightBusinessAction;
+
+  /// No description provided for @insightInputsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Do these figures mean what they appear to?'**
+  String get insightInputsTitle;
+
+  /// No description provided for @insightInputsInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'The band above is struck from the filing as tagged. A figure can be read correctly and still not mean what it looks like: cash that belongs to outside owners, a profit that is a tax release, a share count from before a split. A model can read the filing and say whether any of that applies here.'**
+  String get insightInputsInvitation;
+
+  /// No description provided for @insightInputsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Check against the filing'**
+  String get insightInputsAction;
+
+  /// No description provided for @insightExpectationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What anyone else expects'**
+  String get insightExpectationsTitle;
+
+  /// No description provided for @insightExpectationsInvitation.
+  ///
+  /// In en, this message translates to:
+  /// **'The rate above is what this price asks of the company. Whether the company itself expects it is not in the filings — that is guidance, an earnings call, a broker\'s note. A model can find what has been said and set it against the arithmetic.'**
+  String get insightExpectationsInvitation;
+
+  /// No description provided for @insightExpectationsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Find what is expected'**
+  String get insightExpectationsAction;
+
+  /// No description provided for @agoJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get agoJustNow;
+
+  /// No description provided for @agoMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 min ago} other{{count} min ago}}'**
+  String agoMinutes(int count);
+
+  /// No description provided for @agoHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{an hour ago} other{{count} hours ago}}'**
+  String agoHours(int count);
+
+  /// No description provided for @agoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{yesterday} other{{count} days ago}}'**
+  String agoDays(int count);
+
+  /// No description provided for @agoMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{last month} other{{count} months ago}}'**
+  String agoMonths(int count);
+
+  /// No description provided for @agoYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{last year} other{{count} years ago}}'**
+  String agoYears(int count);
+
+  /// No description provided for @noteGeneratedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Read on {when}. Press to read it again — the web moves, and this did not.'**
+  String noteGeneratedOn(DateTime when);
+
+  /// No description provided for @noteRegenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Read it again'**
+  String get noteRegenerate;
+
+  /// No description provided for @insightReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading…'**
+  String get insightReading;
+
+  /// No description provided for @insightReadingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching the web and reading what it finds. This takes about a minute.'**
+  String get insightReadingHint;
+
+  /// No description provided for @insightSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Read from'**
+  String get insightSources;
+
+  /// No description provided for @insightCaveat.
+  ///
+  /// In en, this message translates to:
+  /// **'Written by a model from pages it found, not from the filings. Check anything you would act on.'**
+  String get insightCaveat;
+
+  /// No description provided for @eventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent developments'**
+  String get eventsTitle;
+
+  /// No description provided for @sourceOpenExternally.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in your browser. This pane closes, so the page is not open twice.'**
+  String get sourceOpenExternally;
+
+  /// No description provided for @sourceClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close this pane'**
+  String get sourceClose;
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This page cannot be shown here. Use the button above to open it in your browser.'**
+  String get sourceUnavailable;
+
+  /// No description provided for @eventsFetch.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch latest news'**
+  String get eventsFetch;
+
+  /// No description provided for @eventsFetchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A model on this machine searches the web and lists the three most recent developments worth an investor\'s attention. It takes about a minute.'**
+  String get eventsFetchHint;
+
+  /// No description provided for @eventsLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading…'**
+  String get eventsLoading;
+
+  /// No description provided for @eventsLoadingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching the web and reading what it finds. This takes about a minute.'**
+  String get eventsLoadingHint;
+
+  /// No description provided for @eventsDoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Read already. Open the company again to look afresh.'**
+  String get eventsDoneHint;
+
+  /// No description provided for @eventsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recent turned up.'**
+  String get eventsEmpty;
+
+  /// No description provided for @eventsOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{caption} Opens {url} in your browser.'**
+  String eventsOpenHint(String caption, String url);
+
+  /// No description provided for @eventsFailedNoKey.
+  ///
+  /// In en, this message translates to:
+  /// **'No Ollama key is built in, so there is nothing to search with. Copy env.example.json to env.json and paste one.'**
+  String get eventsFailedNoKey;
+
+  /// No description provided for @eventsFailedNoServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is answering on this machine. Start Ollama and try again.'**
+  String get eventsFailedNoServer;
+
+  /// No description provided for @eventsFailedNoModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ollama is running but has not pulled the model this build asks for.'**
+  String get eventsFailedNoModel;
+
+  /// No description provided for @eventsFailedOther.
+  ///
+  /// In en, this message translates to:
+  /// **'The search did not finish. Try again.'**
+  String get eventsFailedOther;
 
   /// No description provided for @jobsTooltip.
   ///
@@ -1961,6 +2219,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.'**
   String get napkinCaveatEarnings;
+
+  /// No description provided for @napkinCaveatOutsideOwners.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {share} of this business belongs to the listed shares; the rest is held by owners outside the company. The cash above is the whole group\'s brought down to that share, because the share count beside it counts the listed shares alone.'**
+  String napkinCaveatOutsideOwners(String share);
 
   /// No description provided for @napkinCaveatShareCount.
   ///

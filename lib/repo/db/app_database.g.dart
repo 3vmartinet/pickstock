@@ -817,6 +817,17 @@ class $FiscalYearsTable extends FiscalYears
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _profitLossMeta = const VerificationMeta(
+    'profitLoss',
+  );
+  @override
+  late final GeneratedColumn<double> profitLoss = GeneratedColumn<double>(
+    'profit_loss',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cik,
@@ -833,6 +844,7 @@ class $FiscalYearsTable extends FiscalYears
     totalAssets,
     shareholdersEquity,
     interestExpense,
+    profitLoss,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -958,6 +970,12 @@ class $FiscalYearsTable extends FiscalYears
         ),
       );
     }
+    if (data.containsKey('profit_loss')) {
+      context.handle(
+        _profitLossMeta,
+        profitLoss.isAcceptableOrUnknown(data['profit_loss']!, _profitLossMeta),
+      );
+    }
     return context;
   }
 
@@ -1023,6 +1041,10 @@ class $FiscalYearsTable extends FiscalYears
         DriftSqlType.double,
         data['${effectivePrefix}interest_expense'],
       ),
+      profitLoss: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}profit_loss'],
+      ),
     );
   }
 
@@ -1051,6 +1073,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
   /// company with no debt line is told from one whose debt is filed under a
   /// concept the parser cannot see.
   final double? interestExpense;
+
+  /// Profit for the whole group, where [netIncome] is the parent's share of
+  /// it. The two together say how much of the group the listed shares own,
+  /// which is what a group cash flow has to be brought down to before it is
+  /// divided by the parent's share count.
+  final double? profitLoss;
   const FiscalYearRow({
     required this.cik,
     required this.fiscalYear,
@@ -1066,6 +1094,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     this.totalAssets,
     this.shareholdersEquity,
     this.interestExpense,
+    this.profitLoss,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1110,6 +1139,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     if (!nullToAbsent || interestExpense != null) {
       map['interest_expense'] = Variable<double>(interestExpense);
     }
+    if (!nullToAbsent || profitLoss != null) {
+      map['profit_loss'] = Variable<double>(profitLoss);
+    }
     return map;
   }
 
@@ -1151,6 +1183,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       interestExpense: interestExpense == null && nullToAbsent
           ? const Value.absent()
           : Value(interestExpense),
+      profitLoss: profitLoss == null && nullToAbsent
+          ? const Value.absent()
+          : Value(profitLoss),
     );
   }
 
@@ -1182,6 +1217,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
         json['shareholdersEquity'],
       ),
       interestExpense: serializer.fromJson<double?>(json['interestExpense']),
+      profitLoss: serializer.fromJson<double?>(json['profitLoss']),
     );
   }
   @override
@@ -1204,6 +1240,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       'totalAssets': serializer.toJson<double?>(totalAssets),
       'shareholdersEquity': serializer.toJson<double?>(shareholdersEquity),
       'interestExpense': serializer.toJson<double?>(interestExpense),
+      'profitLoss': serializer.toJson<double?>(profitLoss),
     };
   }
 
@@ -1222,6 +1259,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     Value<double?> totalAssets = const Value.absent(),
     Value<double?> shareholdersEquity = const Value.absent(),
     Value<double?> interestExpense = const Value.absent(),
+    Value<double?> profitLoss = const Value.absent(),
   }) => FiscalYearRow(
     cik: cik ?? this.cik,
     fiscalYear: fiscalYear ?? this.fiscalYear,
@@ -1251,6 +1289,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     interestExpense: interestExpense.present
         ? interestExpense.value
         : this.interestExpense,
+    profitLoss: profitLoss.present ? profitLoss.value : this.profitLoss,
   );
   FiscalYearRow copyWithCompanion(FiscalYearsCompanion data) {
     return FiscalYearRow(
@@ -1286,6 +1325,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       interestExpense: data.interestExpense.present
           ? data.interestExpense.value
           : this.interestExpense,
+      profitLoss: data.profitLoss.present
+          ? data.profitLoss.value
+          : this.profitLoss,
     );
   }
 
@@ -1305,7 +1347,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ..write('depreciationAmortisation: $depreciationAmortisation, ')
           ..write('totalAssets: $totalAssets, ')
           ..write('shareholdersEquity: $shareholdersEquity, ')
-          ..write('interestExpense: $interestExpense')
+          ..write('interestExpense: $interestExpense, ')
+          ..write('profitLoss: $profitLoss')
           ..write(')'))
         .toString();
   }
@@ -1326,6 +1369,7 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     totalAssets,
     shareholdersEquity,
     interestExpense,
+    profitLoss,
   );
   @override
   bool operator ==(Object other) =>
@@ -1344,7 +1388,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           other.depreciationAmortisation == this.depreciationAmortisation &&
           other.totalAssets == this.totalAssets &&
           other.shareholdersEquity == this.shareholdersEquity &&
-          other.interestExpense == this.interestExpense);
+          other.interestExpense == this.interestExpense &&
+          other.profitLoss == this.profitLoss);
 }
 
 class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
@@ -1362,6 +1407,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
   final Value<double?> totalAssets;
   final Value<double?> shareholdersEquity;
   final Value<double?> interestExpense;
+  final Value<double?> profitLoss;
   final Value<int> rowid;
   const FiscalYearsCompanion({
     this.cik = const Value.absent(),
@@ -1378,6 +1424,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.totalAssets = const Value.absent(),
     this.shareholdersEquity = const Value.absent(),
     this.interestExpense = const Value.absent(),
+    this.profitLoss = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FiscalYearsCompanion.insert({
@@ -1395,6 +1442,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.totalAssets = const Value.absent(),
     this.shareholdersEquity = const Value.absent(),
     this.interestExpense = const Value.absent(),
+    this.profitLoss = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        fiscalYear = Value(fiscalYear);
@@ -1413,6 +1461,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Expression<double>? totalAssets,
     Expression<double>? shareholdersEquity,
     Expression<double>? interestExpense,
+    Expression<double>? profitLoss,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1431,6 +1480,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       if (totalAssets != null) 'total_assets': totalAssets,
       if (shareholdersEquity != null) 'shareholders_equity': shareholdersEquity,
       if (interestExpense != null) 'interest_expense': interestExpense,
+      if (profitLoss != null) 'profit_loss': profitLoss,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1450,6 +1500,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Value<double?>? totalAssets,
     Value<double?>? shareholdersEquity,
     Value<double?>? interestExpense,
+    Value<double?>? profitLoss,
     Value<int>? rowid,
   }) {
     return FiscalYearsCompanion(
@@ -1468,6 +1519,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       totalAssets: totalAssets ?? this.totalAssets,
       shareholdersEquity: shareholdersEquity ?? this.shareholdersEquity,
       interestExpense: interestExpense ?? this.interestExpense,
+      profitLoss: profitLoss ?? this.profitLoss,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1519,6 +1571,9 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     if (interestExpense.present) {
       map['interest_expense'] = Variable<double>(interestExpense.value);
     }
+    if (profitLoss.present) {
+      map['profit_loss'] = Variable<double>(profitLoss.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1542,6 +1597,7 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
           ..write('totalAssets: $totalAssets, ')
           ..write('shareholdersEquity: $shareholdersEquity, ')
           ..write('interestExpense: $interestExpense, ')
+          ..write('profitLoss: $profitLoss, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2197,6 +2253,17 @@ class $IngestRunsTable extends IngestRuns
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _loadSecondsMeta = const VerificationMeta(
+    'loadSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> loadSeconds = GeneratedColumn<int>(
+    'load_seconds',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2204,6 +2271,7 @@ class $IngestRunsTable extends IngestRuns
     companyCount,
     extractorVersion,
     archiveLastModified,
+    loadSeconds,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2262,6 +2330,15 @@ class $IngestRunsTable extends IngestRuns
         ),
       );
     }
+    if (data.containsKey('load_seconds')) {
+      context.handle(
+        _loadSecondsMeta,
+        loadSeconds.isAcceptableOrUnknown(
+          data['load_seconds']!,
+          _loadSecondsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2291,6 +2368,10 @@ class $IngestRunsTable extends IngestRuns
         DriftSqlType.dateTime,
         data['${effectivePrefix}archive_last_modified'],
       ),
+      loadSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}load_seconds'],
+      ),
     );
   }
 
@@ -2310,12 +2391,21 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
   /// `Last-Modified` header. Compared against a HEAD request to tell whether a
   /// newer archive is out.
   final DateTime? archiveLastModified;
+
+  /// How long the database half of this ingest took.
+  ///
+  /// Kept so the next refresh can say how long it will be before the app is
+  /// usable again: the archive and the machine are much the same each time, so
+  /// last time is a far better answer than a guessed range. Null for a run
+  /// recorded before this was measured.
+  final int? loadSeconds;
   const IngestRunRow({
     required this.id,
     required this.completedAt,
     required this.companyCount,
     required this.extractorVersion,
     this.archiveLastModified,
+    this.loadSeconds,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2326,6 +2416,9 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
     map['extractor_version'] = Variable<int>(extractorVersion);
     if (!nullToAbsent || archiveLastModified != null) {
       map['archive_last_modified'] = Variable<DateTime>(archiveLastModified);
+    }
+    if (!nullToAbsent || loadSeconds != null) {
+      map['load_seconds'] = Variable<int>(loadSeconds);
     }
     return map;
   }
@@ -2339,6 +2432,9 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
       archiveLastModified: archiveLastModified == null && nullToAbsent
           ? const Value.absent()
           : Value(archiveLastModified),
+      loadSeconds: loadSeconds == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loadSeconds),
     );
   }
 
@@ -2355,6 +2451,7 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
       archiveLastModified: serializer.fromJson<DateTime?>(
         json['archiveLastModified'],
       ),
+      loadSeconds: serializer.fromJson<int?>(json['loadSeconds']),
     );
   }
   @override
@@ -2366,6 +2463,7 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
       'companyCount': serializer.toJson<int>(companyCount),
       'extractorVersion': serializer.toJson<int>(extractorVersion),
       'archiveLastModified': serializer.toJson<DateTime?>(archiveLastModified),
+      'loadSeconds': serializer.toJson<int?>(loadSeconds),
     };
   }
 
@@ -2375,6 +2473,7 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
     int? companyCount,
     int? extractorVersion,
     Value<DateTime?> archiveLastModified = const Value.absent(),
+    Value<int?> loadSeconds = const Value.absent(),
   }) => IngestRunRow(
     id: id ?? this.id,
     completedAt: completedAt ?? this.completedAt,
@@ -2383,6 +2482,7 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
     archiveLastModified: archiveLastModified.present
         ? archiveLastModified.value
         : this.archiveLastModified,
+    loadSeconds: loadSeconds.present ? loadSeconds.value : this.loadSeconds,
   );
   IngestRunRow copyWithCompanion(IngestRunsCompanion data) {
     return IngestRunRow(
@@ -2399,6 +2499,9 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
       archiveLastModified: data.archiveLastModified.present
           ? data.archiveLastModified.value
           : this.archiveLastModified,
+      loadSeconds: data.loadSeconds.present
+          ? data.loadSeconds.value
+          : this.loadSeconds,
     );
   }
 
@@ -2409,7 +2512,8 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
           ..write('completedAt: $completedAt, ')
           ..write('companyCount: $companyCount, ')
           ..write('extractorVersion: $extractorVersion, ')
-          ..write('archiveLastModified: $archiveLastModified')
+          ..write('archiveLastModified: $archiveLastModified, ')
+          ..write('loadSeconds: $loadSeconds')
           ..write(')'))
         .toString();
   }
@@ -2421,6 +2525,7 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
     companyCount,
     extractorVersion,
     archiveLastModified,
+    loadSeconds,
   );
   @override
   bool operator ==(Object other) =>
@@ -2430,7 +2535,8 @@ class IngestRunRow extends DataClass implements Insertable<IngestRunRow> {
           other.completedAt == this.completedAt &&
           other.companyCount == this.companyCount &&
           other.extractorVersion == this.extractorVersion &&
-          other.archiveLastModified == this.archiveLastModified);
+          other.archiveLastModified == this.archiveLastModified &&
+          other.loadSeconds == this.loadSeconds);
 }
 
 class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
@@ -2439,12 +2545,14 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
   final Value<int> companyCount;
   final Value<int> extractorVersion;
   final Value<DateTime?> archiveLastModified;
+  final Value<int?> loadSeconds;
   const IngestRunsCompanion({
     this.id = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.companyCount = const Value.absent(),
     this.extractorVersion = const Value.absent(),
     this.archiveLastModified = const Value.absent(),
+    this.loadSeconds = const Value.absent(),
   });
   IngestRunsCompanion.insert({
     this.id = const Value.absent(),
@@ -2452,6 +2560,7 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
     required int companyCount,
     required int extractorVersion,
     this.archiveLastModified = const Value.absent(),
+    this.loadSeconds = const Value.absent(),
   }) : completedAt = Value(completedAt),
        companyCount = Value(companyCount),
        extractorVersion = Value(extractorVersion);
@@ -2461,6 +2570,7 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
     Expression<int>? companyCount,
     Expression<int>? extractorVersion,
     Expression<DateTime>? archiveLastModified,
+    Expression<int>? loadSeconds,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2469,6 +2579,7 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
       if (extractorVersion != null) 'extractor_version': extractorVersion,
       if (archiveLastModified != null)
         'archive_last_modified': archiveLastModified,
+      if (loadSeconds != null) 'load_seconds': loadSeconds,
     });
   }
 
@@ -2478,6 +2589,7 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
     Value<int>? companyCount,
     Value<int>? extractorVersion,
     Value<DateTime?>? archiveLastModified,
+    Value<int?>? loadSeconds,
   }) {
     return IngestRunsCompanion(
       id: id ?? this.id,
@@ -2485,6 +2597,7 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
       companyCount: companyCount ?? this.companyCount,
       extractorVersion: extractorVersion ?? this.extractorVersion,
       archiveLastModified: archiveLastModified ?? this.archiveLastModified,
+      loadSeconds: loadSeconds ?? this.loadSeconds,
     );
   }
 
@@ -2508,6 +2621,9 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
         archiveLastModified.value,
       );
     }
+    if (loadSeconds.present) {
+      map['load_seconds'] = Variable<int>(loadSeconds.value);
+    }
     return map;
   }
 
@@ -2518,7 +2634,8 @@ class IngestRunsCompanion extends UpdateCompanion<IngestRunRow> {
           ..write('completedAt: $completedAt, ')
           ..write('companyCount: $companyCount, ')
           ..write('extractorVersion: $extractorVersion, ')
-          ..write('archiveLastModified: $archiveLastModified')
+          ..write('archiveLastModified: $archiveLastModified, ')
+          ..write('loadSeconds: $loadSeconds')
           ..write(')'))
         .toString();
   }
@@ -3696,6 +3813,739 @@ class SettingsCompanion extends UpdateCompanion<SettingRow> {
   }
 }
 
+class $ResearchNotesTable extends ResearchNotes
+    with TableInfo<$ResearchNotesTable, ResearchNoteRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ResearchNotesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cikMeta = const VerificationMeta('cik');
+  @override
+  late final GeneratedColumn<String> cik = GeneratedColumn<String>(
+    'cik',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generatedAtMeta = const VerificationMeta(
+    'generatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> generatedAt = GeneratedColumn<DateTime>(
+    'generated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [cik, kind, generatedAt, body];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'research_notes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ResearchNoteRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cik')) {
+      context.handle(
+        _cikMeta,
+        cik.isAcceptableOrUnknown(data['cik']!, _cikMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cikMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('generated_at')) {
+      context.handle(
+        _generatedAtMeta,
+        generatedAt.isAcceptableOrUnknown(
+          data['generated_at']!,
+          _generatedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_generatedAtMeta);
+    }
+    if (data.containsKey('body')) {
+      context.handle(
+        _bodyMeta,
+        body.isAcceptableOrUnknown(data['body']!, _bodyMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cik, kind};
+  @override
+  ResearchNoteRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ResearchNoteRow(
+      cik: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cik'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      generatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}generated_at'],
+      )!,
+      body: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body'],
+      ),
+    );
+  }
+
+  @override
+  $ResearchNotesTable createAlias(String alias) {
+    return $ResearchNotesTable(attachedDatabase, alias);
+  }
+}
+
+class ResearchNoteRow extends DataClass implements Insertable<ResearchNoteRow> {
+  final String cik;
+
+  /// Which question, by the enum's own name — the news, or one of the three
+  /// tab insights.
+  final String kind;
+  final DateTime generatedAt;
+
+  /// The prose, where the question had any. Null for the news, which is
+  /// nothing but its lines.
+  final String? body;
+  const ResearchNoteRow({
+    required this.cik,
+    required this.kind,
+    required this.generatedAt,
+    this.body,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cik'] = Variable<String>(cik);
+    map['kind'] = Variable<String>(kind);
+    map['generated_at'] = Variable<DateTime>(generatedAt);
+    if (!nullToAbsent || body != null) {
+      map['body'] = Variable<String>(body);
+    }
+    return map;
+  }
+
+  ResearchNotesCompanion toCompanion(bool nullToAbsent) {
+    return ResearchNotesCompanion(
+      cik: Value(cik),
+      kind: Value(kind),
+      generatedAt: Value(generatedAt),
+      body: body == null && nullToAbsent ? const Value.absent() : Value(body),
+    );
+  }
+
+  factory ResearchNoteRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ResearchNoteRow(
+      cik: serializer.fromJson<String>(json['cik']),
+      kind: serializer.fromJson<String>(json['kind']),
+      generatedAt: serializer.fromJson<DateTime>(json['generatedAt']),
+      body: serializer.fromJson<String?>(json['body']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cik': serializer.toJson<String>(cik),
+      'kind': serializer.toJson<String>(kind),
+      'generatedAt': serializer.toJson<DateTime>(generatedAt),
+      'body': serializer.toJson<String?>(body),
+    };
+  }
+
+  ResearchNoteRow copyWith({
+    String? cik,
+    String? kind,
+    DateTime? generatedAt,
+    Value<String?> body = const Value.absent(),
+  }) => ResearchNoteRow(
+    cik: cik ?? this.cik,
+    kind: kind ?? this.kind,
+    generatedAt: generatedAt ?? this.generatedAt,
+    body: body.present ? body.value : this.body,
+  );
+  ResearchNoteRow copyWithCompanion(ResearchNotesCompanion data) {
+    return ResearchNoteRow(
+      cik: data.cik.present ? data.cik.value : this.cik,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      generatedAt: data.generatedAt.present
+          ? data.generatedAt.value
+          : this.generatedAt,
+      body: data.body.present ? data.body.value : this.body,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ResearchNoteRow(')
+          ..write('cik: $cik, ')
+          ..write('kind: $kind, ')
+          ..write('generatedAt: $generatedAt, ')
+          ..write('body: $body')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(cik, kind, generatedAt, body);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ResearchNoteRow &&
+          other.cik == this.cik &&
+          other.kind == this.kind &&
+          other.generatedAt == this.generatedAt &&
+          other.body == this.body);
+}
+
+class ResearchNotesCompanion extends UpdateCompanion<ResearchNoteRow> {
+  final Value<String> cik;
+  final Value<String> kind;
+  final Value<DateTime> generatedAt;
+  final Value<String?> body;
+  final Value<int> rowid;
+  const ResearchNotesCompanion({
+    this.cik = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.generatedAt = const Value.absent(),
+    this.body = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ResearchNotesCompanion.insert({
+    required String cik,
+    required String kind,
+    required DateTime generatedAt,
+    this.body = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cik = Value(cik),
+       kind = Value(kind),
+       generatedAt = Value(generatedAt);
+  static Insertable<ResearchNoteRow> custom({
+    Expression<String>? cik,
+    Expression<String>? kind,
+    Expression<DateTime>? generatedAt,
+    Expression<String>? body,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cik != null) 'cik': cik,
+      if (kind != null) 'kind': kind,
+      if (generatedAt != null) 'generated_at': generatedAt,
+      if (body != null) 'body': body,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ResearchNotesCompanion copyWith({
+    Value<String>? cik,
+    Value<String>? kind,
+    Value<DateTime>? generatedAt,
+    Value<String?>? body,
+    Value<int>? rowid,
+  }) {
+    return ResearchNotesCompanion(
+      cik: cik ?? this.cik,
+      kind: kind ?? this.kind,
+      generatedAt: generatedAt ?? this.generatedAt,
+      body: body ?? this.body,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cik.present) {
+      map['cik'] = Variable<String>(cik.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (generatedAt.present) {
+      map['generated_at'] = Variable<DateTime>(generatedAt.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ResearchNotesCompanion(')
+          ..write('cik: $cik, ')
+          ..write('kind: $kind, ')
+          ..write('generatedAt: $generatedAt, ')
+          ..write('body: $body, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ResearchNoteLinesTable extends ResearchNoteLines
+    with TableInfo<$ResearchNoteLinesTable, ResearchNoteLineRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ResearchNoteLinesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cikMeta = const VerificationMeta('cik');
+  @override
+  late final GeneratedColumn<String> cik = GeneratedColumn<String>(
+    'cik',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _happenedAtMeta = const VerificationMeta(
+    'happenedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> happenedAt = GeneratedColumn<DateTime>(
+    'happened_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cik,
+    kind,
+    position,
+    label,
+    url,
+    happenedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'research_note_lines';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ResearchNoteLineRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cik')) {
+      context.handle(
+        _cikMeta,
+        cik.isAcceptableOrUnknown(data['cik']!, _cikMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cikMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('url')) {
+      context.handle(
+        _urlMeta,
+        url.isAcceptableOrUnknown(data['url']!, _urlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_urlMeta);
+    }
+    if (data.containsKey('happened_at')) {
+      context.handle(
+        _happenedAtMeta,
+        happenedAt.isAcceptableOrUnknown(data['happened_at']!, _happenedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cik, kind, position};
+  @override
+  ResearchNoteLineRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ResearchNoteLineRow(
+      cik: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cik'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      url: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}url'],
+      )!,
+      happenedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}happened_at'],
+      ),
+    );
+  }
+
+  @override
+  $ResearchNoteLinesTable createAlias(String alias) {
+    return $ResearchNoteLinesTable(attachedDatabase, alias);
+  }
+}
+
+class ResearchNoteLineRow extends DataClass
+    implements Insertable<ResearchNoteLineRow> {
+  final String cik;
+  final String kind;
+
+  /// Kept so the order the model gave them in survives the round trip.
+  final int position;
+  final String label;
+  final String url;
+
+  /// When the development happened, for the news. Null for a cited page.
+  final DateTime? happenedAt;
+  const ResearchNoteLineRow({
+    required this.cik,
+    required this.kind,
+    required this.position,
+    required this.label,
+    required this.url,
+    this.happenedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cik'] = Variable<String>(cik);
+    map['kind'] = Variable<String>(kind);
+    map['position'] = Variable<int>(position);
+    map['label'] = Variable<String>(label);
+    map['url'] = Variable<String>(url);
+    if (!nullToAbsent || happenedAt != null) {
+      map['happened_at'] = Variable<DateTime>(happenedAt);
+    }
+    return map;
+  }
+
+  ResearchNoteLinesCompanion toCompanion(bool nullToAbsent) {
+    return ResearchNoteLinesCompanion(
+      cik: Value(cik),
+      kind: Value(kind),
+      position: Value(position),
+      label: Value(label),
+      url: Value(url),
+      happenedAt: happenedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(happenedAt),
+    );
+  }
+
+  factory ResearchNoteLineRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ResearchNoteLineRow(
+      cik: serializer.fromJson<String>(json['cik']),
+      kind: serializer.fromJson<String>(json['kind']),
+      position: serializer.fromJson<int>(json['position']),
+      label: serializer.fromJson<String>(json['label']),
+      url: serializer.fromJson<String>(json['url']),
+      happenedAt: serializer.fromJson<DateTime?>(json['happenedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cik': serializer.toJson<String>(cik),
+      'kind': serializer.toJson<String>(kind),
+      'position': serializer.toJson<int>(position),
+      'label': serializer.toJson<String>(label),
+      'url': serializer.toJson<String>(url),
+      'happenedAt': serializer.toJson<DateTime?>(happenedAt),
+    };
+  }
+
+  ResearchNoteLineRow copyWith({
+    String? cik,
+    String? kind,
+    int? position,
+    String? label,
+    String? url,
+    Value<DateTime?> happenedAt = const Value.absent(),
+  }) => ResearchNoteLineRow(
+    cik: cik ?? this.cik,
+    kind: kind ?? this.kind,
+    position: position ?? this.position,
+    label: label ?? this.label,
+    url: url ?? this.url,
+    happenedAt: happenedAt.present ? happenedAt.value : this.happenedAt,
+  );
+  ResearchNoteLineRow copyWithCompanion(ResearchNoteLinesCompanion data) {
+    return ResearchNoteLineRow(
+      cik: data.cik.present ? data.cik.value : this.cik,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      position: data.position.present ? data.position.value : this.position,
+      label: data.label.present ? data.label.value : this.label,
+      url: data.url.present ? data.url.value : this.url,
+      happenedAt: data.happenedAt.present
+          ? data.happenedAt.value
+          : this.happenedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ResearchNoteLineRow(')
+          ..write('cik: $cik, ')
+          ..write('kind: $kind, ')
+          ..write('position: $position, ')
+          ..write('label: $label, ')
+          ..write('url: $url, ')
+          ..write('happenedAt: $happenedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(cik, kind, position, label, url, happenedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ResearchNoteLineRow &&
+          other.cik == this.cik &&
+          other.kind == this.kind &&
+          other.position == this.position &&
+          other.label == this.label &&
+          other.url == this.url &&
+          other.happenedAt == this.happenedAt);
+}
+
+class ResearchNoteLinesCompanion extends UpdateCompanion<ResearchNoteLineRow> {
+  final Value<String> cik;
+  final Value<String> kind;
+  final Value<int> position;
+  final Value<String> label;
+  final Value<String> url;
+  final Value<DateTime?> happenedAt;
+  final Value<int> rowid;
+  const ResearchNoteLinesCompanion({
+    this.cik = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.position = const Value.absent(),
+    this.label = const Value.absent(),
+    this.url = const Value.absent(),
+    this.happenedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ResearchNoteLinesCompanion.insert({
+    required String cik,
+    required String kind,
+    required int position,
+    required String label,
+    required String url,
+    this.happenedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cik = Value(cik),
+       kind = Value(kind),
+       position = Value(position),
+       label = Value(label),
+       url = Value(url);
+  static Insertable<ResearchNoteLineRow> custom({
+    Expression<String>? cik,
+    Expression<String>? kind,
+    Expression<int>? position,
+    Expression<String>? label,
+    Expression<String>? url,
+    Expression<DateTime>? happenedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cik != null) 'cik': cik,
+      if (kind != null) 'kind': kind,
+      if (position != null) 'position': position,
+      if (label != null) 'label': label,
+      if (url != null) 'url': url,
+      if (happenedAt != null) 'happened_at': happenedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ResearchNoteLinesCompanion copyWith({
+    Value<String>? cik,
+    Value<String>? kind,
+    Value<int>? position,
+    Value<String>? label,
+    Value<String>? url,
+    Value<DateTime?>? happenedAt,
+    Value<int>? rowid,
+  }) {
+    return ResearchNoteLinesCompanion(
+      cik: cik ?? this.cik,
+      kind: kind ?? this.kind,
+      position: position ?? this.position,
+      label: label ?? this.label,
+      url: url ?? this.url,
+      happenedAt: happenedAt ?? this.happenedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cik.present) {
+      map['cik'] = Variable<String>(cik.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (happenedAt.present) {
+      map['happened_at'] = Variable<DateTime>(happenedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ResearchNoteLinesCompanion(')
+          ..write('cik: $cik, ')
+          ..write('kind: $kind, ')
+          ..write('position: $position, ')
+          ..write('label: $label, ')
+          ..write('url: $url, ')
+          ..write('happenedAt: $happenedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ReportsTable extends Reports with TableInfo<$ReportsTable, ReportRow> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -4611,6 +5461,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $ResearchNotesTable researchNotes = $ResearchNotesTable(this);
+  late final $ResearchNoteLinesTable researchNoteLines =
+      $ResearchNoteLinesTable(this);
   late final $ReportsTable reports = $ReportsTable(this);
   late final $ReportEntriesTable reportEntries = $ReportEntriesTable(this);
   @override
@@ -4627,6 +5480,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     watchlists,
     watchlistEntries,
     settings,
+    researchNotes,
+    researchNoteLines,
     reports,
     reportEntries,
   ];
@@ -5220,6 +6075,7 @@ typedef $$FiscalYearsTableCreateCompanionBuilder =
       Value<double?> totalAssets,
       Value<double?> shareholdersEquity,
       Value<double?> interestExpense,
+      Value<double?> profitLoss,
       Value<int> rowid,
     });
 typedef $$FiscalYearsTableUpdateCompanionBuilder =
@@ -5238,6 +6094,7 @@ typedef $$FiscalYearsTableUpdateCompanionBuilder =
       Value<double?> totalAssets,
       Value<double?> shareholdersEquity,
       Value<double?> interestExpense,
+      Value<double?> profitLoss,
       Value<int> rowid,
     });
 
@@ -5334,6 +6191,11 @@ class $$FiscalYearsTableFilterComposer
 
   ColumnFilters<double> get interestExpense => $composableBuilder(
     column: $table.interestExpense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get profitLoss => $composableBuilder(
+    column: $table.profitLoss,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5435,6 +6297,11 @@ class $$FiscalYearsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get profitLoss => $composableBuilder(
+    column: $table.profitLoss,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CompaniesTableOrderingComposer get cik {
     final $$CompaniesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5525,6 +6392,11 @@ class $$FiscalYearsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get profitLoss => $composableBuilder(
+    column: $table.profitLoss,
+    builder: (column) => column,
+  );
+
   $$CompaniesTableAnnotationComposer get cik {
     final $$CompaniesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -5591,6 +6463,7 @@ class $$FiscalYearsTableTableManager
                 Value<double?> totalAssets = const Value.absent(),
                 Value<double?> shareholdersEquity = const Value.absent(),
                 Value<double?> interestExpense = const Value.absent(),
+                Value<double?> profitLoss = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion(
                 cik: cik,
@@ -5607,6 +6480,7 @@ class $$FiscalYearsTableTableManager
                 totalAssets: totalAssets,
                 shareholdersEquity: shareholdersEquity,
                 interestExpense: interestExpense,
+                profitLoss: profitLoss,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5625,6 +6499,7 @@ class $$FiscalYearsTableTableManager
                 Value<double?> totalAssets = const Value.absent(),
                 Value<double?> shareholdersEquity = const Value.absent(),
                 Value<double?> interestExpense = const Value.absent(),
+                Value<double?> profitLoss = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion.insert(
                 cik: cik,
@@ -5641,6 +6516,7 @@ class $$FiscalYearsTableTableManager
                 totalAssets: totalAssets,
                 shareholdersEquity: shareholdersEquity,
                 interestExpense: interestExpense,
+                profitLoss: profitLoss,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6119,6 +6995,7 @@ typedef $$IngestRunsTableCreateCompanionBuilder = IngestRunsCompanion Function({
   required int companyCount,
   required int extractorVersion,
   Value<DateTime?> archiveLastModified,
+  Value<int?> loadSeconds,
 });
 typedef $$IngestRunsTableUpdateCompanionBuilder = IngestRunsCompanion Function({
   Value<int> id,
@@ -6126,6 +7003,7 @@ typedef $$IngestRunsTableUpdateCompanionBuilder = IngestRunsCompanion Function({
   Value<int> companyCount,
   Value<int> extractorVersion,
   Value<DateTime?> archiveLastModified,
+  Value<int?> loadSeconds,
 });
 
 class $$IngestRunsTableFilterComposer
@@ -6159,6 +7037,11 @@ class $$IngestRunsTableFilterComposer
 
   ColumnFilters<DateTime> get archiveLastModified => $composableBuilder(
     column: $table.archiveLastModified,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get loadSeconds => $composableBuilder(
+    column: $table.loadSeconds,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6196,6 +7079,11 @@ class $$IngestRunsTableOrderingComposer
     column: $table.archiveLastModified,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get loadSeconds => $composableBuilder(
+    column: $table.loadSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$IngestRunsTableAnnotationComposer
@@ -6227,6 +7115,11 @@ class $$IngestRunsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get archiveLastModified => $composableBuilder(
     column: $table.archiveLastModified,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get loadSeconds => $composableBuilder(
+    column: $table.loadSeconds,
     builder: (column) => column,
   );
 }
@@ -6267,12 +7160,14 @@ class $$IngestRunsTableTableManager
                 Value<int> companyCount = const Value.absent(),
                 Value<int> extractorVersion = const Value.absent(),
                 Value<DateTime?> archiveLastModified = const Value.absent(),
+                Value<int?> loadSeconds = const Value.absent(),
               }) => IngestRunsCompanion(
                 id: id,
                 completedAt: completedAt,
                 companyCount: companyCount,
                 extractorVersion: extractorVersion,
                 archiveLastModified: archiveLastModified,
+                loadSeconds: loadSeconds,
               ),
           createCompanionCallback:
               ({
@@ -6281,12 +7176,14 @@ class $$IngestRunsTableTableManager
                 required int companyCount,
                 required int extractorVersion,
                 Value<DateTime?> archiveLastModified = const Value.absent(),
+                Value<int?> loadSeconds = const Value.absent(),
               }) => IngestRunsCompanion.insert(
                 id: id,
                 completedAt: completedAt,
                 companyCount: companyCount,
                 extractorVersion: extractorVersion,
                 archiveLastModified: archiveLastModified,
+                loadSeconds: loadSeconds,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7213,6 +8110,423 @@ typedef $$SettingsTableProcessedTableManager =
       SettingRow,
       PrefetchHooks Function()
     >;
+typedef $$ResearchNotesTableCreateCompanionBuilder =
+    ResearchNotesCompanion Function({
+      required String cik,
+      required String kind,
+      required DateTime generatedAt,
+      Value<String?> body,
+      Value<int> rowid,
+    });
+typedef $$ResearchNotesTableUpdateCompanionBuilder =
+    ResearchNotesCompanion Function({
+      Value<String> cik,
+      Value<String> kind,
+      Value<DateTime> generatedAt,
+      Value<String?> body,
+      Value<int> rowid,
+    });
+
+class $$ResearchNotesTableFilterComposer
+    extends Composer<_$AppDatabase, $ResearchNotesTable> {
+  $$ResearchNotesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get generatedAt => $composableBuilder(
+    column: $table.generatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ResearchNotesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ResearchNotesTable> {
+  $$ResearchNotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get generatedAt => $composableBuilder(
+    column: $table.generatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get body => $composableBuilder(
+    column: $table.body,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ResearchNotesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ResearchNotesTable> {
+  $$ResearchNotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cik =>
+      $composableBuilder(column: $table.cik, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get generatedAt => $composableBuilder(
+    column: $table.generatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
+}
+
+class $$ResearchNotesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ResearchNotesTable,
+          ResearchNoteRow,
+          $$ResearchNotesTableFilterComposer,
+          $$ResearchNotesTableOrderingComposer,
+          $$ResearchNotesTableAnnotationComposer,
+          $$ResearchNotesTableCreateCompanionBuilder,
+          $$ResearchNotesTableUpdateCompanionBuilder,
+          (
+            ResearchNoteRow,
+            BaseReferences<_$AppDatabase, $ResearchNotesTable, ResearchNoteRow>,
+          ),
+          ResearchNoteRow,
+          PrefetchHooks Function()
+        > {
+  $$ResearchNotesTableTableManager(_$AppDatabase db, $ResearchNotesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ResearchNotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ResearchNotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ResearchNotesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cik = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<DateTime> generatedAt = const Value.absent(),
+                Value<String?> body = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ResearchNotesCompanion(
+                cik: cik,
+                kind: kind,
+                generatedAt: generatedAt,
+                body: body,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cik,
+                required String kind,
+                required DateTime generatedAt,
+                Value<String?> body = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ResearchNotesCompanion.insert(
+                cik: cik,
+                kind: kind,
+                generatedAt: generatedAt,
+                body: body,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ResearchNotesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ResearchNotesTable,
+      ResearchNoteRow,
+      $$ResearchNotesTableFilterComposer,
+      $$ResearchNotesTableOrderingComposer,
+      $$ResearchNotesTableAnnotationComposer,
+      $$ResearchNotesTableCreateCompanionBuilder,
+      $$ResearchNotesTableUpdateCompanionBuilder,
+      (
+        ResearchNoteRow,
+        BaseReferences<_$AppDatabase, $ResearchNotesTable, ResearchNoteRow>,
+      ),
+      ResearchNoteRow,
+      PrefetchHooks Function()
+    >;
+typedef $$ResearchNoteLinesTableCreateCompanionBuilder =
+    ResearchNoteLinesCompanion Function({
+      required String cik,
+      required String kind,
+      required int position,
+      required String label,
+      required String url,
+      Value<DateTime?> happenedAt,
+      Value<int> rowid,
+    });
+typedef $$ResearchNoteLinesTableUpdateCompanionBuilder =
+    ResearchNoteLinesCompanion Function({
+      Value<String> cik,
+      Value<String> kind,
+      Value<int> position,
+      Value<String> label,
+      Value<String> url,
+      Value<DateTime?> happenedAt,
+      Value<int> rowid,
+    });
+
+class $$ResearchNoteLinesTableFilterComposer
+    extends Composer<_$AppDatabase, $ResearchNoteLinesTable> {
+  $$ResearchNoteLinesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get happenedAt => $composableBuilder(
+    column: $table.happenedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ResearchNoteLinesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ResearchNoteLinesTable> {
+  $$ResearchNoteLinesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cik => $composableBuilder(
+    column: $table.cik,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get url => $composableBuilder(
+    column: $table.url,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get happenedAt => $composableBuilder(
+    column: $table.happenedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ResearchNoteLinesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ResearchNoteLinesTable> {
+  $$ResearchNoteLinesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cik =>
+      $composableBuilder(column: $table.cik, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get happenedAt => $composableBuilder(
+    column: $table.happenedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$ResearchNoteLinesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ResearchNoteLinesTable,
+          ResearchNoteLineRow,
+          $$ResearchNoteLinesTableFilterComposer,
+          $$ResearchNoteLinesTableOrderingComposer,
+          $$ResearchNoteLinesTableAnnotationComposer,
+          $$ResearchNoteLinesTableCreateCompanionBuilder,
+          $$ResearchNoteLinesTableUpdateCompanionBuilder,
+          (
+            ResearchNoteLineRow,
+            BaseReferences<
+              _$AppDatabase,
+              $ResearchNoteLinesTable,
+              ResearchNoteLineRow
+            >,
+          ),
+          ResearchNoteLineRow,
+          PrefetchHooks Function()
+        > {
+  $$ResearchNoteLinesTableTableManager(
+    _$AppDatabase db,
+    $ResearchNoteLinesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ResearchNoteLinesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ResearchNoteLinesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ResearchNoteLinesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> cik = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> url = const Value.absent(),
+                Value<DateTime?> happenedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ResearchNoteLinesCompanion(
+                cik: cik,
+                kind: kind,
+                position: position,
+                label: label,
+                url: url,
+                happenedAt: happenedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cik,
+                required String kind,
+                required int position,
+                required String label,
+                required String url,
+                Value<DateTime?> happenedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ResearchNoteLinesCompanion.insert(
+                cik: cik,
+                kind: kind,
+                position: position,
+                label: label,
+                url: url,
+                happenedAt: happenedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ResearchNoteLinesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ResearchNoteLinesTable,
+      ResearchNoteLineRow,
+      $$ResearchNoteLinesTableFilterComposer,
+      $$ResearchNoteLinesTableOrderingComposer,
+      $$ResearchNoteLinesTableAnnotationComposer,
+      $$ResearchNoteLinesTableCreateCompanionBuilder,
+      $$ResearchNoteLinesTableUpdateCompanionBuilder,
+      (
+        ResearchNoteLineRow,
+        BaseReferences<
+          _$AppDatabase,
+          $ResearchNoteLinesTable,
+          ResearchNoteLineRow
+        >,
+      ),
+      ResearchNoteLineRow,
+      PrefetchHooks Function()
+    >;
 typedef $$ReportsTableCreateCompanionBuilder = ReportsCompanion Function({
   Value<int> id,
   required String name,
@@ -7917,6 +9231,10 @@ class $AppDatabaseManager {
       $$WatchlistEntriesTableTableManager(_db, _db.watchlistEntries);
   $$SettingsTableTableManager get settings =>
       $$SettingsTableTableManager(_db, _db.settings);
+  $$ResearchNotesTableTableManager get researchNotes =>
+      $$ResearchNotesTableTableManager(_db, _db.researchNotes);
+  $$ResearchNoteLinesTableTableManager get researchNoteLines =>
+      $$ResearchNoteLinesTableTableManager(_db, _db.researchNoteLines);
   $$ReportsTableTableManager get reports =>
       $$ReportsTableTableManager(_db, _db.reports);
   $$ReportEntriesTableTableManager get reportEntries =>

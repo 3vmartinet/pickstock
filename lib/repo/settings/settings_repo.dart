@@ -13,6 +13,7 @@ const String _watchlistKey = 'browseWatchlist';
 const String _debtFreeKey = 'browseDebtFree';
 const String _industriesKey = 'browseIndustries';
 const String _positiveCashFlowKey = 'browsePositiveCashFlow';
+const String _masterPaneKey = 'masterPaneWidth';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -52,6 +53,13 @@ abstract interface class SettingsRepo {
   /// year generated cash rather than consumed it.
   bool get positiveCashFlowOnly;
   Future<void> setPositiveCashFlowOnly(bool value);
+
+  /// How wide the list was left beside the report, or `null` if the divider
+  /// has never been dragged. How much of the window goes to the list and how
+  /// much to the report is a working preference, and re-dragging it at every
+  /// launch is the kind of small tax that adds up.
+  double? get masterPaneWidth;
+  Future<void> setMasterPaneWidth(double width);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -118,6 +126,15 @@ class LocalSettingsRepo implements SettingsRepo {
       ? _write(_positiveCashFlowKey, 'true')
       : _erase(_positiveCashFlowKey);
 
+  /// Anything unparseable reads as never set, which opens at the default
+  /// width rather than stopping the app.
+  @override
+  double? get masterPaneWidth => double.tryParse(_values[_masterPaneKey] ?? '');
+
+  @override
+  Future<void> setMasterPaneWidth(double width) =>
+      _write(_masterPaneKey, '$width');
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -150,6 +167,7 @@ class MemorySettingsRepo implements SettingsRepo {
   int? _watchlistId;
   bool _debtFreeOnly = false;
   bool _positiveCashFlowOnly = false;
+  double? _masterPaneWidth;
 
   @override
   Future<void> load() async {}
@@ -196,4 +214,11 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setPositiveCashFlowOnly(bool value) async =>
       _positiveCashFlowOnly = value;
+
+  @override
+  double? get masterPaneWidth => _masterPaneWidth;
+
+  @override
+  Future<void> setMasterPaneWidth(double width) async =>
+      _masterPaneWidth = width;
 }

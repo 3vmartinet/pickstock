@@ -59,6 +59,9 @@ class _PickStockAppView extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       initialRoute: AppRoute.home.path,
       routes: AppRoute.routes,
+      // Nothing to say: the corner ribbon covers the app's own chrome and
+      // tells the only person who ever sees it something they already know.
+      debugShowCheckedModeBanner: false,
     );
   }
 }

@@ -162,6 +162,8 @@ void main() {
     expect(run, isNotNull);
     expect(run!.companyCount, 1);
     expect(run.extractorVersion, extractorVersion);
+    // Timed, so the next refresh can say how long the app will be shut.
+    expect(run.loadSeconds, isNotNull);
   });
 
   test('skips entries that are not filer payloads', () async {

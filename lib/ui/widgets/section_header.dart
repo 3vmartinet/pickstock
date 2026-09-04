@@ -14,7 +14,10 @@ class SectionHeader extends StatelessWidget {
       spacing: ThemeRepo.spaceSmall,
       children: [
         Icon(icon).iconSmall().iconMutedForeground(),
-        Text(title).semiBold().small(),
+        // Shortened rather than overflowing: squeezed into the company
+        // header's row, the title was drawn straight over the control beside
+        // it.
+        Flexible(child: Text(title).semiBold().small().singleLine().ellipsis()),
       ],
     );
   }

@@ -24,8 +24,8 @@ const List<String> _schemaVersion1 = [
 /// The schema as it stood at version 11, taken from a live install.
 ///
 /// An install on this version has a 1.4 GB ingest behind it, so the upgrade
-/// to 12 has to add the new column and leave everything else alone — a
-/// rebuild would cost that download again.
+/// has to add each new column and leave everything else alone — a rebuild
+/// would cost that download again.
 const List<String> _schemaVersion11 = [
   'CREATE TABLE IF NOT EXISTS "companies" ("cik" TEXT NOT NULL, "name" TEXT NOT NULL, "sic" INTEGER NULL, "shares_outstanding" REAL NULL, PRIMARY KEY ("cik"));',
   'CREATE TABLE IF NOT EXISTS "tickers" ("symbol" TEXT NOT NULL, "cik" TEXT NOT NULL, "name" TEXT NOT NULL, PRIMARY KEY ("symbol"));',
@@ -105,7 +105,7 @@ void main() {
     expect(await database.allTickers(), isEmpty);
   });
 
-  test('a version 11 install gains the column and keeps its ingest', () async {
+  test('a version 11 install gains the columns and keeps its ingest', () async {
     final upgradeFile = File('${directory.path}/v11.sqlite');
     final raw = sqlite.sqlite3.open(upgradeFile.path);
     for (final statement in _schemaVersion11) {
@@ -142,6 +142,37 @@ void main() {
       (await database.companyFor('0000320193'))?.sharesLastFiled,
       isNotNull,
     );
+
+    // Version 15's tables exist and take a row, which is what proves they
+    // were created rather than merely declared.
+    await database.customStatement(
+      "INSERT INTO research_notes (cik, kind, generated_at, body) "
+      "VALUES ('0000320193', 'business', 0, 'kept')",
+    );
+    expect(
+      (await database.researchNote('0000320193', 'business'))?.$1.body,
+      'kept',
+    );
+
+    // Same again for what version 14 added: the group's profit, null until
+    // the next ingest.
+    expect((await database.yearsFor('0000320193')), isEmpty);
+    await database.customStatement(
+      'INSERT INTO fiscal_years (cik, fiscal_year, profit_loss) '
+      "VALUES ('0000320193', 2025, 64041000.0)",
+    );
+    expect(
+      (await database.yearsFor('0000320193')).single.profitLoss,
+      64041000.0,
+    );
+
+    // Same again for what version 13 added: null until a load has been timed,
+    // and writable, which is what proves the column is there.
+    expect((await database.lastIngest())?.loadSeconds, isNull);
+    await database.customStatement(
+      'UPDATE ingest_runs SET load_seconds = 420 WHERE id = 1',
+    );
+    expect((await database.lastIngest())?.loadSeconds, 420);
 
     // And the ingest behind it survived, rather than being rebuilt: an
     // upgrade that dropped the tables would cost the download again.

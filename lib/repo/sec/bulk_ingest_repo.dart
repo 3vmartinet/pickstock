@@ -738,6 +738,10 @@ class BulkIngestRepo {
     final total = filerEntries.length;
     yield IngestLoading(companiesLoaded: 0, totalCompanies: total);
 
+    // Timed from here, where the work that keeps the app shut actually starts,
+    // so the next refresh can say how long that will be.
+    final startedAt = DateTime.now();
+
     final archivePath = archiveFile.path;
     // `loaded` counts entries worked through, which is what the bar measures;
     // `stored` counts filers that actually yielded figures, which is what the
@@ -768,6 +772,7 @@ class BulkIngestRepo {
     await _database.recordIngest(
       stored,
       archiveLastModified: staged.archiveLastModified,
+      loadDuration: DateTime.now().difference(startedAt),
     );
     logInfo(() => 'Ingested $stored companies from $total entries');
     yield IngestDone(companyCount: stored);
@@ -826,6 +831,7 @@ class BulkIngestRepo {
               totalAssets: Value(year.totalAssets),
               shareholdersEquity: Value(year.shareholdersEquity),
               interestExpense: Value(year.interestExpense),
+              profitLoss: Value(year.profitLoss),
             ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalQuarters, [

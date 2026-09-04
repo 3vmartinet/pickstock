@@ -130,7 +130,7 @@ coverage/
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 
-# Secrets. `env.json` holds the Finnhub API key and is passed to the build with
+# Secrets. `env.json` holds the Finnhub and Ollama API keys and is passed to the build with
 # --dart-define-from-file; it must never be committed. `env.example.json` is the
 # committed template and holds no key.
 env.json

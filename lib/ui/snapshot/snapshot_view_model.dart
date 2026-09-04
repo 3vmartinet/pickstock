@@ -5,6 +5,8 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/period_figures.dart';
+import 'package:pickstock/data/research/company_event.dart';
+import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/quote/quote.dart';
@@ -12,6 +14,8 @@ import 'package:pickstock/data/valuation/growth_expectation.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
+import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/data/valuation/discount_rate.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
@@ -21,6 +25,8 @@ import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
+OllamaRepo get _researchRepo => GetIt.I.get<OllamaRepo>();
+ResearchNoteRepo get _noteRepo => GetIt.I.get<ResearchNoteRepo>();
 MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
 
 /// How old a stored quote may be before opening a company refetches it.
@@ -34,6 +40,24 @@ const Duration quoteFreshness = Duration(minutes: 15);
 const List<String> suggestedTickers = ['AAPL', 'MSFT', 'NVDA', 'KO', 'F'];
 
 const int _maxRecentTickers = 6;
+
+/// Where a company's reading-around has got to.
+enum EventsState {
+  /// Never asked. The header offers the press and shows nothing else.
+  idle,
+
+  /// The model is searching and reading, which takes about a minute.
+  loading,
+
+  /// Found and shown.
+  ready,
+
+  /// Asked, and there was nothing recent worth reporting.
+  empty,
+
+  /// The key, the local server or the model was not there.
+  failed,
+}
 
 class SnapshotViewModel extends ChangeNotifier {
   SnapshotState _state = const SnapshotIdle();
@@ -83,10 +107,315 @@ class SnapshotViewModel extends ChangeNotifier {
   /// The year immediately before [index], for year-over-year comparisons.
   FiscalYearFigures? previousFiguresAt(int index) => figuresAt(index - 1);
 
+  EventsState _eventsState = EventsState.idle;
+
+  /// Where the header's reading-around has got to. Idle until asked: it costs
+  /// a minute of a local model's time, so it happens on a press and not on
+  /// every company opened.
+  EventsState get eventsState => _eventsState;
+
+  DateTime? _eventsGeneratedAt;
+
+  /// When the news on screen was read, or `null` if it has not been.
+  ///
+  /// Shown rather than hidden: restored from disk an answer can be a month
+  /// old, and a reader has no way to tell this morning's reading from last
+  /// month's without being told.
+  DateTime? get eventsGeneratedAt => _eventsGeneratedAt;
+
+  List<CompanyEvent> _events = const [];
+
+  /// What the model found, newest first, or empty until it has been asked.
+  List<CompanyEvent> get events => _events;
+
+  ResearchFailure? _eventsFailure;
+
+  /// Why the last attempt came to nothing, so the button can say which of the
+  /// several things that have to be running is not.
+  ResearchFailure? get eventsFailure => _eventsFailure;
+
+  /// Whether reading around is on offer at all: a key has to be built in.
+  bool get canResearchEvents => _researchRepo.isConfigured;
+
+  /// Whether the header has anything to give the middle of its row to.
+  ///
+  /// The name gets the whole row until there is news, and takes it back when
+  /// the reader moves to another company: an empty column that still claimed
+  /// its share truncated the company's own name to make room for nothing.
+  bool get hasEventsToShow => switch (_eventsState) {
+    EventsState.idle || EventsState.loading => false,
+    EventsState.ready || EventsState.empty || EventsState.failed => true,
+  };
+
+  /// Asks the local model what has been happening to the company on screen.
+  ///
+  /// Nothing is cached beyond the company: the news moves, and a reader
+  /// pressing again means "again".
+  Future<void> loadEvents({bool afresh = false}) async {
+    final company = snapshot?.company;
+    if (company == null || _eventsState == EventsState.loading) return;
+    // Refused unless the reader asked again: the answer is on screen, and a
+    // second run would spend another minute to say the same thing.
+    if (!afresh && _eventsState != EventsState.idle) return;
+
+    final generation = _requestGeneration;
+    _eventsFailure = null;
+    _eventsGeneratedAt = null;
+    if (afresh) await _noteRepo.clear(company.cik, eventsNoteKind);
+    _setEventsState(EventsState.loading);
+
+    try {
+      final found = await _researchRepo.eventsFor(
+        ticker: company.ticker,
+        name: company.name,
+      );
+      if (found.isNotEmpty) {
+        await _noteRepo.saveEvents(
+          cik: company.cik,
+          kind: eventsNoteKind,
+          events: found,
+        );
+      }
+      // The reader has moved on; the answer is about a company no longer on
+      // screen.
+      if (generation != _requestGeneration) return;
+      _events = found;
+      _eventsGeneratedAt = DateTime.now();
+      _setEventsState(found.isEmpty ? EventsState.empty : EventsState.ready);
+    } on ResearchException catch (error) {
+      if (generation != _requestGeneration) return;
+      logWarning(() => 'Could not read around ${company.ticker}: $error');
+      _eventsFailure = error.failure;
+      _setEventsState(EventsState.failed);
+    } on Object catch (error) {
+      if (generation != _requestGeneration) return;
+      logSevere(() => 'Reading around ${company.ticker} failed: $error');
+      _eventsFailure = ResearchFailure.failed;
+      _setEventsState(EventsState.failed);
+    }
+  }
+
+  /// Whether there are price cases to show beside the verdict.
+  ///
+  /// Asked by the layout rather than left to the card: the card collapses to
+  /// nothing when it has none, and level with its neighbour that reserved half
+  /// the row for a void.
+  bool get hasPriceTargets {
+    final expectation = growthExpectation;
+    final shares = valuation?.sharesOutstanding;
+    if (expectation == null || shares == null || shares <= 0) return false;
+    return expectation.growthRatesOnFile.isNotEmpty;
+  }
+
+  final Map<CompanyInsight, InsightState> _insightStates = {};
+  final Map<CompanyInsight, ResearchAnswer> _insightAnswers = {};
+  final Map<CompanyInsight, ResearchFailure> _insightFailures = {};
+  final Map<CompanyInsight, DateTime> _insightGeneratedAt = {};
+
+  /// When [insight] was answered, or `null` if it has not been.
+  DateTime? insightGeneratedAt(CompanyInsight insight) =>
+      _insightGeneratedAt[insight];
+
+  InsightState insightState(CompanyInsight insight) =>
+      _insightStates[insight] ?? InsightState.idle;
+
+  ResearchAnswer? insightAnswer(CompanyInsight insight) =>
+      _insightAnswers[insight];
+
+  ResearchFailure? insightFailure(CompanyInsight insight) =>
+      _insightFailures[insight];
+
+  /// Whether reading around is on offer at all: a key has to be built in.
+  bool get canResearch => _researchRepo.isConfigured;
+
+  /// Asks the local model the one question [insight] exists for.
+  ///
+  /// Each is asked on its own: three questions is three minutes of a local
+  /// model, and a reader on the overview has no use for the valuation's audit.
+  /// Pressing again is refused for the same reason the news is — the answer is
+  /// already there, and the company is what changes it.
+  Future<void> loadInsight(
+    CompanyInsight insight, {
+    bool afresh = false,
+  }) async {
+    final company = snapshot?.company;
+    if (company == null) return;
+    final state = insightState(insight);
+    if (state == InsightState.loading) return;
+    if (!afresh && state != InsightState.idle) return;
+
+    final question = _questionFor(insight);
+    if (question == null) return;
+
+    final generation = _requestGeneration;
+    _insightFailures.remove(insight);
+    _insightGeneratedAt.remove(insight);
+    if (afresh) await _noteRepo.clear(company.cik, insight.name);
+    _setInsightState(insight, InsightState.loading);
+
+    try {
+      final answer = await _researchRepo.ask(question, context: _brief());
+      if (answer.text.isNotEmpty) {
+        await _noteRepo.saveAnswer(
+          cik: company.cik,
+          kind: insight.name,
+          text: answer.text,
+          sources: answer.sources,
+        );
+      }
+      // The reader has moved on; the answer is about a company no longer on
+      // screen.
+      if (generation != _requestGeneration) return;
+      _insightAnswers[insight] = answer;
+      _insightGeneratedAt[insight] = DateTime.now();
+      _setInsightState(insight, InsightState.ready);
+    } on ResearchException catch (error) {
+      if (generation != _requestGeneration) return;
+      logWarning(() => 'Insight ${insight.name} failed: $error');
+      _insightFailures[insight] = error.failure;
+      _setInsightState(insight, InsightState.failed);
+    } on Object catch (error) {
+      if (generation != _requestGeneration) return;
+      logSevere(() => 'Insight ${insight.name} failed: $error');
+      _insightFailures[insight] = ResearchFailure.failed;
+      _setInsightState(insight, InsightState.failed);
+    }
+  }
+
+  void _setInsightState(CompanyInsight insight, InsightState state) {
+    _insightStates[insight] = state;
+    notifyListeners();
+  }
+
+  /// What the app already knows, handed over so the model comments on the
+  /// company in front of the reader rather than on whatever shares its name.
+  String _brief() {
+    final company = snapshot?.company;
+    final latest = latestFigures;
+    return [
+      'The reader is looking at ${company?.name} (${company?.ticker}) in '
+          'PickStock, which reads US SEC filings and nothing else.',
+      'Today is ${DateTime.now().toIso8601String()}.',
+      if (latest != null)
+        'Its newest filed year is FY${latest.fiscalYear}: revenue '
+            '${_millions(latest.revenue)}, net income '
+            '${_millions(latest.netIncome)}, operating income '
+            '${_millions(latest.operatingIncome)}, free cash flow '
+            '${_millions(latest.freeCashFlow)}.',
+    ].join(' ');
+  }
+
+  /// The question behind each insight, built where the figures are.
+  ///
+  /// Written out rather than templated: what makes these worth asking is that
+  /// each names the thing the filings cannot settle, and that is different
+  /// wording every time.
+  String? _questionFor(CompanyInsight insight) {
+    final company = snapshot?.company;
+    if (company == null) return null;
+    final subject = '${company.name} (${company.ticker})';
+
+    return switch (insight) {
+      // EDGAR carries no description of a business anywhere, so this is the
+      // one thing a reader cannot get from the report at all.
+      CompanyInsight.business =>
+        'Search the web and tell me, in three or four sentences: what does '
+            '$subject actually sell, and to whom? Then say in one sentence '
+            'what has been driving its revenue in that direction lately. Do '
+            'not repeat the figures I gave you; explain the business behind '
+            'them.',
+      CompanyInsight.inputs => _inputsQuestion(subject),
+      CompanyInsight.expectations => _expectationsQuestion(subject),
+    };
+  }
+
+  /// The audit: the figures the band was struck from, handed back for checking
+  /// against what the filing says they are.
+  String _inputsQuestion(String subject) {
+    final current = valuation;
+    return 'PickStock valued $subject from its latest annual filing, using '
+        'free cash flow ${_millions(current?.freeCashFlow)} and '
+        '${_count(current?.sharesOutstanding)} shares, and reads it as '
+        '${current?.verdict.name}. Search the web, read the latest 10-K or '
+        '20-F, and tell me in three or four sentences whether any of those '
+        'figures does not mean what it appears to — a non-controlling '
+        'interest, a one-off gain or tax release, a share class or reverse '
+        'split, discontinued operations, a change of fiscal year. If they all '
+        'look sound, say so plainly and briefly.';
+  }
+
+  /// The comparison: what the price asks, against what anyone expects.
+  String _expectationsQuestion(String subject) {
+    final expectation = growthExpectation;
+    return 'At its current price, $subject has to grow its cash flow by about '
+        '${_percent(expectation?.requiredGrowthPercent)} a year for a decade '
+        'to be worth what it costs. Over its own history it has managed about '
+        '${_percent(expectation?.deliveredGrowthPercent)}. Search the web and '
+        'tell me in three or four sentences: what has management guided to, or '
+        'what does the market expect, and what would have to go right or wrong '
+        'for the first figure rather than the second?';
+  }
+
+  /// A figure in millions, or a phrase: a prompt with `null` in it invites the
+  /// model to fill the gap itself.
+  static String _millions(double? value) => value == null
+      ? 'not reported'
+      : '\$${(value / 1000000).toStringAsFixed(1)}M';
+
+  static String _count(double? value) => value == null
+      ? 'an unknown number of'
+      : '${(value / 1000000).toStringAsFixed(1)}M';
+
+  static String _percent(double? value) =>
+      value == null ? 'an unknown rate' : '${value.toStringAsFixed(1)}%';
+
+  /// Reads back what is on file for this company, in one pass over the four
+  /// questions.
+  ///
+  /// Off the critical path: the report renders from the filings, and an answer
+  /// arriving a frame later costs nothing. Failures are swallowed — a note
+  /// that cannot be read is a note that was never taken, and the offer to ask
+  /// stands.
+  Future<void> _restoreNotes(String cik, int generation) async {
+    try {
+      final news = await _noteRepo.noteFor(cik, eventsNoteKind);
+      if (generation != _requestGeneration) return;
+      if (news != null && news.events.isNotEmpty) {
+        _events = news.events;
+        _eventsGeneratedAt = news.generatedAt;
+        _eventsState = EventsState.ready;
+      }
+
+      for (final insight in CompanyInsight.values) {
+        final note = await _noteRepo.noteFor(cik, insight.name);
+        if (generation != _requestGeneration) return;
+        final text = note?.text;
+        if (note == null || text == null || text.isEmpty) continue;
+        _insightAnswers[insight] = ResearchAnswer(
+          text: text,
+          sources: note.sources,
+        );
+        _insightGeneratedAt[insight] = note.generatedAt;
+        _insightStates[insight] = InsightState.ready;
+      }
+      notifyListeners();
+    } on Object catch (error) {
+      logWarning(() => 'Could not read the notes for $cik: $error');
+    }
+  }
+
+  void _setEventsState(EventsState state) {
+    _eventsState = state;
+    notifyListeners();
+  }
+
   ReportTab _reportTab = ReportTab.overview;
 
-  /// Which part of the report is on screen. Overview first: it answers "is
-  /// this worth a look" before the price does.
+  /// Which part of the report is on screen.
+  ///
+  /// Overview to begin with: it answers "is this worth a look" before the
+  /// price does. It then stays wherever it is put, across companies as well —
+  /// see [search].
   ReportTab get reportTab => _reportTab;
 
   void selectReportTab(ReportTab tab) {
@@ -341,11 +670,25 @@ class SnapshotViewModel extends ChangeNotifier {
       final snapshot = await _secRepo.fetchSnapshot(symbol);
       if (generation != _requestGeneration) return;
       _rememberTicker(symbol);
-      // A different company starts on the overview: the tab left open for the
-      // last one says nothing about this one.
-      _reportTab = ReportTab.overview;
+      // The open tab is deliberately left where it is. Companies are read one
+      // after another with the same question in mind, and re-picking the same
+      // tab for each of them was the cost of starting every one on the
+      // overview.
       _discountRate = null;
+      // Cleared, unlike the tab: last company's news says nothing about this
+      // one, and it is a minute of work nobody asked for yet.
+      _events = const [];
+      _eventsFailure = null;
+      _eventsState = EventsState.idle;
+      _insightStates.clear();
+      _insightAnswers.clear();
+      _insightFailures.clear();
+      _insightGeneratedAt.clear();
       _setState(SnapshotLoaded(snapshot));
+      // Whatever a model has already said about this company, straight back on
+      // screen: it cost a minute each to get and nothing about it has gone
+      // stale in the time it took to open the company again.
+      unawaited(_restoreNotes(snapshot.company.cik, generation));
       unawaited(_loadDiscountRate(symbol, generation));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {

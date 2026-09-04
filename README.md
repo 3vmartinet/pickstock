@@ -259,6 +259,36 @@ built in:
 fvm flutter test --dart-define-from-file=env.json test/live_quote_test.dart
 ```
 
+### Reading around the figures
+
+A model on this machine can search the web and comment on the company in front
+of you. Two halves, deliberately: `gemma4:12b-mlx` runs locally through Ollama,
+so nothing about the company you are looking at leaves the machine except the
+search terms the model itself chooses, while the searching is Ollama's hosted
+service — a local model has no way to reach the web on its own.
+
+`OLLAMA_API_KEY` reaches the app the same way the Finnhub key does, through
+`--dart-define-from-file=env.json`. `OLLAMA_HOST` and `OLLAMA_MODEL` are defines
+too, since which models are pulled is a property of the machine rather than of
+the app. Without a key the feature reports itself unavailable; so does a machine
+with no server listening or without the model pulled, which is checked rather
+than assumed.
+
+The model is handed the first 4,000 characters of each page. Ollama's own note
+is that a search returns thousands of tokens a page, and five whole pages is a
+prompt a 12B model spends minutes re-reading on every round of its loop — a
+question that answered in 31 seconds trimmed took past four minutes whole. The
+page is still kept unabridged for the reader, who is not the one paying for it.
+
+```sh
+fvm flutter test --dart-define-from-file=env.json test/live_research_test.dart
+```
+
+Proves the key arrives, that the hosted search answers the shape the parser
+expects, and that the local model actually calls the tools rather than answering
+from memory. Skipped without a key, and the model tests skip themselves if
+nothing is listening.
+
 **Ranking the whole directory by valuation is not offered.** At 60 calls a
 minute, pricing 10,391 companies takes about three hours, so it would have to be
 an overnight batch rather than a sort you can click.

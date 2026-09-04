@@ -135,11 +135,13 @@ class _StartButton extends StatelessWidget {
   }
 
   void _start(BuildContext context, List<Company> companies) {
-    context.read<JobsViewModel>().start(
+    final started = context.read<JobsViewModel>().start(
       name: context.read<BrowseViewModel>().describeFilter(context.strings),
       companies: companies,
     );
-    closeOverlay(context);
+    // Only out of the way once something is actually under way. A panel that
+    // closed on a refused start looked exactly like one that had worked.
+    if (started) closeOverlay(context);
   }
 }
 

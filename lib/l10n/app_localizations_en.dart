@@ -149,11 +149,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String dataAsOf(DateTime date) {
+  String get dataAsOfLabel => 'SEC data';
+
+  @override
+  String dataAsOfDate(DateTime date) {
     final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
     final String dateString = dateDateFormat.format(date);
 
-    return 'SEC data · $dateString';
+    return '$dateString';
   }
 
   @override
@@ -187,6 +190,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateReady => 'Finish update';
 
   @override
+  String get updateConfirmTitle => 'Refresh the database now?';
+
+  @override
+  String get updateConfirmBody =>
+      'Every figure is replaced from the archive that has been downloaded, so PickStock cannot be used until it finishes. Leave the app open while it runs.';
+
+  @override
+  String updateConfirmLast(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'about $minutes minutes',
+      one: 'about a minute',
+    );
+    return 'Last time this took $_temp0.';
+  }
+
+  @override
+  String get updateConfirmUntimed =>
+      'It usually takes a few minutes. Nothing has been timed on this machine yet, so that is a guess rather than a measurement.';
+
+  @override
+  String get updateConfirmStart => 'Refresh now';
+
+  @override
+  String get updateConfirmCancel => 'Not now';
+
+  @override
   String get updateReadyHint =>
       'The download is complete. Refreshing the database takes a few minutes and the app cannot be used while it runs, so nothing starts until you say so.';
 
@@ -199,6 +230,174 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
+
+  @override
+  String get insightBusinessTitle => 'What the filings do not say';
+
+  @override
+  String get insightBusinessInvitation =>
+      'EDGAR publishes no description of a business anywhere — the industry title above is the closest thing on file. A model on this machine can read around and say what this company actually sells, and what has been moving its revenue.';
+
+  @override
+  String get insightBusinessAction => 'Describe the business';
+
+  @override
+  String get insightInputsTitle => 'Do these figures mean what they appear to?';
+
+  @override
+  String get insightInputsInvitation =>
+      'The band above is struck from the filing as tagged. A figure can be read correctly and still not mean what it looks like: cash that belongs to outside owners, a profit that is a tax release, a share count from before a split. A model can read the filing and say whether any of that applies here.';
+
+  @override
+  String get insightInputsAction => 'Check against the filing';
+
+  @override
+  String get insightExpectationsTitle => 'What anyone else expects';
+
+  @override
+  String get insightExpectationsInvitation =>
+      'The rate above is what this price asks of the company. Whether the company itself expects it is not in the filings — that is guidance, an earnings call, a broker\'s note. A model can find what has been said and set it against the arithmetic.';
+
+  @override
+  String get insightExpectationsAction => 'Find what is expected';
+
+  @override
+  String get agoJustNow => 'just now';
+
+  @override
+  String agoMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count min ago',
+      one: '1 min ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours ago',
+      one: 'an hour ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days ago',
+      one: 'yesterday',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months ago',
+      one: 'last month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String agoYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count years ago',
+      one: 'last year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String noteGeneratedOn(DateTime when) {
+    final intl.DateFormat whenDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String whenString = whenDateFormat.format(when);
+
+    return 'Read on $whenString. Press to read it again — the web moves, and this did not.';
+  }
+
+  @override
+  String get noteRegenerate => 'Read it again';
+
+  @override
+  String get insightReading => 'Reading…';
+
+  @override
+  String get insightReadingHint =>
+      'Searching the web and reading what it finds. This takes about a minute.';
+
+  @override
+  String get insightSources => 'Read from';
+
+  @override
+  String get insightCaveat =>
+      'Written by a model from pages it found, not from the filings. Check anything you would act on.';
+
+  @override
+  String get eventsTitle => 'Recent developments';
+
+  @override
+  String get sourceOpenExternally =>
+      'Open in your browser. This pane closes, so the page is not open twice.';
+
+  @override
+  String get sourceClose => 'Close this pane';
+
+  @override
+  String get sourceUnavailable =>
+      'This page cannot be shown here. Use the button above to open it in your browser.';
+
+  @override
+  String get eventsFetch => 'Fetch latest news';
+
+  @override
+  String get eventsFetchHint =>
+      'A model on this machine searches the web and lists the three most recent developments worth an investor\'s attention. It takes about a minute.';
+
+  @override
+  String get eventsLoading => 'Reading…';
+
+  @override
+  String get eventsLoadingHint =>
+      'Searching the web and reading what it finds. This takes about a minute.';
+
+  @override
+  String get eventsDoneHint =>
+      'Read already. Open the company again to look afresh.';
+
+  @override
+  String get eventsEmpty => 'Nothing recent turned up.';
+
+  @override
+  String eventsOpenHint(String caption, String url) {
+    return '$caption Opens $url in your browser.';
+  }
+
+  @override
+  String get eventsFailedNoKey =>
+      'No Ollama key is built in, so there is nothing to search with. Copy env.example.json to env.json and paste one.';
+
+  @override
+  String get eventsFailedNoServer =>
+      'Nothing is answering on this machine. Start Ollama and try again.';
+
+  @override
+  String get eventsFailedNoModel =>
+      'Ollama is running but has not pulled the model this build asks for.';
+
+  @override
+  String get eventsFailedOther => 'The search did not finish. Try again.';
 
   @override
   String get jobsTooltip => 'Reports and running jobs';
@@ -1311,6 +1510,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get napkinCaveatEarnings =>
       'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.';
+
+  @override
+  String napkinCaveatOutsideOwners(String share) {
+    return 'Only $share of this business belongs to the listed shares; the rest is held by owners outside the company. The cash above is the whole group\'s brought down to that share, because the share count beside it counts the listed shares alone.';
+  }
 
   @override
   String get napkinCaveatShareCount =>

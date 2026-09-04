@@ -4,6 +4,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/snapshot/widgets/company_events.dart';
 import 'package:pickstock/ui/watchlist/widgets/add_to_watchlist_button.dart';
 import 'package:pickstock/ui/watchlist/widgets/watchlist_star.dart';
 import 'package:provider/provider.dart';
@@ -15,17 +16,39 @@ class CompanyHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Watched rather than read: whether the panel is on the row decides how
+    // the row is divided.
+    final hasEvents = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.hasEventsToShow,
+    );
+
     return Card(
       padding: context.cardPadding,
-      // Following sits on the title's own row, hard right: it is about the
-      // company rather than about the report, and a row of its own underneath
-      // read as a third piece of content.
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: ThemeRepo.spaceMedium,
         children: [
-          Expanded(child: _CompanyIdentity()),
-          _FollowRow(),
+          // Two layouts, because the row has two jobs. With no news the name
+          // and its industry line get the lot; with news the identity is
+          // pinned narrow and the rest goes to the panel.
+          // The name takes the slack either way; only the panel is capped.
+          const Expanded(child: _CompanyIdentity()),
+          // The middle of the row, which the header has always reserved and
+          // never used. `Flexible` rather than `Expanded` so it gives back
+          // what it does not need, and capped so a wide window does not hand
+          // it width the captions have no use for.
+          if (hasEvents)
+            Flexible(
+              // `ConstrainedBox` asserts on its constraints, so it is not
+              // const.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: ThemeRepo.eventsPanelMaxWidth,
+                ),
+                child: const CompanyEvents(),
+              ),
+            ),
+          const _FollowRow(),
         ],
       ),
     );
@@ -85,11 +108,21 @@ class _FollowRow extends StatelessWidget {
     );
     if (cik == null) return const SizedBox.shrink();
 
-    return Row(
+    // A column, so reading around sits under the lists rather than in the
+    // middle of the title row: all three are things you do to the company.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       spacing: ThemeRepo.spaceSmall,
       children: [
-        WatchlistStar(cik: cik),
-        AddToWatchlistButton(cik: cik),
+        Row(
+          spacing: ThemeRepo.spaceSmall,
+          children: [
+            WatchlistStar(cik: cik),
+            AddToWatchlistButton(cik: cik),
+          ],
+        ),
+        const CompanyEventsButton(),
       ],
     );
   }

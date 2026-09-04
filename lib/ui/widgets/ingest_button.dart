@@ -3,8 +3,10 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
+import 'package:pickstock/ui/widgets/app_dialog.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/edge_progress.dart';
 import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
@@ -64,12 +66,43 @@ class _DataDate extends StatelessWidget {
 
     return Tooltip(
       tooltip: HintTooltip(context.strings.dataAsOfHint(loadedOn)).call,
-      child: Text(context.strings.dataAsOf(loadedOn))
-          .muted()
-          .xSmall()
-          .singleLine(),
+      child: Container(
+        padding: ThemeRepo.dataStampPadding,
+        // A box of its own, so two lines of small type read as one stamp
+        // rather than as text left loose in the app bar beside the buttons.
+        decoration: BoxDecoration(
+          color: context.theme.colorScheme.muted,
+          borderRadius: context.theme.borderRadiusMd,
+        ),
+        // Two lines: "SEC data" heads the date rather than reading as part of
+        // the same phrase with it, and stacked they take a fraction of the app
+        // bar's width that one line was claiming.
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _StampLine(context.strings.dataAsOfLabel),
+            _StampLine(context.strings.dataAsOfDate(loadedOn)),
+          ],
+        ),
+      ),
     );
   }
+}
+
+/// One line of the data stamp, set tight so the pair reads as a block.
+class _StampLine extends StatelessWidget {
+  const _StampLine(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: ThemeRepo.dataStampFontSize,
+      height: ThemeRepo.dataStampLineHeight,
+    ),
+  ).muted().singleLine();
 }
 
 /// A newer archive is out and nothing has been fetched yet.
@@ -150,11 +183,13 @@ class _Downloading extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: ThemeRepo.spaceXSmall,
       children: [
-        _EdgeProgress(
+        EdgeProgress(
           // Null until the archive itself starts coming down, which shows the
           // indeterminate bar: the two short stages before it have no size
           // worth putting a figure on.
           fraction: viewModel.updateFraction,
+          // On a filled button, so the bar is drawn in its own foreground.
+          colour: context.theme.colorScheme.primaryForeground,
           child: _ActionButton(
             // The figure goes in the tooltip, not the label: a label that
             // changed a hundred times would jitter the app bar, and the bar
@@ -173,53 +208,6 @@ class _Downloading extends StatelessWidget {
         ),
         const _CancelButton(),
       ],
-    );
-  }
-}
-
-/// Draws [fraction] along the bottom edge of [child].
-///
-/// Inside the button's own outline rather than under it: a bar of its own
-/// below the row would make the app bar taller as a download started, and the
-/// button is the thing the progress belongs to.
-class _EdgeProgress extends StatelessWidget {
-  const _EdgeProgress({required this.fraction, required this.child});
-
-  /// `null` shows the indeterminate bar, for a stage with no known size.
-  final double? fraction;
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      // The same radius the button draws itself with, so the bar picks up its
-      // corners instead of squaring them off.
-      borderRadius: context.theme.borderRadiusMd,
-      child: Stack(
-        children: [
-          child,
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: ComponentTheme<ProgressTheme>(
-              // Squared off, because the clip above supplies the only corners
-              // the bar should have; and drawn in the button's own foreground,
-              // since the default colours are meant for a bar on a page
-              // rather than on a filled button.
-              data: ProgressTheme(
-                minHeight: ThemeRepo.updateProgressHeight,
-                borderRadius: BorderRadius.zero,
-                color: context.theme.colorScheme.primaryForeground,
-                backgroundColor: context.theme.colorScheme.primaryForeground
-                    .withValues(alpha: ThemeRepo.updateProgressTrack),
-              ),
-              child: Progress(progress: fraction),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -261,10 +249,59 @@ class _Staged extends StatelessWidget {
         hint: context.strings.updateReadyHint,
         leading: const Icon(LucideIcons.databaseZap),
         label: context.strings.updateReady,
-        onPressed: context.read<IngestViewModel>().applyUpdate,
+        onPressed: () => _confirmRefresh(context),
       ),
     );
   }
+}
+
+/// Asks before shutting the app for several minutes.
+///
+/// The press is a decision with a cost, and the cost is knowable: the last
+/// load was timed, and the archive and the machine are much the same each
+/// time, so the dialog can say roughly how long rather than "a while".
+Future<void> _confirmRefresh(BuildContext context) async {
+  final viewModel = context.read<IngestViewModel>();
+  final taken = viewModel.lastLoadDuration;
+
+  final confirmed = await showAppDialog<bool>(
+    context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(context.strings.updateConfirmTitle),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        spacing: ThemeRepo.spaceSmall,
+        children: [
+          Text(context.strings.updateConfirmBody),
+          Text(
+            taken == null
+                ? context.strings.updateConfirmUntimed
+                : context.strings.updateConfirmLast(_wholeMinutes(taken)),
+          ).muted().small(),
+        ],
+      ),
+      actions: [
+        OutlineButton(
+          onPressed: () => closeAppDialog(dialogContext, false),
+          child: Text(context.strings.updateConfirmCancel),
+        ),
+        PrimaryButton(
+          onPressed: () => closeAppDialog(dialogContext, true),
+          child: Text(context.strings.updateConfirmStart),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed ?? false) await viewModel.applyUpdate();
+}
+
+/// [taken] in whole minutes, and never none of them: "about 0 minutes" says
+/// nothing, and no load has ever been that quick.
+int _wholeMinutes(Duration taken) {
+  final minutes = (taken.inSeconds / Duration.secondsPerMinute).round();
+  return minutes < 1 ? 1 : minutes;
 }
 
 /// The background download did not finish. Nothing was written, so this is an
@@ -297,8 +334,8 @@ class _ActionButton extends StatelessWidget {
   final Widget leading;
   final String label;
 
-  /// `null` leaves the button in place but inert, which is what a step already
-  /// under way needs.
+  /// `null` leaves the button inert, which is what a step already under way
+  /// needs.
   final VoidCallback? onPressed;
 
   @override
@@ -307,7 +344,11 @@ class _ActionButton extends StatelessWidget {
       tooltip: HintTooltip(hint).call,
       child: PrimaryButton(
         size: ButtonSize.small,
-        enabled: onPressed != null,
+        // Kept solid even with nothing to press. Left to work itself out from
+        // `onPressed`, the download's button greys off to a muted outline —
+        // which beside the solid cancel button reads as two unrelated
+        // controls, one of them broken, rather than as one thing happening.
+        enabled: true,
         onPressed: onPressed,
         leading: leading,
         child: Text(label),

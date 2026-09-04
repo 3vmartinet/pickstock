@@ -2,6 +2,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
+import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
@@ -10,6 +11,7 @@ import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/snapshot/widgets/company_insight_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
@@ -188,10 +190,16 @@ class _TabBody extends StatelessWidget {
 
     final sections = switch (tab) {
       ReportTab.overview => const <Widget>[
+        // Before the checks: what the company does is the question a reader
+        // asks before whether its revenue grew.
+        _InsightSection(insight: CompanyInsight.business),
         _SanityCheckSection(),
         _HighlightsSection(),
         _HistorySection(),
       ],
+      // Both of these carry their insight inside their own layout rather than
+      // as a section after it: appended, it sat below a screen of arithmetic
+      // and was read by nobody.
       ReportTab.valuation => const <Widget>[_ValuationSection()],
       ReportTab.expectations => const <Widget>[_ExpectationsSection()],
     };
@@ -257,6 +265,74 @@ class _Section extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+/// One insight, spaced like the sections it sits between.
+///
+/// No heading of its own: the alert inside carries its own title, and a
+/// section header above it would state the question twice.
+/// The targets beside the verdict, and the reading-around under both.
+///
+/// Side by side because they answer halves of one question — what a share is
+/// worth if the company keeps going as it has, and what the price is already
+/// asking of it — and a reader compares them rather than reading them in
+/// turn. Stacked where the pane is too narrow to put them level.
+class _ExpectationsContent extends StatelessWidget {
+  const _ExpectationsContent();
+
+  @override
+  Widget build(BuildContext context) {
+    // Level only where there are two cards to put level: without price cases
+    // the targets card collapses to nothing, and an `Expanded` around it
+    // would hold half the row open for a void.
+    final hasTargets = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.hasPriceTargets,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: ThemeRepo.spaceMedium,
+        children: [
+          if (!hasTargets)
+            const ExpectationCard()
+          else if (constraints.maxWidth <
+              ThemeRepo.expectationsSideBySideMinWidth)
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: ThemeRepo.spaceMedium,
+              children: [PriceTargetCard(), ExpectationCard()],
+            )
+          else
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: ThemeRepo.spaceMedium,
+              children: [
+                Expanded(child: PriceTargetCard()),
+                Expanded(child: ExpectationCard()),
+              ],
+            ),
+          // Under both: it sets what anyone else expects against the pair,
+          // which cannot be read before them.
+          const CompanyInsightCard(insight: CompanyInsight.expectations),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightSection extends StatelessWidget {
+  const _InsightSection({required this.insight});
+
+  final CompanyInsight insight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),
+      child: CompanyInsightCard(insight: insight),
     );
   }
 }
@@ -335,7 +411,18 @@ class _ValuationContent extends StatelessWidget {
         const cards = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: ThemeRepo.spaceMedium,
-          children: [ValuationVerdictCard(), ValuationGrid()],
+          children: [
+            ValuationVerdictCard(),
+            ValuationGrid(),
+            // Under the ratios and beside the worked example, so the check on
+            // the figures is read at the same height as the figures rather
+            // than a screen below them.
+            //
+            // Inside the priced branch on purpose: the question quotes the
+            // cash flow and share count the band was struck from, and there
+            // is no band to check until there is a price.
+            CompanyInsightCard(insight: CompanyInsight.inputs),
+          ],
         );
 
         if (constraints.maxWidth < ThemeRepo.napkinSideBySideMinWidth) {
@@ -389,11 +476,7 @@ class _ExpectationsSection extends StatelessWidget {
       // The targets first: what a share is worth is the question a reader
       // came with. The verdict below sets it against what the price already
       // asks, which is the check on taking any single target seriously.
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: ThemeRepo.spaceMedium,
-        children: [PriceTargetCard(), ExpectationCard()],
-      ),
+      child: const _ExpectationsContent(),
     );
   }
 }

@@ -51,6 +51,7 @@ class Valuation extends Equatable {
       netIncome: latest.netIncome,
       operatingIncome: latest.operatingIncome,
       freeCashFlow: latest.freeCashFlow,
+      parentStake: latest.parentStake,
       revenue: latest.revenue,
       netDebt: latest.netDebt,
       fiscalYear: latest.fiscalYear,
@@ -70,6 +71,7 @@ class Valuation extends Equatable {
     required this.netIncome,
     required this.operatingIncome,
     required this.freeCashFlow,
+    required this.parentStake,
     required this.revenue,
     required this.netDebt,
     required this.fiscalYear,
@@ -112,6 +114,31 @@ class Valuation extends Equatable {
   final double? freeCashFlow;
   final double? revenue;
   final double? netDebt;
+
+  /// How much of the group the shares being priced own, as a fraction.
+  ///
+  /// `1` for all but a handful of filers. Where a listed company holds only a
+  /// slice of the business it consolidates, its cash flow and operating profit
+  /// are the whole group's while its share count is its own, and the two are
+  /// not divisible by one another until the first is brought down to this.
+  final double parentStake;
+
+  /// Whether the figures below have been brought down to the parent's slice,
+  /// so the worked example can say that they were.
+  bool get hasOutsideOwners => parentStake < 1;
+
+  /// Free cash flow, less the part of it that belongs to owners outside the
+  /// listed company.
+  ///
+  /// The cash the filing reports is the whole group's, and only this much of
+  /// it reaches the shares. MarketWise generated $45.6M in FY2025 against 2.4M
+  /// diluted shares — $18.71 a share, or so it read, when 91% of the group's
+  /// profit went to its Class B unitholders and the shares' own claim was
+  /// $1.64.
+  double? get freeCashFlowToShareholders {
+    final cash = freeCashFlow;
+    return cash == null ? null : cash * parentStake;
+  }
 
   /// The fiscal year every figure above is taken from.
   final int fiscalYear;
@@ -197,7 +224,9 @@ class Valuation extends Equatable {
   /// Which stream the band is struck against, preferring cash over accounting
   /// profit, or `null` where the company generates neither.
   ValuationBasis? get basis {
-    if ((freeCashFlow ?? 0) > 0) return ValuationBasis.freeCashFlow;
+    if ((freeCashFlowToShareholders ?? 0) > 0) {
+      return ValuationBasis.freeCashFlow;
+    }
     if ((_earningsFromOperations ?? 0) > 0) return ValuationBasis.earnings;
     return null;
   }
@@ -205,7 +234,7 @@ class Valuation extends Equatable {
   /// The amount [basis] refers to, so the report can state the working without
   /// having to know which stream was chosen.
   double? get basisAmount => switch (basis) {
-    ValuationBasis.freeCashFlow => freeCashFlow,
+    ValuationBasis.freeCashFlow => freeCashFlowToShareholders,
     ValuationBasis.earnings => _earningsFromOperations,
     null => null,
   };
@@ -224,11 +253,16 @@ class Valuation extends Equatable {
   /// price of $17 — a thirteen-fold upside, on a year the business lost
   /// money. Held to operating income the figure is negative, there is no
   /// stream to value, and the report says so instead.
+  /// Net income needs no such treatment: it is already the parent's share.
+  /// Operating income is the group's, so the ceiling is brought down before
+  /// it is applied — otherwise a company whose operating profit is the smaller
+  /// of the two would be held to a figure most of which is not its own.
   double? get _earningsFromOperations {
     final profit = netIncome;
     if (profit == null) return null;
     final operating = operatingIncome;
-    return operating == null ? profit : math.min(profit, operating);
+    if (operating == null) return profit;
+    return math.min(profit, operating * parentStake);
   }
 
   /// Growth credited to the multiple, in percentage points.
@@ -362,6 +396,7 @@ class Valuation extends Equatable {
     netIncome,
     operatingIncome,
     freeCashFlow,
+    parentStake,
     revenue,
     netDebt,
     fiscalYear,

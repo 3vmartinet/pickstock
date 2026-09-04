@@ -4,6 +4,9 @@ import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/finnhub_quote_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
+import 'package:pickstock/repo/research/research_note_repo.dart';
+import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
@@ -39,6 +42,15 @@ abstract final class DependenciesRepo {
         () => usesMockData
             ? const UnavailableMarketRatesRepo()
             : LiveMarketRatesRepo(),
+      )
+      ..registerLazySingleton<ResearchNoteRepo>(
+        () => usesMockData
+            ? MemoryResearchNoteRepo()
+            : const LocalResearchNoteRepo(),
+      )
+      ..registerLazySingleton<WebSearchRepo>(OllamaWebSearchRepo.new)
+      ..registerLazySingleton<OllamaRepo>(
+        () => OllamaRepo(search: GetIt.I.get<WebSearchRepo>()),
       )
       ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
       ..registerLazySingleton<ReportRepo>(LocalReportRepo.new)

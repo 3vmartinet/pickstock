@@ -77,6 +77,7 @@ class LocalSecRepo implements SecRepo {
             totalAssets: row.totalAssets,
             shareholdersEquity: row.shareholdersEquity,
             interestExpense: row.interestExpense,
+            profitLoss: row.profitLoss,
           ),
       ],
       quarters: _quartersFrom(quarterRows),

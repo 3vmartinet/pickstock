@@ -225,6 +225,13 @@ List<String> _caveatsFor(
         strings.napkinCaveatShareCount,
     if (valuation.basis == ValuationBasis.earnings)
       strings.napkinCaveatEarnings,
+    // Said out loud because the figures above would otherwise not add up
+    // against the filing: the cash shown is a fraction of what the cash flow
+    // statement reports, and this is why.
+    if (valuation.hasOutsideOwners)
+      strings.napkinCaveatOutsideOwners(
+        _formatRepo.percent(valuation.parentStake * 100),
+      ),
     if (expectation != null && expectation.isBuildingCapacity(figures))
       strings.napkinCaveatBuilding(
         _formatRepo.ratio(figures.capexToDepreciation!),

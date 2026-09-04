@@ -13,7 +13,11 @@ part 'app_database.g.dart';
 /// and gas producers file it under, finds borrowings through the interest a
 /// captive finance arm pays on them, and refuses a cover-page share count
 /// that the filer stopped restating years ago.
-const int extractorVersion = 8;
+///
+/// 9 reads the whole group's profit alongside the parent's share of it, so a
+/// company that owns a slice of its own operations has its cash flow brought
+/// down to that slice before it is divided by the parent's share count.
+const int extractorVersion = 9;
 
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
@@ -92,6 +96,12 @@ class FiscalYears extends Table {
   /// company with no debt line is told from one whose debt is filed under a
   /// concept the parser cannot see.
   RealColumn get interestExpense => real().nullable()();
+
+  /// Profit for the whole group, where [netIncome] is the parent's share of
+  /// it. The two together say how much of the group the listed shares own,
+  /// which is what a group cash flow has to be brought down to before it is
+  /// divided by the parent's share count.
+  RealColumn get profitLoss => real().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {cik, fiscalYear};
@@ -230,6 +240,53 @@ class WatchlistEntries extends Table {
   Set<Column<Object>> get primaryKey => {watchlistId, cik};
 }
 
+/// One question a model has answered about a company, kept so the answer
+/// survives closing the company and closing the app.
+///
+/// Not derived from the archive, so an ingest leaves it alone: the answers are
+/// about companies rather than read out of the filings, and throwing them away
+/// with the figures would cost a minute of a local model each to get back.
+@DataClassName('ResearchNoteRow')
+class ResearchNotes extends Table {
+  TextColumn get cik => text()();
+
+  /// Which question, by the enum's own name — the news, or one of the three
+  /// tab insights.
+  TextColumn get kind => text()();
+
+  DateTimeColumn get generatedAt => dateTime()();
+
+  /// The prose, where the question had any. Null for the news, which is
+  /// nothing but its lines.
+  TextColumn get body => text().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {cik, kind};
+}
+
+/// One line of a note: a development, or a page an answer was read from.
+///
+/// The two shapes are near enough the same thing — a label, a link, and
+/// sometimes a date — that one table holds both, as the answer that cites its
+/// sources and the news that is nothing but sources both want.
+@DataClassName('ResearchNoteLineRow')
+class ResearchNoteLines extends Table {
+  TextColumn get cik => text()();
+  TextColumn get kind => text()();
+
+  /// Kept so the order the model gave them in survives the round trip.
+  IntColumn get position => integer()();
+
+  TextColumn get label => text()();
+  TextColumn get url => text()();
+
+  /// When the development happened, for the news. Null for a cited page.
+  DateTimeColumn get happenedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {cik, kind, position};
+}
+
 /// A single row recording what the last completed bulk ingest loaded.
 @DataClassName('IngestRunRow')
 class IngestRuns extends Table {
@@ -242,6 +299,14 @@ class IngestRuns extends Table {
   /// `Last-Modified` header. Compared against a HEAD request to tell whether a
   /// newer archive is out.
   DateTimeColumn get archiveLastModified => dateTime().nullable()();
+
+  /// How long the database half of this ingest took.
+  ///
+  /// Kept so the next refresh can say how long it will be before the app is
+  /// usable again: the archive and the machine are much the same each time, so
+  /// last time is a far better answer than a guessed range. Null for a run
+  /// recorded before this was measured.
+  IntColumn get loadSeconds => integer().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -258,6 +323,8 @@ class IngestRuns extends Table {
     Watchlists,
     WatchlistEntries,
     Settings,
+    ResearchNotes,
+    ResearchNoteLines,
     Reports,
     ReportEntries,
   ],
@@ -272,7 +339,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -308,6 +375,23 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        if (from < 15) {
+          logInfo(() => 'Adding research notes');
+          await migrator.createTable(researchNotes);
+          await migrator.createTable(researchNoteLines);
+        }
+        if (from < 14) {
+          // Added, not populated: the figure arrives with the next ingest,
+          // which the extractor version already insists on.
+          logInfo(() => 'Adding fiscal_years.profit_loss');
+          await migrator.addColumn(fiscalYears, fiscalYears.profitLoss);
+        }
+        if (from < 13) {
+          // Added, not populated: how long a load takes is only known once
+          // one has been timed, and until then the app says so.
+          logInfo(() => 'Adding ingest_runs.load_seconds');
+          await migrator.addColumn(ingestRuns, ingestRuns.loadSeconds);
         }
         if (from < 12) {
           // Added, not populated: the date arrives with the next ingest.
@@ -414,7 +498,14 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Replaces the contents of the database with a freshly ingested set.
-  Future<void> recordIngest(int companyCount, {DateTime? archiveLastModified}) {
+  ///
+  /// [loadDuration] is how long the database half took, kept so the next
+  /// refresh can say how long the app will be out of use.
+  Future<void> recordIngest(
+    int companyCount, {
+    DateTime? archiveLastModified,
+    Duration? loadDuration,
+  }) {
     return into(ingestRuns).insertOnConflictUpdate(
       IngestRunsCompanion.insert(
         id: const Value(1),
@@ -422,6 +513,7 @@ class AppDatabase extends _$AppDatabase {
         companyCount: companyCount,
         extractorVersion: extractorVersion,
         archiveLastModified: Value(archiveLastModified),
+        loadSeconds: Value(loadDuration?.inSeconds),
       ),
     );
   }
@@ -739,6 +831,69 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> clearSetting(String key) {
     return (delete(settings)..where((row) => row.key.equals(key))).go();
+  }
+
+  /// What a model last said about [cik] for [kind], with its lines in order,
+  /// or `null` if it has never been asked.
+  Future<(ResearchNoteRow, List<ResearchNoteLineRow>)?> researchNote(
+    String cik,
+    String kind,
+  ) async {
+    final note =
+        await (select(researchNotes)
+              ..where((row) => row.cik.equals(cik) & row.kind.equals(kind)))
+            .getSingleOrNull();
+    if (note == null) return null;
+
+    final lines =
+        await (select(researchNoteLines)
+              ..where((row) => row.cik.equals(cik) & row.kind.equals(kind))
+              ..orderBy([(row) => OrderingTerm.asc(row.position)]))
+            .get();
+    return (note, lines);
+  }
+
+  /// Replaces whatever was stored for [cik] and [kind].
+  Future<void> saveResearchNote({
+    required String cik,
+    required String kind,
+    required DateTime generatedAt,
+    String? body,
+    required List<({String label, String url, DateTime? happenedAt})> lines,
+  }) async {
+    await transaction(() async {
+      await clearResearchNote(cik, kind);
+      await into(researchNotes).insert(
+        ResearchNotesCompanion.insert(
+          cik: cik,
+          kind: kind,
+          generatedAt: generatedAt,
+          body: Value(body),
+        ),
+      );
+      await batch(
+        (batch) => batch.insertAll(researchNoteLines, [
+          for (final (index, line) in lines.indexed)
+            ResearchNoteLinesCompanion.insert(
+              cik: cik,
+              kind: kind,
+              position: index,
+              label: line.label,
+              url: line.url,
+              happenedAt: Value(line.happenedAt),
+            ),
+        ]),
+      );
+    });
+  }
+
+  Future<void> clearResearchNote(String cik, String kind) async {
+    await (delete(
+      researchNoteLines,
+    )..where((row) => row.cik.equals(cik) & row.kind.equals(kind))).go();
+    await (delete(
+      researchNotes,
+    )..where((row) => row.cik.equals(cik) & row.kind.equals(kind))).go();
   }
 
   /// The price last entered for [cik], or `null` if none has been.
