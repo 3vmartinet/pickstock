@@ -130,6 +130,23 @@ class ThemeRepo {
   static const double stagePulseScale = 1.12;
   static const Duration stagePulseDuration = Duration(milliseconds: 900);
 
+  /// The dot that marks an update as new, and how far it sits outside the
+  /// button's top-left corner. Small and unadorned: it is a mark, not a
+  /// second thing to read.
+  static const double updateBadgeSize = 8;
+  static const double updateBadgeOffset = -2;
+
+  /// The sliver of progress along the bottom edge of the download button, and
+  /// how faint its unfilled track is. Thin enough to read as part of the
+  /// button's border rather than as a bar laid across it.
+  static const double updateProgressHeight = 3;
+  static const double updateProgressTrack = 0.3;
+
+  /// One turn of the app bar's refresh arrows while an update downloads
+  /// behind the app. Slow enough to read as "still going" rather than as
+  /// something urgently spinning.
+  static const Duration updateSpinDuration = Duration(milliseconds: 1600);
+
   static const double filterFieldMaxWidth = 320;
   static const double sortPopupMaxHeight = 320;
 
@@ -233,6 +250,12 @@ class ThemeRepo {
   Color negative(ThemeData theme) => theme.brightness == Brightness.dark
       ? Colors.rose.shade400
       : Colors.rose.shade600;
+
+  /// Colour for something finished and waiting on the user, which is neither
+  /// good news nor bad: an update downloaded but not yet loaded.
+  Color caution(ThemeData theme) => theme.brightness == Brightness.dark
+      ? Colors.orange.shade400
+      : Colors.orange.shade600;
 
   /// Colour for a figure the filings do not report.
   Color unknown(ThemeData theme) => theme.colorScheme.mutedForeground;

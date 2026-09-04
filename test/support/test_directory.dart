@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show InsertMode, Value;
 
-import 'dart:io' show HttpDate;
+import 'dart:async' show Completer;
+import 'dart:io' show Directory, HttpDate;
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -109,9 +110,19 @@ double? _scaled(double? millions) =>
 /// The fixture's figures are written in millions for readability.
 const double _millions = 1000000;
 
-/// An archive date old enough that the fake HEAD response looks newer.
-final DateTime _loadedArchiveDate = DateTime.utc(2026, 1, 1);
-final DateTime _newerArchiveDate = DateTime.utc(2026, 8, 29);
+/// The archive date recorded against the seeded ingest: old enough that the
+/// fake HEAD response looks newer.
+final DateTime testLoadedArchiveDate = DateTime.utc(2026, 1, 1);
+
+/// What the fake HEAD response says SEC now has on offer.
+final DateTime testNewerArchiveDate = DateTime.utc(2026, 8, 29);
+
+/// A download the fakes pretend is waiting on disk, rebuilt by SEC on
+/// [archiveDate]. Nothing opens the files, so the path is never used.
+StagedIngest fakeStagedIngest(DateTime archiveDate) => StagedIngest(
+  stagingDirectory: Directory('${Directory.systemTemp.path}/pickstock-fake'),
+  archiveLastModified: archiveDate,
+);
 
 /// Stands in for SEC. HEAD answers the update check; nothing here reaches the
 /// network, so tests never depend on it.
@@ -122,13 +133,83 @@ BulkIngestRepo _fakeIngestRepo({required bool withUpdate}) => BulkIngestRepo(
         '',
         200,
         headers: withUpdate
-            ? {'last-modified': HttpDate.format(_newerArchiveDate)}
+            ? {'last-modified': HttpDate.format(testNewerArchiveDate)}
             : const {},
       );
     }
     return http.Response('{}', 200);
   }),
 );
+
+/// A stand-in for the ingest itself rather than for SEC, so a test can hold
+/// each half of a refresh open and look at the app in between.
+///
+/// The two halves are separately controllable because that is the whole point
+/// of the split: the downloads run behind a working app, and only the database
+/// step blocks it.
+class FakeBulkIngestRepo extends BulkIngestRepo {
+  FakeBulkIngestRepo({DateTime? archiveDate})
+    : archiveDate = archiveDate ?? testNewerArchiveDate;
+
+  /// What a HEAD request reports SEC has on offer.
+  final DateTime archiveDate;
+
+  /// Held open until the test completes them, so each half can be inspected
+  /// while it is still running.
+  final Completer<void> finishDownload = Completer<void>();
+  final Completer<void> finishLoad = Completer<void>();
+
+  /// What an earlier session is pretending to have left on disk.
+  StagedIngest? staged;
+
+  @override
+  Future<DateTime?> fetchArchiveLastModified() async => archiveDate;
+
+  @override
+  Future<StagedIngest?> readStaged() async => staged;
+
+  @override
+  Future<void> discardStaged() async {
+    staged = null;
+    wasDiscarded = true;
+  }
+
+  /// Whether the stream was cancelled rather than run to its end, which is
+  /// what leaving the loop early looks like from in here.
+  bool wasCancelled = false;
+
+  /// Whether the part-finished download was cleared up.
+  bool wasDiscarded = false;
+
+  @override
+  Stream<IngestProgress> download() async* {
+    var staged = false;
+    try {
+      yield const IngestFetchingDirectory();
+      yield const IngestDownloading(receivedBytes: 42, totalBytes: 100);
+      await finishDownload.future;
+      yield IngestStaged(fakeStagedIngest(archiveDate));
+      staged = true;
+    } finally {
+      // The real stream deletes what it had fetched here; this only records
+      // that the clean-up ran.
+      wasCancelled = !staged;
+    }
+  }
+
+  @override
+  Stream<IngestProgress> load(StagedIngest staged) async* {
+    yield const IngestLoading(companiesLoaded: 0, totalCompanies: 2);
+    await finishLoad.future;
+    // What the real load leaves behind, and what tells the app the archive it
+    // holds is now the newest one.
+    await GetIt.I.get<AppDatabase>().recordIngest(
+      testTickers.length,
+      archiveLastModified: staged.archiveLastModified,
+    );
+    yield const IngestDone(companyCount: 2);
+  }
+}
 
 /// A quote source for tests: unconfigured by default, so the price is typed in
 /// exactly as it is in a build with no API key.
@@ -172,6 +253,7 @@ Future<AppDatabase> registerTestDependencies({
   bool withIngest = true,
   bool withFinancials = false,
   bool withUpdateAvailable = false,
+  BulkIngestRepo? bulkIngestRepo,
   QuoteRepo? quoteRepo,
   SettingsRepo? settingsRepo,
   MarketRatesRepo? marketRatesRepo,
@@ -187,7 +269,7 @@ Future<AppDatabase> registerTestDependencies({
     );
     await database.recordIngest(
       testTickers.length,
-      archiveLastModified: _loadedArchiveDate,
+      archiveLastModified: testLoadedArchiveDate,
     );
   }
 
@@ -239,7 +321,7 @@ Future<AppDatabase> registerTestDependencies({
     ..registerSingleton<AppDatabase>(database)
     ..registerSingleton<TickerDirectoryRepo>(directory)
     ..registerLazySingleton<BulkIngestRepo>(
-      () => _fakeIngestRepo(withUpdate: withUpdateAvailable),
+      () => bulkIngestRepo ?? _fakeIngestRepo(withUpdate: withUpdateAvailable),
     )
     ..registerLazySingleton<SecRepo>(() => const MockSecRepo())
     // The real implementation, against the in-memory database: remembering a

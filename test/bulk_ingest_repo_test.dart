@@ -374,49 +374,85 @@ void main() {
     expect(workingDirectory.listSync(), isEmpty);
   });
 
-  test(
-    'reuses an archive already on disk instead of downloading again',
-    () async {
-      final archive = _archiveBytes({
+  test('picks a staged download back up rather than fetching again', () async {
+    final archive = _archiveBytes({
+      'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+    });
+    var archiveRequests = 0;
+    final repo = BulkIngestRepo(
+      workingDirectory: workingDirectory,
+      client: MockClient((request) async {
+        if (request.url.toString() == tickerDirectoryUrl) {
+          return http.Response(
+            jsonEncode({
+              '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+            }),
+            200,
+          );
+        }
+        // Only a GET of the archive itself is a download; the ingest also
+        // HEADs it for the date and GETs the optional sector data sets.
+        if (request.method == 'GET' &&
+            request.url.toString() == bulkCompanyFactsUrl) {
+          archiveRequests++;
+        }
+        return http.Response.bytes(archive, 200);
+      }),
+    );
+
+    // What an earlier session left behind: a whole download, unloaded.
+    await repo.download().drain<void>();
+    expect(archiveRequests, 1);
+
+    final staged = await repo.readStaged();
+    expect(staged, isNotNull);
+    final progress = await repo.load(staged!).toList();
+
+    expect(archiveRequests, 1, reason: 'the 1.4 GB download was repeated');
+    expect(progress.whereType<IngestDownloading>(), isEmpty);
+    expect(await database.companyFor('0000320193'), isNotNull);
+  });
+
+  test('starts over rather than trusting half a download', () async {
+    final staging = Directory('${workingDirectory.path}/sec-download')
+      ..createSync(recursive: true);
+    // An archive with no manifest beside it: what an interrupted download,
+    // or a crash between the two halves, leaves behind.
+    File('${staging.path}/companyfacts.zip').writeAsBytesSync(const [1, 2, 3]);
+
+    expect(await repoServing(const []).readStaged(), isNull);
+    // And none of it is left to be mistaken for a download next time.
+    expect(staging.existsSync(), isFalse);
+  });
+
+  test('clears an archive left where an older build put it', () async {
+    // Before downloads had a folder of their own the archive sat in the
+    // temporary directory itself, where nothing now looks for it.
+    final orphan = File('${workingDirectory.path}/companyfacts.zip')
+      ..writeAsBytesSync(const [1, 2, 3]);
+
+    expect(await repoServing(const []).readStaged(), isNull);
+    expect(orphan.existsSync(), isFalse);
+  });
+
+  test('a download whose archive was cleaned up is not offered', () async {
+    final repo = repoServing(
+      _archiveBytes({
         'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
-      });
-      // Left behind by an attempt that downloaded but failed to load.
-      File('${workingDirectory.path}/companyfacts.zip')
-          .writeAsBytesSync(archive);
+      }),
+    );
+    final staged = (await repo.download().toList())
+        .whereType<IngestStaged>()
+        .single
+        .staged;
 
-      var archiveRequests = 0;
-      final repo = BulkIngestRepo(
-        workingDirectory: workingDirectory,
-        client: MockClient((request) async {
-          if (request.url.toString() == tickerDirectoryUrl) {
-            return http.Response(
-              jsonEncode({
-                '0': {
-                  'cik_str': 320193,
-                  'ticker': 'AAPL',
-                  'title': 'Apple Inc.',
-                },
-              }),
-              200,
-            );
-          }
-          // Only a GET of the archive itself is a download; the ingest also
-          // HEADs it for the date and GETs the optional sector data sets.
-          if (request.method == 'GET' &&
-              request.url.toString() == bulkCompanyFactsUrl) {
-            archiveRequests++;
-          }
-          return http.Response.bytes(archive, 200);
-        }),
-      );
+    // The staging area is a temporary directory, and the platform is entitled
+    // to empty it: the manifest alone is not proof the archive is still there.
+    staged.archiveFile.deleteSync();
 
-      final progress = await repo.ingest().toList();
-
-      expect(archiveRequests, 0, reason: 'the 1.4 GB download was repeated');
-      expect(progress.whereType<IngestDownloading>(), isEmpty);
-      expect(await database.companyFor('0000320193'), isNotNull);
-    },
-  );
+    expect(await repo.readStaged(), isNull);
+    expect(staged.stagingDirectory.existsSync(), isFalse);
+  });
 
   test('a half-written download never looks complete', () async {
     final repo = BulkIngestRepo(
@@ -444,6 +480,80 @@ void main() {
       File('${workingDirectory.path}/companyfacts.zip').existsSync(),
       isFalse,
     );
+    expect(workingDirectory.listSync(), isEmpty);
+  });
+
+  test('keeps the hand-off between the two halves to itself', () async {
+    // `ingest` folds the hand-off away: it is how a caller that wants the two
+    // halves apart gets hold of the archive, not a stage to report.
+    final progress = await repoServing(
+      _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      }),
+    ).ingest().toList();
+
+    expect(progress.whereType<IngestStaged>(), isEmpty);
+  });
+
+  test('downloading writes nothing, so the app can stay open', () async {
+    final progress = await repoServing(
+      _archiveBytes({
+        'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+      }),
+    ).download().toList();
+
+    // No table is touched until the load, which is exactly what lets a
+    // refresh's 1.4 GB download run behind a working app.
+    expect(await database.lastIngest(), isNull);
+    expect(await database.companyFor('0000320193'), isNull);
+
+    // Everything a load needs is on disk, manifest last, so a restart can
+    // pick the download up where it was left.
+    final staged = progress.whereType<IngestStaged>().single.staged;
+    expect(staged.archiveFile.existsSync(), isTrue);
+    expect(staged.tickersFile.existsSync(), isTrue);
+    expect(staged.sectorsFile.existsSync(), isTrue);
+    expect(staged.manifestFile.existsSync(), isTrue);
+  });
+
+  test('a staged download loads without fetching anything again', () async {
+    final archive = _archiveBytes({
+      'CIK0000320193.json': _facts('Apple Inc.', fy: 2025, val: 400),
+    });
+    var requests = 0;
+    final repo = BulkIngestRepo(
+      workingDirectory: workingDirectory,
+      client: MockClient((request) async {
+        requests++;
+        if (request.url.path.contains('financial-statement-data-sets')) {
+          return http.Response('', 404);
+        }
+        if (request.url.toString() == tickerDirectoryUrl) {
+          return http.Response(
+            jsonEncode({
+              '0': {'cik_str': 320193, 'ticker': 'AAPL', 'title': 'Apple Inc.'},
+            }),
+            200,
+          );
+        }
+        return http.Response.bytes(archive, 200);
+      }),
+    );
+
+    final staged = (await repo.download().toList())
+        .whereType<IngestStaged>()
+        .single
+        .staged;
+    final downloadRequests = requests;
+
+    final progress = await repo.load(staged).toList();
+
+    expect(requests, downloadRequests, reason: 'the load went back to SEC');
+    expect(progress.last, isA<IngestDone>());
+    expect(await database.companyFor('0000320193'), isNotNull);
+    expect((await database.lastIngest())!.companyCount, 1);
+    // And everything downloaded is cleared up, not only the archive.
+    await _settleCleanup();
     expect(workingDirectory.listSync(), isEmpty);
   });
 

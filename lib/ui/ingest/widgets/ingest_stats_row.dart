@@ -93,7 +93,7 @@ class IngestStatsRow extends StatelessWidget {
           value: _remaining(context, viewModel),
         ),
       ],
-      IngestDone() => const [],
+      IngestDone() || IngestStaged() => const [],
     };
   }
 

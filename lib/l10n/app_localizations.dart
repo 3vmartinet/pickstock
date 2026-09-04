@@ -298,6 +298,72 @@ abstract class AppLocalizations {
   /// **'SEC rebuilt the archive on {date}. Download it to refresh your figures.'**
   String updateAvailableOn(DateTime date);
 
+  /// No description provided for @dataAsOf.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC data · {date}'**
+  String dataAsOf(DateTime date);
+
+  /// No description provided for @dataAsOfHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your figures come from the archive SEC published on {date}. PickStock looks for a newer one every time it starts.'**
+  String dataAsOfHint(DateTime date);
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading update…'**
+  String get updateDownloading;
+
+  /// No description provided for @updateDownloadingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC\'s archive is downloading in the background. Carry on using the app — refreshing the database is a separate step, and you will be asked before it starts.'**
+  String get updateDownloadingHint;
+
+  /// No description provided for @updateDownloadedPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% downloaded.'**
+  String updateDownloadedPercent(int percent);
+
+  /// No description provided for @updateCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel the download'**
+  String get updateCancel;
+
+  /// No description provided for @updateCancelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop the download and throw away what has come down. An archive is only usable whole, so there is nothing to resume — starting again starts from the beginning.'**
+  String get updateCancelHint;
+
+  /// No description provided for @updateReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish update'**
+  String get updateReady;
+
+  /// No description provided for @updateReadyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The download is complete. Refreshing the database takes a few minutes and the app cannot be used while it runs, so nothing starts until you say so.'**
+  String get updateReadyHint;
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Update failed'**
+  String get updateFailed;
+
+  /// No description provided for @updateFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The download did not finish and nothing was changed — your figures are as they were. Press to try again.'**
+  String get updateFailedHint;
+
   /// No description provided for @ingestWarnLeave.
   ///
   /// In en, this message translates to:

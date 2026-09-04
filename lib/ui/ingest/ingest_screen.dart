@@ -137,7 +137,9 @@ class _ActiveRing extends StatelessWidget {
     final fraction = switch (progress) {
       IngestDownloading(:final fraction) => fraction,
       IngestLoading(:final fraction) => fraction,
-      IngestDone() => 1.0,
+      // Staging only reaches here on the two-step refresh, where everything
+      // downloadable is by then downloaded.
+      IngestDone() || IngestStaged() => 1.0,
       IngestFetchingDirectory() => null,
       IngestFetchingSectors(:final quartersRead) =>
         quartersRead / sectorQuarters,

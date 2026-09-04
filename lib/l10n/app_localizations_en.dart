@@ -149,6 +149,55 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String dataAsOf(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'SEC data · $dateString';
+  }
+
+  @override
+  String dataAsOfHint(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Your figures come from the archive SEC published on $dateString. PickStock looks for a newer one every time it starts.';
+  }
+
+  @override
+  String get updateDownloading => 'Downloading update…';
+
+  @override
+  String get updateDownloadingHint =>
+      'SEC\'s archive is downloading in the background. Carry on using the app — refreshing the database is a separate step, and you will be asked before it starts.';
+
+  @override
+  String updateDownloadedPercent(int percent) {
+    return '$percent% downloaded.';
+  }
+
+  @override
+  String get updateCancel => 'Cancel the download';
+
+  @override
+  String get updateCancelHint =>
+      'Stop the download and throw away what has come down. An archive is only usable whole, so there is nothing to resume — starting again starts from the beginning.';
+
+  @override
+  String get updateReady => 'Finish update';
+
+  @override
+  String get updateReadyHint =>
+      'The download is complete. Refreshing the database takes a few minutes and the app cannot be used while it runs, so nothing starts until you say so.';
+
+  @override
+  String get updateFailed => 'Update failed';
+
+  @override
+  String get updateFailedHint =>
+      'The download did not finish and nothing was changed — your figures are as they were. Press to try again.';
+
+  @override
   String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
 
   @override

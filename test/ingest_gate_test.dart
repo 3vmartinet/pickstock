@@ -2,11 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/ui/widgets/ingest_button.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/test_directory.dart';
 
 const Size _desktopSize = Size(1440, 1000);
+
+/// Long enough for flutter_animate's zero-duration start timers to fire, which
+/// a test must not leave pending.
+const Duration _animationStart = Duration(milliseconds: 50);
 
 void main() {
   late AppDatabase database;
@@ -50,24 +55,137 @@ void main() {
     expect(find.text('PickStock'), findsOneWidget);
   });
 
-  testWidgets('blocks again while a refresh is running', (tester) async {
-    // The refresh is only offered when SEC has published a newer archive.
-    database = await registerTestDependencies(withUpdateAvailable: true);
+  testWidgets('keeps the app usable while an update downloads', (tester) async {
+    final ingest = FakeBulkIngestRepo();
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
     await pumpApp(tester);
-    expect(find.text('PickStock'), findsOneWidget);
 
-    // A refresh clears the tables before repopulating them, so the app must
-    // not stay usable behind it.
     expect(find.text('Update available'), findsOneWidget);
     await tester.tap(find.text('Update available'));
+    await tester.pump();
+    // The turning arrows schedule a start timer, which has to be let go of
+    // before the test ends.
+    await tester.pump(_animationStart);
+
+    // The downloads touch no table, so there is no reason to lock the app for
+    // the several minutes they take: only the app bar changes.
+    expect(find.text('Downloading update…'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Preparing your data'), findsNothing);
+  });
+
+  testWidgets('shows how far a background download has got', (tester) async {
+    final ingest = FakeBulkIngestRepo();
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Update available'));
+    await tester.pump();
+    await tester.pump(_animationStart);
+
+    // On the button's own bottom edge rather than in a bar of its own, which
+    // would make the app bar taller the moment a download started.
+    final bar = find.byType(Progress);
+    expect(bar, findsOneWidget);
+    expect(tester.widget<Progress>(bar).progress, 0.42);
+    expect(
+      tester.getRect(bar).bottom,
+      tester
+          .getRect(
+            find.ancestor(
+              of: find.text('Downloading update…'),
+              matching: find.byType(PrimaryButton),
+            ),
+          )
+          .bottom,
+    );
+  });
+
+  testWidgets('stops a background download when asked, keeping nothing', (
+    tester,
+  ) async {
+    final ingest = FakeBulkIngestRepo();
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Update available'));
+    await tester.pump();
+    await tester.pump(_animationStart);
+
+    await tester.tap(find.byKey(updateCancelKey));
+    // A download is stopped at its next report, so the fake has to send one —
+    // and it sends its last, which is the case worth pinning down: a cancel
+    // that lands as the download finishes still cancels.
+    ingest.finishDownload.complete();
+    await tester.pumpAndSettle();
+
+    // Half an archive is no use, so it goes, and the offer is back as it was.
+    expect(ingest.wasCancelled, isTrue);
+    expect(ingest.wasDiscarded, isTrue);
+    expect(find.text('Update available'), findsOneWidget);
+    expect(find.text('Downloading update…'), findsNothing);
+    expect(find.byKey(updateCancelKey), findsNothing);
+    // And the app was never in the way of any of it.
+    expect(find.text('PickStock'), findsOneWidget);
+  });
+
+  testWidgets('waits to be told before it touches the database', (
+    tester,
+  ) async {
+    final ingest = FakeBulkIngestRepo();
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Update available'));
+    await tester.pump();
+    await tester.pump(_animationStart);
+    ingest.finishDownload.complete();
+    await tester.pump();
+
+    // Everything is downloaded and the app is still usable: the step that
+    // clears the tables is a decision, not a consequence.
+    expect(find.text('Finish update'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
+
+    await tester.tap(find.text('Finish update'));
     // Enough for flutter_animate's start timers; the panel's pulse repeats
     // forever, so settling is not an option.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
+    // Now the app has to go: the tables are cleared before they are
+    // repopulated, so there is nothing behind the panel to use.
     expect(find.text('PickStock'), findsNothing);
-    // The setup panel, with its progress ring, has taken the screen.
     expect(find.byType(CircularProgressIndicator), findsWidgets);
     expect(find.text('Preparing your data'), findsOneWidget);
+  });
+
+  testWidgets('lets the app back in, with nothing left on offer', (
+    tester,
+  ) async {
+    final ingest = FakeBulkIngestRepo();
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Update available'));
+    await tester.pump();
+    await tester.pump(_animationStart);
+    ingest.finishDownload.complete();
+    await tester.pump();
+    await tester.tap(find.text('Finish update'));
+    await tester.pump();
+    await tester.pump(_animationStart);
+
+    ingest.finishLoad.complete();
+    // The directory is re-read and the ingest row looked up before the gate
+    // opens, so the app comes back a few turns of the loop later. Settling is
+    // an option again here: the panel with the repeating pulse has gone.
+    await tester.pumpAndSettle();
+
+    expect(find.text('PickStock'), findsOneWidget);
+    // The archive just loaded is the newest one, so the button goes away.
+    expect(find.text('Update available'), findsNothing);
+    expect(find.text('Finish update'), findsNothing);
   });
 }

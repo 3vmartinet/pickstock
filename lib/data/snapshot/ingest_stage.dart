@@ -20,7 +20,8 @@ enum IngestStage {
   static IngestStage of(IngestProgress progress) => switch (progress) {
     IngestFetchingDirectory() => IngestStage.directory,
     IngestFetchingSectors() => IngestStage.sectors,
-    IngestDownloading() => IngestStage.download,
+    // Staging is the download stage finishing, not a stage of its own.
+    IngestDownloading() || IngestStaged() => IngestStage.download,
     IngestLoading() || IngestDone() => IngestStage.load,
   };
 

@@ -69,7 +69,11 @@ class _HomeAppBar extends StatelessWidget {
       subtitle: context.isCompact
           ? null
           : Text(context.strings.browseSubtitle(total)),
-      trailing: const [JobsButton(), IngestButton(), ThemeToggleButton()],
+      // The ingest button last: it is the only one of the three that is
+      // sometimes a labelled button and sometimes a line of text, and a slot
+      // that changes width belongs at the end of the row rather than between
+      // two icons it would shove about.
+      trailing: const [JobsButton(), ThemeToggleButton(), IngestButton()],
     );
   }
 }

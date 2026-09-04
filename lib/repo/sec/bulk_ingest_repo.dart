@@ -30,7 +30,18 @@ const String tickerDirectoryUrl =
 /// EDGAR requires a descriptive User-Agent on every request.
 const String _userAgent = 'PickStock App straspool+pickstock@gmail.com';
 
+/// A download's own directory, under the platform temporary directory. Its
+/// own, so clearing up is one recursive delete rather than a list of names to
+/// remember.
+const String _stagingDirectoryName = 'sec-download';
+
 const String _archiveFileName = 'companyfacts.zip';
+const String _tickersFileName = 'company_tickers.json';
+const String _sectorsFileName = 'sectors.json';
+const String _manifestFileName = 'staged.json';
+
+const String _manifestArchiveDateKey = 'archiveLastModified';
+const String _manifestArchiveBytesKey = 'archiveBytes';
 
 /// A download in flight. Renamed to [_archiveFileName] only once complete, so
 /// the presence of the final name means "fully downloaded".
@@ -119,6 +130,66 @@ List<IngestedCompany> parseArchiveSlice(
   }
 }
 
+/// SEC's ticker directory payload as rows for the `tickers` table.
+List<TickersCompanion> _parseTickerDirectory(String payload) {
+  final decoded = jsonDecode(payload) as Map<String, dynamic>;
+  return [
+    for (final raw in decoded.values)
+      if (raw case final Map<String, dynamic> entry)
+        TickersCompanion.insert(
+          symbol: (entry[_tickerKey] as String).toUpperCase(),
+          cik: entry[_directoryCikKey].toString().padLeft(
+            _cikDigits,
+            _cikPadding,
+          ),
+          name: entry[_titleKey] as String? ?? '',
+        ),
+  ];
+}
+
+/// The staged industry codes, as written by a download.
+Map<String, int> _parseStagedSectors(String payload) {
+  final decoded = jsonDecode(payload) as Map<String, dynamic>;
+  return {for (final entry in decoded.entries) entry.key: entry.value as int};
+}
+
+/// Reads `sub.txt` out of one quarterly data set, as a SIC code per CIK.
+///
+/// Top-level so it can run under [Isolate.run]: the zip is about 60 MB and the
+/// table inside it ten thousand lines, which is a visible stall on the isolate
+/// drawing the app.
+Map<String, int> readSectorCodes(Uint8List zipBytes) {
+  final sicByCik = <String, int>{};
+  final archive = ZipDecoder().decodeBytes(zipBytes);
+
+  for (final entry in archive) {
+    if (!entry.isFile || !entry.name.endsWith(_sectorEntryName)) continue;
+
+    final lines = const LineSplitter().convert(
+      utf8.decode(entry.readBytes()!, allowMalformed: true),
+    );
+    if (lines.isEmpty) continue;
+
+    final columns = lines.first.split('\t');
+    final cikAt = columns.indexOf(_sectorCikColumn);
+    final sicAt = columns.indexOf(_sectorSicColumn);
+    if (cikAt < 0 || sicAt < 0) continue;
+
+    for (final line in lines.skip(1)) {
+      final fields = line.split('\t');
+      if (fields.length <= sicAt) continue;
+      final sic = int.tryParse(fields[sicAt]);
+      final cik = int.tryParse(fields[cikAt]);
+      if (sic == null || cik == null) continue;
+      sicByCik.putIfAbsent(
+        cik.toString().padLeft(_cikDigits, _cikPadding),
+        () => sic,
+      );
+    }
+  }
+  return sicByCik;
+}
+
 /// `CIK0000320193.json` -> `0000320193`. Anything else is not a filer file.
 String? _cikOf(String entryName) {
   final base = entryName.split('/').last;
@@ -188,6 +259,56 @@ final class IngestDone extends IngestProgress {
   final int companyCount;
 }
 
+/// Every download is finished and nothing has touched the database yet.
+///
+/// The last event [BulkIngestRepo.download] reports, so a caller that wants
+/// the two halves of an ingest apart has something to hold on to in between.
+final class IngestStaged extends IngestProgress {
+  const IngestStaged(this.staged);
+
+  final StagedIngest staged;
+}
+
+/// A complete download, ready to be loaded into the database.
+///
+/// The two halves of an ingest are separable because only the second one
+/// touches the database: fetching 1.4 GB can happen behind a working app —
+/// and outlive it being closed — while loading it clears the tables and
+/// cannot.
+///
+/// Nothing is held in memory: this is a handle to files on disk, so a download
+/// finished at midnight can still be loaded the next morning.
+class StagedIngest {
+  const StagedIngest({
+    required this.stagingDirectory,
+    required this.archiveLastModified,
+  });
+
+  /// The directory holding the archive, the ticker directory, the industry
+  /// codes and the manifest that vouches for all three.
+  ///
+  /// Owned outright and used for nothing else, so clearing up is one recursive
+  /// delete that can never reach anything that matters.
+  final Directory stagingDirectory;
+
+  /// When SEC rebuilt the archive that was fetched, or `null` if the header
+  /// could not be read.
+  final DateTime? archiveLastModified;
+
+  File get archiveFile => _staged(_archiveFileName);
+
+  /// SEC's directory payload, saved verbatim.
+  File get tickersFile => _staged(_tickersFileName);
+
+  /// The merged SIC codes, as a JSON object keyed by padded CIK.
+  File get sectorsFile => _staged(_sectorsFileName);
+
+  /// Written last, and so the thing that says the other three are whole.
+  File get manifestFile => _staged(_manifestFileName);
+
+  File _staged(String name) => File('${stagingDirectory.path}/$name');
+}
+
 /// SEC's quarterly financial statement data sets. Their `sub.txt` carries a
 /// SIC code per filer, which is the only industry classification SEC
 /// publishes — and at roughly 60 MB a quarter it is far cheaper than the only
@@ -226,24 +347,67 @@ class BulkIngestRepo {
 
   /// Runs a full ingest, replacing whatever is already stored.
   ///
-  /// The archive is ~1.4 GB and expands to roughly 19 GB of JSON, so it is
-  /// streamed to disk and then read one entry at a time — never held whole in
-  /// memory.
+  /// Both halves in one pass, which is what a first run wants: there is no
+  /// data to keep the app usable for anyway.
   Stream<IngestProgress> ingest() async* {
-    final stagingDirectory = workingDirectory ?? await getTemporaryDirectory();
+    StagedIngest? downloaded;
+    // `await for`, not `yield*`: the hand-off event belongs to this function,
+    // not to whoever is watching the ingest.
+    await for (final progress in download()) {
+      if (progress case IngestStaged(:final staged)) {
+        downloaded = staged;
+      } else {
+        yield progress;
+      }
+    }
+    // `download` either reports it or throws, so it cannot be missing here.
+    yield* load(downloaded!);
+  }
+
+  /// Downloads everything a load needs, without touching the database.
+  ///
+  /// The archive is ~1.4 GB, so it is streamed to disk rather than held in
+  /// memory; the ticker directory and the industry codes are saved beside it.
+  /// Nothing here reads or writes the database, which is what lets a refresh
+  /// run behind a working app.
+  ///
+  /// The final event is an [IngestStaged]; from then on the staged download
+  /// belongs to the caller, which must hand it to [load].
+  Stream<IngestProgress> download() async* {
+    await _clearLegacyStaging();
+    final staging = await _stagingDirectory();
+
+    // A whole set from an earlier attempt — a load that failed, or the app
+    // closed between the two halves — leaves nothing to fetch.
+    final existing = _readStagedIn(staging);
+    if (existing != null) {
+      logInfo(() => 'Reusing the download already on disk');
+      yield IngestStaged(existing);
+      return;
+    }
+
+    // Anything else in there is half-finished, and half a download is worth
+    // nothing: this starts from the beginning rather than from the middle.
+    await _clearStaging(staging);
     // On macOS the sandbox container's cache directory is reported before it
     // is created, and `openWrite` does not create parents.
-    await stagingDirectory.create(recursive: true);
-    final archiveFile = File('${stagingDirectory.path}/$_archiveFileName');
+    await staging.create(recursive: true);
 
-    // Kept only when a complete archive failed to load for a reason other
-    // than the archive itself: a retry then skips the 1.4 GB download.
-    var discardArchive = true;
+    var discardStaging = true;
     try {
       // The directory first: it is small, and a failure here should not come
       // after a 1.4 GB download.
       yield const IngestFetchingDirectory();
-      final directory = await _fetchTickerDirectory();
+      // Only here for the file names it works out: the archive's date is not
+      // known until the archive is down, so the whole thing is rebuilt below.
+      final partial = StagedIngest(
+        stagingDirectory: staging,
+        archiveLastModified: null,
+      );
+      await partial.tickersFile.writeAsString(
+        await _fetchTickerDirectory(),
+        flush: true,
+      );
 
       final sicByCik = <String, int>{};
       var quarter = 0;
@@ -254,40 +418,176 @@ class BulkIngestRepo {
       logInfo(
         () => 'Sectors for ${sicByCik.length} filers from $quarter data sets',
       );
+      await partial.sectorsFile.writeAsString(
+        jsonEncode(sicByCik),
+        flush: true,
+      );
 
-      if (archiveFile.existsSync()) {
-        // A previous attempt downloaded it and failed to load it. The file
-        // takes its final name only once complete, so reusing it is safe.
-        logInfo(() => 'Reusing the archive already on disk');
-      } else {
-        // `await for`, not `yield*`: a delegated stream's errors bypass this
-        // function's catch clauses entirely, so the archive would be kept when
-        // it should be discarded.
-        await for (final progress in _download(archiveFile)) {
-          yield progress;
-        }
-      }
-
-      discardArchive = false;
-      // Recorded against the ingest so a later HEAD request can tell whether
-      // SEC has rebuilt the archive since.
-      final archiveDate = await fetchArchiveLastModified();
-      await for (final progress in _load(
-        archiveFile,
-        directory,
-        archiveDate,
-        sicByCik,
-      )) {
+      // `await for`, not `yield*`: a delegated stream's errors bypass this
+      // function's catch clauses entirely, so the download would be kept when
+      // it should be discarded.
+      await for (final progress in _download(partial.archiveFile)) {
         yield progress;
       }
-      discardArchive = true;
+
+      final complete = StagedIngest(
+        stagingDirectory: staging,
+        // Recorded against the ingest so a later HEAD request can tell
+        // whether SEC has rebuilt the archive since.
+        archiveLastModified: await fetchArchiveLastModified(),
+      );
+      // Written last, so nothing is ever taken for a finished download until
+      // it is one.
+      await _writeManifest(complete);
+      discardStaging = false;
+      yield IngestStaged(complete);
+    } finally {
+      if (discardStaging) await _clearStaging(staging);
+    }
+  }
+
+  /// Loads a staged download into the database, replacing what is stored.
+  ///
+  /// The tables are cleared before they are repopulated, so the app has
+  /// nothing to show while this runs. The archive expands to roughly 19 GB of
+  /// JSON and is read one entry at a time — never held whole in memory.
+  Stream<IngestProgress> load(StagedIngest staged) async* {
+    // Kept when a whole download failed to load for a reason other than the
+    // archive itself: a retry then skips the 1.4 GB fetch.
+    var discardStaging = false;
+    try {
+      // `await for`, not `yield*`: a delegated stream's errors bypass this
+      // function's catch clauses entirely, so the download would be kept when
+      // it should be discarded.
+      await for (final progress in _load(staged)) {
+        yield progress;
+      }
+      discardStaging = true;
     } on FormatException {
       // The archive is unusable, so there is nothing worth keeping.
-      discardArchive = true;
+      discardStaging = true;
       rethrow;
     } finally {
-      if (discardArchive) await _deleteQuietly(archiveFile);
+      // Everything, not just the archive: once it is in the database the
+      // 1.4 GB and the two files beside it have no further use.
+      if (discardStaging) await _clearStaging(staged.stagingDirectory);
     }
+  }
+
+  /// The whole download waiting on disk from an earlier session, or `null` if
+  /// there is none.
+  ///
+  /// Anything half-finished is deleted rather than reported: the manifest is
+  /// written last, so a staging directory without one is the wreckage of an
+  /// interrupted download and none of it can be trusted.
+  Future<StagedIngest?> readStaged() async {
+    try {
+      await _clearLegacyStaging();
+      final staging = await _stagingDirectory();
+      if (!staging.existsSync()) return null;
+
+      final staged = _readStagedIn(staging);
+      if (staged != null) return staged;
+
+      logInfo(() => 'Discarding an unfinished download');
+      await _clearStaging(staging);
+      return null;
+    } on Object catch (error) {
+      // Not being able to look is the same as there being nothing there.
+      logWarning(() => 'Could not read the staging directory: $error');
+      return null;
+    }
+  }
+
+  /// The download staged in [staging], or `null` if there is not a whole one.
+  ///
+  /// The manifest is written last and records the size the archive should be,
+  /// so this is enough to tell a finished download from the wreckage of one
+  /// that was interrupted — by a failure, or by the app being closed mid-way.
+  StagedIngest? _readStagedIn(Directory staging) {
+    final staged = StagedIngest(
+      stagingDirectory: staging,
+      archiveLastModified: null,
+    );
+    if (!staged.manifestFile.existsSync()) return null;
+
+    try {
+      final manifest = jsonDecode(
+        staged.manifestFile.readAsStringSync(),
+      ) as Map<String, dynamic>;
+      if (!staged.tickersFile.existsSync() ||
+          !staged.sectorsFile.existsSync()) {
+        return null;
+      }
+      // A temporary directory is nobody's private property, so the archive is
+      // measured rather than assumed.
+      if (!staged.archiveFile.existsSync() ||
+          staged.archiveFile.lengthSync() !=
+              manifest[_manifestArchiveBytesKey]) {
+        return null;
+      }
+
+      final date = manifest[_manifestArchiveDateKey] as String?;
+      return StagedIngest(
+        stagingDirectory: staging,
+        archiveLastModified: date == null ? null : DateTime.parse(date),
+      );
+    } on Object catch (error) {
+      logWarning(() => 'Could not read the staging manifest: $error');
+      return null;
+    }
+  }
+
+  /// Deletes a staged download, whole or not.
+  Future<void> discardStaged() async {
+    try {
+      await _clearStaging(await _stagingDirectory());
+    } on Object catch (error) {
+      logWarning(() => 'Could not clear the staging directory: $error');
+    }
+  }
+
+  /// Where a download is staged. Not created here: the read paths want to
+  /// know whether it exists.
+  Future<Directory> _stagingDirectory() async =>
+      Directory('${(await _stagingRoot()).path}/$_stagingDirectoryName');
+
+  Future<Directory> _stagingRoot() async =>
+      workingDirectory ?? await getTemporaryDirectory();
+
+  /// Deletes an archive staged by a build that kept it in the temporary
+  /// directory itself, before downloads had a folder of their own.
+  ///
+  /// Nothing reads it any more, and 1.4 GB of orphan is not something to leave
+  /// on someone's disk because the layout changed under it.
+  Future<void> _clearLegacyStaging() async {
+    final root = await _stagingRoot();
+    for (final name in const [
+      _archiveFileName,
+      '$_archiveFileName$_partialSuffix',
+    ]) {
+      final file = File('${root.path}/$name');
+      if (!file.existsSync()) continue;
+      logInfo(() => 'Deleting an archive left by an earlier version');
+      await _deleteQuietly(file);
+    }
+  }
+
+  Future<void> _clearStaging(Directory staging) async {
+    if (!staging.existsSync()) return;
+    await staging.delete(recursive: true);
+  }
+
+  Future<void> _writeManifest(StagedIngest staged) async {
+    final archiveDate = staged.archiveLastModified;
+    await staged.manifestFile.writeAsString(
+      jsonEncode({
+        if (archiveDate != null)
+          _manifestArchiveDateKey: archiveDate.toIso8601String(),
+        _manifestArchiveBytesKey: staged.archiveFile.lengthSync(),
+      }),
+      flush: true,
+    );
   }
 
   /// When SEC last rebuilt the archive, or `null` if it cannot be determined.
@@ -313,7 +613,12 @@ class BulkIngestRepo {
     if (file.existsSync()) await file.delete();
   }
 
-  Future<List<TickersCompanion>> _fetchTickerDirectory() async {
+  /// Fetches SEC's ticker directory and hands it back verbatim, to be staged
+  /// as it came.
+  ///
+  /// Parsed here only to fail early: an unusable directory should stop a run
+  /// before the 1.4 GB download rather than after it.
+  Future<String> _fetchTickerDirectory() async {
     logInfo(() => 'Fetching $tickerDirectoryUrl');
     final response = await _client.get(
       Uri.parse(tickerDirectoryUrl),
@@ -323,19 +628,8 @@ class BulkIngestRepo {
       throw HttpException('Ticker directory failed: ${response.statusCode}');
     }
 
-    final payload = jsonDecode(response.body) as Map<String, dynamic>;
-    return [
-      for (final raw in payload.values)
-        if (raw case final Map<String, dynamic> entry)
-          TickersCompanion.insert(
-            symbol: (entry[_tickerKey] as String).toUpperCase(),
-            cik: entry[_directoryCikKey].toString().padLeft(
-              _cikDigits,
-              _cikPadding,
-            ),
-            name: entry[_titleKey] as String? ?? '',
-          ),
-    ];
+    _parseTickerDirectory(response.body);
+    return response.body;
   }
 
   /// Merges SIC codes from the most recent quarters, newest first so a later
@@ -359,7 +653,15 @@ class BulkIngestRepo {
           headers: const {'User-Agent': _userAgent},
         );
         if (response.statusCode == HttpStatus.ok) {
-          _readSectors(response.bodyBytes, into);
+          final bytes = response.bodyBytes;
+          // Off the UI isolate: decompressing 60 MB and splitting the ten
+          // thousand lines inside it stalls the app for about a second, which
+          // matters when a refresh is running behind a screen still in use.
+          final quarterly = await Isolate.run(() => readSectorCodes(bytes));
+          // Only fill gaps: newer quarters are read first.
+          for (final entry in quarterly.entries) {
+            into.putIfAbsent(entry.key, () => entry.value);
+          }
           found++;
           yield found;
         }
@@ -369,37 +671,6 @@ class BulkIngestRepo {
 
       // Step back one quarter.
       candidate = DateTime.utc(candidate.year, candidate.month - 3, 1);
-    }
-  }
-
-  /// Reads `sub.txt` out of a data set and records each filer's SIC code.
-  void _readSectors(List<int> zipBytes, Map<String, int> into) {
-    final archive = ZipDecoder().decodeBytes(zipBytes);
-    for (final entry in archive) {
-      if (!entry.isFile || !entry.name.endsWith(_sectorEntryName)) continue;
-
-      final lines = const LineSplitter().convert(
-        utf8.decode(entry.readBytes()!, allowMalformed: true),
-      );
-      if (lines.isEmpty) continue;
-
-      final columns = lines.first.split('\t');
-      final cikAt = columns.indexOf(_sectorCikColumn);
-      final sicAt = columns.indexOf(_sectorSicColumn);
-      if (cikAt < 0 || sicAt < 0) continue;
-
-      for (final line in lines.skip(1)) {
-        final fields = line.split('\t');
-        if (fields.length <= sicAt) continue;
-        final sic = int.tryParse(fields[sicAt]);
-        final cik = int.tryParse(fields[cikAt]);
-        if (sic == null || cik == null) continue;
-        // Only fill gaps: newer quarters are read first.
-        into.putIfAbsent(
-          cik.toString().padLeft(_cikDigits, _cikPadding),
-          () => sic,
-        );
-      }
     }
   }
 
@@ -434,15 +705,20 @@ class BulkIngestRepo {
     }
   }
 
-  Stream<IngestProgress> _load(
-    File archiveFile,
-    List<TickersCompanion> directory,
-    DateTime? archiveLastModified,
-    Map<String, int> sicByCik,
-  ) async* {
+  Stream<IngestProgress> _load(StagedIngest staged) async* {
+    final archiveFile = staged.archiveFile;
     logInfo(
       () => 'Loading ${archiveFile.lengthSync()} bytes into the database',
     );
+    // Read back off disk rather than carried in memory, so a download staged
+    // in an earlier session loads by exactly the same path as a fresh one.
+    final directory = _parseTickerDirectory(
+      await staged.tickersFile.readAsString(),
+    );
+    final sicByCik = _parseStagedSectors(
+      await staged.sectorsFile.readAsString(),
+    );
+
     await _database.clearFinancials();
     await _database.batch(
       (batch) => batch.insertAll(_database.tickers, directory),
@@ -491,7 +767,7 @@ class BulkIngestRepo {
 
     await _database.recordIngest(
       stored,
-      archiveLastModified: archiveLastModified,
+      archiveLastModified: staged.archiveLastModified,
     );
     logInfo(() => 'Ingested $stored companies from $total entries');
     yield IngestDone(companyCount: stored);
