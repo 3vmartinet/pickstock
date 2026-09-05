@@ -228,6 +228,13 @@ List<String> _caveatsFor(
     // Said out loud because the figures above would otherwise not add up
     // against the filing: the cash shown is a fraction of what the cash flow
     // statement reports, and this is why.
+    // Said where the arithmetic happens, because the figure above is not the
+    // one the cash flow statement prints and a reader checking would find
+    // them differ.
+    if (valuation.stockPayShareOfCashPercent case final share?)
+      strings.napkinCaveatStockPay(_formatRepo.percent(share)),
+    if (figures.leaseShareOfDebtPercent case final share?)
+      strings.napkinCaveatLeases(_formatRepo.percent(share)),
     if (valuation.hasOutsideOwners)
       strings.napkinCaveatOutsideOwners(
         _formatRepo.percent(valuation.parentStake * 100),

@@ -412,6 +412,126 @@ abstract class AppLocalizations {
   /// **'This takes a few minutes. Leave the app open.'**
   String get ingestWarnLeave;
 
+  /// No description provided for @napkinCaveatStockPay.
+  ///
+  /// In en, this message translates to:
+  /// **'{share} of that spare cash was paid to staff in shares rather than money. No cash left the building, so the cash flow statement adds it back — but the shares were printed, and every holder owns a little less for it. The band above is struck after subtracting it.'**
+  String napkinCaveatStockPay(String share);
+
+  /// No description provided for @napkinCaveatLeases.
+  ///
+  /// In en, this message translates to:
+  /// **'{share} of what this company owes is rent it has committed to rather than money it has borrowed. A long lease is an obligation like a loan, and since 2019 it sits on the balance sheet as one, so it is counted here as debt.'**
+  String napkinCaveatLeases(String share);
+
+  /// No description provided for @sectionCapitalReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'What came back to owners'**
+  String get sectionCapitalReturned;
+
+  /// No description provided for @capitalReturnedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Dividends and buybacks together, against the spare cash the company generated. It answers the question the rest of the tab cannot: of what the business earned, how much of it actually reached the people who own it.'**
+  String get capitalReturnedHint;
+
+  /// No description provided for @labelCapitalReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Returned in the year'**
+  String get labelCapitalReturned;
+
+  /// No description provided for @labelDividends.
+  ///
+  /// In en, this message translates to:
+  /// **'Dividends'**
+  String get labelDividends;
+
+  /// No description provided for @labelBuybacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Buybacks'**
+  String get labelBuybacks;
+
+  /// No description provided for @capitalReturnedShare.
+  ///
+  /// In en, this message translates to:
+  /// **'{share} of spare cash'**
+  String capitalReturnedShare(String share);
+
+  /// No description provided for @capitalReturnedNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'None reported'**
+  String get capitalReturnedNothing;
+
+  /// No description provided for @capitalReturnedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Against the year\'s free cash flow'**
+  String get capitalReturnedNote;
+
+  /// No description provided for @sectionOrderBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Order book'**
+  String get sectionOrderBook;
+
+  /// No description provided for @orderBookHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue already under contract and not yet earned, as the company reports it under ASC 606. It is the only figure here that looks forwards — everything else is what has already been earned. Most filers report none.'**
+  String get orderBookHint;
+
+  /// No description provided for @labelOrderBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Under contract'**
+  String get labelOrderBook;
+
+  /// No description provided for @orderBookAsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'As at the end of FY{year}'**
+  String orderBookAsAt(int year);
+
+  /// No description provided for @labelOrderBookYears.
+  ///
+  /// In en, this message translates to:
+  /// **'Years of revenue'**
+  String get labelOrderBookYears;
+
+  /// No description provided for @orderBookYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{years} years'**
+  String orderBookYears(String years);
+
+  /// No description provided for @orderBookYearsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'At the latest year\'s rate'**
+  String get orderBookYearsNote;
+
+  /// No description provided for @labelOrderBookChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Book year on year'**
+  String get labelOrderBookChange;
+
+  /// No description provided for @orderBookChangeNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Against the year before'**
+  String get orderBookChangeNote;
+
+  /// No description provided for @orderBookWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The book shrank while revenue did not. Revenue is what has been earned and the book is what has been sold, so the years after this one are being sold more slowly than they are being delivered.'**
+  String get orderBookWarning;
+
   /// No description provided for @insightBusinessTitle.
   ///
   /// In en, this message translates to:

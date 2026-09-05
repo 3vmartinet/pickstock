@@ -828,6 +828,61 @@ class $FiscalYearsTable extends FiscalYears
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _backlogMeta = const VerificationMeta(
+    'backlog',
+  );
+  @override
+  late final GeneratedColumn<double> backlog = GeneratedColumn<double>(
+    'backlog',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shareBasedCompensationMeta =
+      const VerificationMeta('shareBasedCompensation');
+  @override
+  late final GeneratedColumn<double> shareBasedCompensation =
+      GeneratedColumn<double>(
+        'share_based_compensation',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _operatingLeasesMeta = const VerificationMeta(
+    'operatingLeases',
+  );
+  @override
+  late final GeneratedColumn<double> operatingLeases = GeneratedColumn<double>(
+    'operating_leases',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dividendsPaidMeta = const VerificationMeta(
+    'dividendsPaid',
+  );
+  @override
+  late final GeneratedColumn<double> dividendsPaid = GeneratedColumn<double>(
+    'dividends_paid',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _buybacksMeta = const VerificationMeta(
+    'buybacks',
+  );
+  @override
+  late final GeneratedColumn<double> buybacks = GeneratedColumn<double>(
+    'buybacks',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cik,
@@ -845,6 +900,11 @@ class $FiscalYearsTable extends FiscalYears
     shareholdersEquity,
     interestExpense,
     profitLoss,
+    backlog,
+    shareBasedCompensation,
+    operatingLeases,
+    dividendsPaid,
+    buybacks,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -976,6 +1036,45 @@ class $FiscalYearsTable extends FiscalYears
         profitLoss.isAcceptableOrUnknown(data['profit_loss']!, _profitLossMeta),
       );
     }
+    if (data.containsKey('backlog')) {
+      context.handle(
+        _backlogMeta,
+        backlog.isAcceptableOrUnknown(data['backlog']!, _backlogMeta),
+      );
+    }
+    if (data.containsKey('share_based_compensation')) {
+      context.handle(
+        _shareBasedCompensationMeta,
+        shareBasedCompensation.isAcceptableOrUnknown(
+          data['share_based_compensation']!,
+          _shareBasedCompensationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('operating_leases')) {
+      context.handle(
+        _operatingLeasesMeta,
+        operatingLeases.isAcceptableOrUnknown(
+          data['operating_leases']!,
+          _operatingLeasesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dividends_paid')) {
+      context.handle(
+        _dividendsPaidMeta,
+        dividendsPaid.isAcceptableOrUnknown(
+          data['dividends_paid']!,
+          _dividendsPaidMeta,
+        ),
+      );
+    }
+    if (data.containsKey('buybacks')) {
+      context.handle(
+        _buybacksMeta,
+        buybacks.isAcceptableOrUnknown(data['buybacks']!, _buybacksMeta),
+      );
+    }
     return context;
   }
 
@@ -1045,6 +1144,26 @@ class $FiscalYearsTable extends FiscalYears
         DriftSqlType.double,
         data['${effectivePrefix}profit_loss'],
       ),
+      backlog: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}backlog'],
+      ),
+      shareBasedCompensation: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}share_based_compensation'],
+      ),
+      operatingLeases: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}operating_leases'],
+      ),
+      dividendsPaid: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}dividends_paid'],
+      ),
+      buybacks: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}buybacks'],
+      ),
     );
   }
 
@@ -1079,6 +1198,19 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
   /// which is what a group cash flow has to be brought down to before it is
   /// divided by the parent's share count.
   final double? profitLoss;
+
+  /// Revenue under contract and not yet earned, as at the year end — the
+  /// order book. Null for the great majority of filers, which report none.
+  final double? backlog;
+
+  /// What the company paid its staff in shares rather than money.
+  final double? shareBasedCompensation;
+
+  /// Rent committed to and not yet paid. Counted inside [totalDebt] as well:
+  /// a lease is a borrowing in all but name.
+  final double? operatingLeases;
+  final double? dividendsPaid;
+  final double? buybacks;
   const FiscalYearRow({
     required this.cik,
     required this.fiscalYear,
@@ -1095,6 +1227,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     this.shareholdersEquity,
     this.interestExpense,
     this.profitLoss,
+    this.backlog,
+    this.shareBasedCompensation,
+    this.operatingLeases,
+    this.dividendsPaid,
+    this.buybacks,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1142,6 +1279,23 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     if (!nullToAbsent || profitLoss != null) {
       map['profit_loss'] = Variable<double>(profitLoss);
     }
+    if (!nullToAbsent || backlog != null) {
+      map['backlog'] = Variable<double>(backlog);
+    }
+    if (!nullToAbsent || shareBasedCompensation != null) {
+      map['share_based_compensation'] = Variable<double>(
+        shareBasedCompensation,
+      );
+    }
+    if (!nullToAbsent || operatingLeases != null) {
+      map['operating_leases'] = Variable<double>(operatingLeases);
+    }
+    if (!nullToAbsent || dividendsPaid != null) {
+      map['dividends_paid'] = Variable<double>(dividendsPaid);
+    }
+    if (!nullToAbsent || buybacks != null) {
+      map['buybacks'] = Variable<double>(buybacks);
+    }
     return map;
   }
 
@@ -1186,6 +1340,21 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       profitLoss: profitLoss == null && nullToAbsent
           ? const Value.absent()
           : Value(profitLoss),
+      backlog: backlog == null && nullToAbsent
+          ? const Value.absent()
+          : Value(backlog),
+      shareBasedCompensation: shareBasedCompensation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shareBasedCompensation),
+      operatingLeases: operatingLeases == null && nullToAbsent
+          ? const Value.absent()
+          : Value(operatingLeases),
+      dividendsPaid: dividendsPaid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dividendsPaid),
+      buybacks: buybacks == null && nullToAbsent
+          ? const Value.absent()
+          : Value(buybacks),
     );
   }
 
@@ -1218,6 +1387,13 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       ),
       interestExpense: serializer.fromJson<double?>(json['interestExpense']),
       profitLoss: serializer.fromJson<double?>(json['profitLoss']),
+      backlog: serializer.fromJson<double?>(json['backlog']),
+      shareBasedCompensation: serializer.fromJson<double?>(
+        json['shareBasedCompensation'],
+      ),
+      operatingLeases: serializer.fromJson<double?>(json['operatingLeases']),
+      dividendsPaid: serializer.fromJson<double?>(json['dividendsPaid']),
+      buybacks: serializer.fromJson<double?>(json['buybacks']),
     );
   }
   @override
@@ -1241,6 +1417,13 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       'shareholdersEquity': serializer.toJson<double?>(shareholdersEquity),
       'interestExpense': serializer.toJson<double?>(interestExpense),
       'profitLoss': serializer.toJson<double?>(profitLoss),
+      'backlog': serializer.toJson<double?>(backlog),
+      'shareBasedCompensation': serializer.toJson<double?>(
+        shareBasedCompensation,
+      ),
+      'operatingLeases': serializer.toJson<double?>(operatingLeases),
+      'dividendsPaid': serializer.toJson<double?>(dividendsPaid),
+      'buybacks': serializer.toJson<double?>(buybacks),
     };
   }
 
@@ -1260,6 +1443,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     Value<double?> shareholdersEquity = const Value.absent(),
     Value<double?> interestExpense = const Value.absent(),
     Value<double?> profitLoss = const Value.absent(),
+    Value<double?> backlog = const Value.absent(),
+    Value<double?> shareBasedCompensation = const Value.absent(),
+    Value<double?> operatingLeases = const Value.absent(),
+    Value<double?> dividendsPaid = const Value.absent(),
+    Value<double?> buybacks = const Value.absent(),
   }) => FiscalYearRow(
     cik: cik ?? this.cik,
     fiscalYear: fiscalYear ?? this.fiscalYear,
@@ -1290,6 +1478,17 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
         ? interestExpense.value
         : this.interestExpense,
     profitLoss: profitLoss.present ? profitLoss.value : this.profitLoss,
+    backlog: backlog.present ? backlog.value : this.backlog,
+    shareBasedCompensation: shareBasedCompensation.present
+        ? shareBasedCompensation.value
+        : this.shareBasedCompensation,
+    operatingLeases: operatingLeases.present
+        ? operatingLeases.value
+        : this.operatingLeases,
+    dividendsPaid: dividendsPaid.present
+        ? dividendsPaid.value
+        : this.dividendsPaid,
+    buybacks: buybacks.present ? buybacks.value : this.buybacks,
   );
   FiscalYearRow copyWithCompanion(FiscalYearsCompanion data) {
     return FiscalYearRow(
@@ -1328,6 +1527,17 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       profitLoss: data.profitLoss.present
           ? data.profitLoss.value
           : this.profitLoss,
+      backlog: data.backlog.present ? data.backlog.value : this.backlog,
+      shareBasedCompensation: data.shareBasedCompensation.present
+          ? data.shareBasedCompensation.value
+          : this.shareBasedCompensation,
+      operatingLeases: data.operatingLeases.present
+          ? data.operatingLeases.value
+          : this.operatingLeases,
+      dividendsPaid: data.dividendsPaid.present
+          ? data.dividendsPaid.value
+          : this.dividendsPaid,
+      buybacks: data.buybacks.present ? data.buybacks.value : this.buybacks,
     );
   }
 
@@ -1348,7 +1558,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ..write('totalAssets: $totalAssets, ')
           ..write('shareholdersEquity: $shareholdersEquity, ')
           ..write('interestExpense: $interestExpense, ')
-          ..write('profitLoss: $profitLoss')
+          ..write('profitLoss: $profitLoss, ')
+          ..write('backlog: $backlog, ')
+          ..write('shareBasedCompensation: $shareBasedCompensation, ')
+          ..write('operatingLeases: $operatingLeases, ')
+          ..write('dividendsPaid: $dividendsPaid, ')
+          ..write('buybacks: $buybacks')
           ..write(')'))
         .toString();
   }
@@ -1370,6 +1585,11 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     shareholdersEquity,
     interestExpense,
     profitLoss,
+    backlog,
+    shareBasedCompensation,
+    operatingLeases,
+    dividendsPaid,
+    buybacks,
   );
   @override
   bool operator ==(Object other) =>
@@ -1389,7 +1609,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           other.totalAssets == this.totalAssets &&
           other.shareholdersEquity == this.shareholdersEquity &&
           other.interestExpense == this.interestExpense &&
-          other.profitLoss == this.profitLoss);
+          other.profitLoss == this.profitLoss &&
+          other.backlog == this.backlog &&
+          other.shareBasedCompensation == this.shareBasedCompensation &&
+          other.operatingLeases == this.operatingLeases &&
+          other.dividendsPaid == this.dividendsPaid &&
+          other.buybacks == this.buybacks);
 }
 
 class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
@@ -1408,6 +1633,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
   final Value<double?> shareholdersEquity;
   final Value<double?> interestExpense;
   final Value<double?> profitLoss;
+  final Value<double?> backlog;
+  final Value<double?> shareBasedCompensation;
+  final Value<double?> operatingLeases;
+  final Value<double?> dividendsPaid;
+  final Value<double?> buybacks;
   final Value<int> rowid;
   const FiscalYearsCompanion({
     this.cik = const Value.absent(),
@@ -1425,6 +1655,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.shareholdersEquity = const Value.absent(),
     this.interestExpense = const Value.absent(),
     this.profitLoss = const Value.absent(),
+    this.backlog = const Value.absent(),
+    this.shareBasedCompensation = const Value.absent(),
+    this.operatingLeases = const Value.absent(),
+    this.dividendsPaid = const Value.absent(),
+    this.buybacks = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FiscalYearsCompanion.insert({
@@ -1443,6 +1678,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.shareholdersEquity = const Value.absent(),
     this.interestExpense = const Value.absent(),
     this.profitLoss = const Value.absent(),
+    this.backlog = const Value.absent(),
+    this.shareBasedCompensation = const Value.absent(),
+    this.operatingLeases = const Value.absent(),
+    this.dividendsPaid = const Value.absent(),
+    this.buybacks = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        fiscalYear = Value(fiscalYear);
@@ -1462,6 +1702,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Expression<double>? shareholdersEquity,
     Expression<double>? interestExpense,
     Expression<double>? profitLoss,
+    Expression<double>? backlog,
+    Expression<double>? shareBasedCompensation,
+    Expression<double>? operatingLeases,
+    Expression<double>? dividendsPaid,
+    Expression<double>? buybacks,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1481,6 +1726,12 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       if (shareholdersEquity != null) 'shareholders_equity': shareholdersEquity,
       if (interestExpense != null) 'interest_expense': interestExpense,
       if (profitLoss != null) 'profit_loss': profitLoss,
+      if (backlog != null) 'backlog': backlog,
+      if (shareBasedCompensation != null)
+        'share_based_compensation': shareBasedCompensation,
+      if (operatingLeases != null) 'operating_leases': operatingLeases,
+      if (dividendsPaid != null) 'dividends_paid': dividendsPaid,
+      if (buybacks != null) 'buybacks': buybacks,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1501,6 +1752,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Value<double?>? shareholdersEquity,
     Value<double?>? interestExpense,
     Value<double?>? profitLoss,
+    Value<double?>? backlog,
+    Value<double?>? shareBasedCompensation,
+    Value<double?>? operatingLeases,
+    Value<double?>? dividendsPaid,
+    Value<double?>? buybacks,
     Value<int>? rowid,
   }) {
     return FiscalYearsCompanion(
@@ -1520,6 +1776,12 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       shareholdersEquity: shareholdersEquity ?? this.shareholdersEquity,
       interestExpense: interestExpense ?? this.interestExpense,
       profitLoss: profitLoss ?? this.profitLoss,
+      backlog: backlog ?? this.backlog,
+      shareBasedCompensation:
+          shareBasedCompensation ?? this.shareBasedCompensation,
+      operatingLeases: operatingLeases ?? this.operatingLeases,
+      dividendsPaid: dividendsPaid ?? this.dividendsPaid,
+      buybacks: buybacks ?? this.buybacks,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1574,6 +1836,23 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     if (profitLoss.present) {
       map['profit_loss'] = Variable<double>(profitLoss.value);
     }
+    if (backlog.present) {
+      map['backlog'] = Variable<double>(backlog.value);
+    }
+    if (shareBasedCompensation.present) {
+      map['share_based_compensation'] = Variable<double>(
+        shareBasedCompensation.value,
+      );
+    }
+    if (operatingLeases.present) {
+      map['operating_leases'] = Variable<double>(operatingLeases.value);
+    }
+    if (dividendsPaid.present) {
+      map['dividends_paid'] = Variable<double>(dividendsPaid.value);
+    }
+    if (buybacks.present) {
+      map['buybacks'] = Variable<double>(buybacks.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1598,6 +1877,11 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
           ..write('shareholdersEquity: $shareholdersEquity, ')
           ..write('interestExpense: $interestExpense, ')
           ..write('profitLoss: $profitLoss, ')
+          ..write('backlog: $backlog, ')
+          ..write('shareBasedCompensation: $shareBasedCompensation, ')
+          ..write('operatingLeases: $operatingLeases, ')
+          ..write('dividendsPaid: $dividendsPaid, ')
+          ..write('buybacks: $buybacks, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6076,6 +6360,11 @@ typedef $$FiscalYearsTableCreateCompanionBuilder =
       Value<double?> shareholdersEquity,
       Value<double?> interestExpense,
       Value<double?> profitLoss,
+      Value<double?> backlog,
+      Value<double?> shareBasedCompensation,
+      Value<double?> operatingLeases,
+      Value<double?> dividendsPaid,
+      Value<double?> buybacks,
       Value<int> rowid,
     });
 typedef $$FiscalYearsTableUpdateCompanionBuilder =
@@ -6095,6 +6384,11 @@ typedef $$FiscalYearsTableUpdateCompanionBuilder =
       Value<double?> shareholdersEquity,
       Value<double?> interestExpense,
       Value<double?> profitLoss,
+      Value<double?> backlog,
+      Value<double?> shareBasedCompensation,
+      Value<double?> operatingLeases,
+      Value<double?> dividendsPaid,
+      Value<double?> buybacks,
       Value<int> rowid,
     });
 
@@ -6196,6 +6490,31 @@ class $$FiscalYearsTableFilterComposer
 
   ColumnFilters<double> get profitLoss => $composableBuilder(
     column: $table.profitLoss,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get backlog => $composableBuilder(
+    column: $table.backlog,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get shareBasedCompensation => $composableBuilder(
+    column: $table.shareBasedCompensation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get operatingLeases => $composableBuilder(
+    column: $table.operatingLeases,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dividendsPaid => $composableBuilder(
+    column: $table.dividendsPaid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get buybacks => $composableBuilder(
+    column: $table.buybacks,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6302,6 +6621,31 @@ class $$FiscalYearsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get backlog => $composableBuilder(
+    column: $table.backlog,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get shareBasedCompensation => $composableBuilder(
+    column: $table.shareBasedCompensation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get operatingLeases => $composableBuilder(
+    column: $table.operatingLeases,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get dividendsPaid => $composableBuilder(
+    column: $table.dividendsPaid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get buybacks => $composableBuilder(
+    column: $table.buybacks,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CompaniesTableOrderingComposer get cik {
     final $$CompaniesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6397,6 +6741,27 @@ class $$FiscalYearsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get backlog =>
+      $composableBuilder(column: $table.backlog, builder: (column) => column);
+
+  GeneratedColumn<double> get shareBasedCompensation => $composableBuilder(
+    column: $table.shareBasedCompensation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get operatingLeases => $composableBuilder(
+    column: $table.operatingLeases,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get dividendsPaid => $composableBuilder(
+    column: $table.dividendsPaid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get buybacks =>
+      $composableBuilder(column: $table.buybacks, builder: (column) => column);
+
   $$CompaniesTableAnnotationComposer get cik {
     final $$CompaniesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -6464,6 +6829,11 @@ class $$FiscalYearsTableTableManager
                 Value<double?> shareholdersEquity = const Value.absent(),
                 Value<double?> interestExpense = const Value.absent(),
                 Value<double?> profitLoss = const Value.absent(),
+                Value<double?> backlog = const Value.absent(),
+                Value<double?> shareBasedCompensation = const Value.absent(),
+                Value<double?> operatingLeases = const Value.absent(),
+                Value<double?> dividendsPaid = const Value.absent(),
+                Value<double?> buybacks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion(
                 cik: cik,
@@ -6481,6 +6851,11 @@ class $$FiscalYearsTableTableManager
                 shareholdersEquity: shareholdersEquity,
                 interestExpense: interestExpense,
                 profitLoss: profitLoss,
+                backlog: backlog,
+                shareBasedCompensation: shareBasedCompensation,
+                operatingLeases: operatingLeases,
+                dividendsPaid: dividendsPaid,
+                buybacks: buybacks,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6500,6 +6875,11 @@ class $$FiscalYearsTableTableManager
                 Value<double?> shareholdersEquity = const Value.absent(),
                 Value<double?> interestExpense = const Value.absent(),
                 Value<double?> profitLoss = const Value.absent(),
+                Value<double?> backlog = const Value.absent(),
+                Value<double?> shareBasedCompensation = const Value.absent(),
+                Value<double?> operatingLeases = const Value.absent(),
+                Value<double?> dividendsPaid = const Value.absent(),
+                Value<double?> buybacks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion.insert(
                 cik: cik,
@@ -6517,6 +6897,11 @@ class $$FiscalYearsTableTableManager
                 shareholdersEquity: shareholdersEquity,
                 interestExpense: interestExpense,
                 profitLoss: profitLoss,
+                backlog: backlog,
+                shareBasedCompensation: shareBasedCompensation,
+                operatingLeases: operatingLeases,
+                dividendsPaid: dividendsPaid,
+                buybacks: buybacks,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -232,6 +232,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
 
   @override
+  String napkinCaveatStockPay(String share) {
+    return '$share of that spare cash was paid to staff in shares rather than money. No cash left the building, so the cash flow statement adds it back — but the shares were printed, and every holder owns a little less for it. The band above is struck after subtracting it.';
+  }
+
+  @override
+  String napkinCaveatLeases(String share) {
+    return '$share of what this company owes is rent it has committed to rather than money it has borrowed. A long lease is an obligation like a loan, and since 2019 it sits on the balance sheet as one, so it is counted here as debt.';
+  }
+
+  @override
+  String get sectionCapitalReturned => 'What came back to owners';
+
+  @override
+  String get capitalReturnedHint =>
+      'Dividends and buybacks together, against the spare cash the company generated. It answers the question the rest of the tab cannot: of what the business earned, how much of it actually reached the people who own it.';
+
+  @override
+  String get labelCapitalReturned => 'Returned in the year';
+
+  @override
+  String get labelDividends => 'Dividends';
+
+  @override
+  String get labelBuybacks => 'Buybacks';
+
+  @override
+  String capitalReturnedShare(String share) {
+    return '$share of spare cash';
+  }
+
+  @override
+  String get capitalReturnedNothing => 'None reported';
+
+  @override
+  String get capitalReturnedNote => 'Against the year\'s free cash flow';
+
+  @override
+  String get sectionOrderBook => 'Order book';
+
+  @override
+  String get orderBookHint =>
+      'Revenue already under contract and not yet earned, as the company reports it under ASC 606. It is the only figure here that looks forwards — everything else is what has already been earned. Most filers report none.';
+
+  @override
+  String get labelOrderBook => 'Under contract';
+
+  @override
+  String orderBookAsAt(int year) {
+    return 'As at the end of FY$year';
+  }
+
+  @override
+  String get labelOrderBookYears => 'Years of revenue';
+
+  @override
+  String orderBookYears(String years) {
+    return '$years years';
+  }
+
+  @override
+  String get orderBookYearsNote => 'At the latest year\'s rate';
+
+  @override
+  String get labelOrderBookChange => 'Book year on year';
+
+  @override
+  String get orderBookChangeNote => 'Against the year before';
+
+  @override
+  String get orderBookWarning =>
+      'The book shrank while revenue did not. Revenue is what has been earned and the book is what has been sold, so the years after this one are being sold more slowly than they are being delivered.';
+
+  @override
   String get insightBusinessTitle => 'What the filings do not say';
 
   @override

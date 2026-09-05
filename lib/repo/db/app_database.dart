@@ -17,7 +17,17 @@ part 'app_database.g.dart';
 /// 9 reads the whole group's profit alongside the parent's share of it, so a
 /// company that owns a slice of its own operations has its cash flow brought
 /// down to that slice before it is divided by the parent's share count.
-const int extractorVersion = 9;
+///
+/// 10 reads the order book — revenue already under contract — which ASC 606
+/// requires and 774 filers report. It is the only figure in the report that
+/// looks forwards.
+///
+/// 11 counts three things the figures were quietly missing: pay handed out in
+/// shares, which free cash flow adds back and shareholders still pay for;
+/// operating leases, which are a borrowing in all but name and have been on
+/// the balance sheet since 2019; and the cash actually returned to owners as
+/// dividends and buybacks.
+const int extractorVersion = 11;
 
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
@@ -102,6 +112,20 @@ class FiscalYears extends Table {
   /// which is what a group cash flow has to be brought down to before it is
   /// divided by the parent's share count.
   RealColumn get profitLoss => real().nullable()();
+
+  /// Revenue under contract and not yet earned, as at the year end — the
+  /// order book. Null for the great majority of filers, which report none.
+  RealColumn get backlog => real().nullable()();
+
+  /// What the company paid its staff in shares rather than money.
+  RealColumn get shareBasedCompensation => real().nullable()();
+
+  /// Rent committed to and not yet paid. Counted inside [totalDebt] as well:
+  /// a lease is a borrowing in all but name.
+  RealColumn get operatingLeases => real().nullable()();
+
+  RealColumn get dividendsPaid => real().nullable()();
+  RealColumn get buybacks => real().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {cik, fiscalYear};
@@ -339,7 +363,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -375,6 +399,24 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        if (from < 17) {
+          // Added, not populated: the figures arrive with the next ingest,
+          // which the extractor version already insists on.
+          logInfo(() => 'Adding stock pay, leases and capital returned');
+          await migrator.addColumn(
+            fiscalYears,
+            fiscalYears.shareBasedCompensation,
+          );
+          await migrator.addColumn(fiscalYears, fiscalYears.operatingLeases);
+          await migrator.addColumn(fiscalYears, fiscalYears.dividendsPaid);
+          await migrator.addColumn(fiscalYears, fiscalYears.buybacks);
+        }
+        if (from < 16) {
+          // Added, not populated: the figure arrives with the next ingest,
+          // which the extractor version already insists on.
+          logInfo(() => 'Adding fiscal_years.backlog');
+          await migrator.addColumn(fiscalYears, fiscalYears.backlog);
         }
         if (from < 15) {
           logInfo(() => 'Adding research notes');

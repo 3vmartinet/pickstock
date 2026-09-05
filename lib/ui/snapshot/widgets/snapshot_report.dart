@@ -11,7 +11,9 @@ import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/snapshot/widgets/capital_returned_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_insight_card.dart';
+import 'package:pickstock/ui/snapshot/widgets/order_book_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
@@ -195,6 +197,10 @@ class _TabBody extends StatelessWidget {
         _InsightSection(insight: CompanyInsight.business),
         _SanityCheckSection(),
         _HighlightsSection(),
+        // Between what has been earned and the history of it: the book is the
+        // one figure that looks the other way. Renders nothing for the great
+        // majority of filers, which report none.
+        OrderBookCard(),
         _HistorySection(),
       ],
       // Both of these carry their insight inside their own layout rather than
@@ -314,8 +320,12 @@ class _ExpectationsContent extends StatelessWidget {
                 Expanded(child: ExpectationCard()),
               ],
             ),
-          // Under both: it sets what anyone else expects against the pair,
-          // which cannot be read before them.
+          // What the owners actually got, against what the tab has just said
+          // the price is asking them to believe. Renders nothing for a company
+          // that returns nothing, which is most of them.
+          const CapitalReturnedCard(),
+          // Under all of it: it sets what anyone else expects against the
+          // arithmetic, which cannot be read before it.
           const CompanyInsightCard(insight: CompanyInsight.expectations),
         ],
       ),

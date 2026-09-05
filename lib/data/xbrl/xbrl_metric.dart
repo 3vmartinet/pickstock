@@ -68,6 +68,94 @@ enum XbrlMetric {
   /// on.
   totalAssets(tags: ['Assets'], isInstant: true),
 
+  /// What the company paid its staff in shares rather than in money.
+  ///
+  /// Added back in the cash flow statement because no cash left the building,
+  /// which is what makes free cash flow overstate what reaches a shareholder:
+  /// the shares handed out were printed, and every existing holder owns a
+  /// little less because of it. Alphabet's FY2025 free cash flow is $73.3B and
+  /// $25.0B of that is stock — a third of the "spare cash" is a bill the
+  /// owners paid in dilution.
+  ///
+  /// 4,568 filers report it, which is nearly three quarters of the ones filing
+  /// a balance sheet at all, and the share is highest in exactly the companies
+  /// whose valuation turns on cash flow.
+  shareBasedCompensation(
+    tags: [
+      'ShareBasedCompensation',
+      'AllocatedShareBasedCompensationExpense',
+      'ShareBasedCompensationArrangementByShareBasedPaymentAwardCompensationCost',
+    ],
+  ),
+
+  /// Rent the company has committed to and not yet paid.
+  ///
+  /// A lease is a borrowing in all but name — fifteen years of rent on a shop
+  /// is an obligation exactly as a mortgage on one is — and since 2019 it sits
+  /// on the balance sheet saying so. Read alongside the borrowings rather than
+  /// instead of them: Starbucks owes $14.6B and has committed to $9.0B more in
+  /// leases, and a debt figure without the second calls it a third less
+  /// indebted than it is.
+  ///
+  /// The current portion is a separate concept, so both are summed; a filer
+  /// that reports only the total tags the third.
+  operatingLeaseNoncurrent(
+    tags: ['OperatingLeaseLiabilityNoncurrent'],
+    isInstant: true,
+  ),
+  operatingLeaseCurrent(
+    tags: ['OperatingLeaseLiabilityCurrent'],
+    isInstant: true,
+  ),
+  operatingLeaseTotal(tags: ['OperatingLeaseLiability'], isInstant: true),
+
+  /// Cash handed back to shareholders, as dividends and as buybacks.
+  ///
+  /// The one thing the report never said: of the spare cash a company
+  /// generates, how much of it actually reaches the people who own it. A
+  /// company returning nine tenths of its cash flow is making a different
+  /// promise from one retaining all of it, and the price is being asked to
+  /// believe one of them.
+  /// Filers move between these: Accenture tagged the first until 2022 and the
+  /// second after it, and reading only the first left its $3.7B dividend
+  /// looking like nothing at all.
+  ///
+  /// `...MinorityInterest` is deliberately absent. It is a dividend paid to
+  /// the owners of the bits of the group somebody else holds — money leaving,
+  /// not money arriving — and taken as a fallback it turned Accenture's
+  /// dividend into the $0.00B its non-controlling interests were paid.
+  dividendsPaid(
+    tags: [
+      'PaymentsOfDividendsCommonStock',
+      'PaymentsOfOrdinaryDividends',
+      'PaymentsOfDividends',
+    ],
+  ),
+  buybacks(
+    tags: [
+      'PaymentsForRepurchaseOfCommonStock',
+      'PaymentsForRepurchaseOfEquity',
+    ],
+  ),
+
+  /// Revenue already under contract and not yet earned — the order book.
+  ///
+  /// ASC 606 requires it, so it is a tagged figure rather than something to be
+  /// read out of prose: 774 filers report it, which is a twentieth of the
+  /// directory but nearly all of the ones it decides anything for — software,
+  /// defence, aerospace, engineering, consulting.
+  ///
+  /// An instant, dated to the year end rather than spanning the year, and the
+  /// one figure in the report that looks forwards. Boeing's $682B and
+  /// Lockheed's $194B are next decade's revenue already sold; a book shrinking
+  /// while revenue holds up is the earliest warning a filing gives.
+  ///
+  /// The companion `...ObligationPercentage`, which would say how much of it
+  /// lands within a year, is deliberately not read: it is dimensioned by
+  /// period and company facts strips the dimension, so Accenture's arrives as
+  /// an unlabelled `[0.18, 0.24]` with no way to tell which is which.
+  backlog(tags: ['RevenueRemainingPerformanceObligation'], isInstant: true),
+
   /// The owners' share of it.
   shareholdersEquity(
     tags: [
@@ -278,6 +366,16 @@ enum XbrlMetric {
     currentDebt,
     commercialPaper,
     shortTermBorrowings,
+  ];
+
+  /// What a company has committed to in rent, summed the way the balance sheet
+  /// splits it.
+  ///
+  /// The total is read last and only where neither half is: a filer that
+  /// reports all three would otherwise be counted twice.
+  static const List<XbrlMetric> leaseComponents = [
+    operatingLeaseNoncurrent,
+    operatingLeaseCurrent,
   ];
 
   /// The components that add up to liquid holdings, which is what net debt is

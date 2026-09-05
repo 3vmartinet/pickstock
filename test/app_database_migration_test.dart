@@ -157,14 +157,23 @@ void main() {
     // Same again for what version 14 added: the group's profit, null until
     // the next ingest.
     expect((await database.yearsFor('0000320193')), isEmpty);
+    // Version 16's order book goes in the same row: both are columns the
+    // migration had to add, and writing to one that is missing throws.
     await database.customStatement(
-      'INSERT INTO fiscal_years (cik, fiscal_year, profit_loss) '
-      "VALUES ('0000320193', 2025, 64041000.0)",
+      'INSERT INTO fiscal_years (cik, fiscal_year, profit_loss, backlog, '
+      'share_based_compensation, operating_leases, dividends_paid, buybacks) '
+      "VALUES ('0000320193', 2025, 64041000.0, 34000000000.0, "
+      '12900000000.0, 9000000000.0, 15000000000.0, 60000000000.0)',
     );
-    expect(
-      (await database.yearsFor('0000320193')).single.profitLoss,
-      64041000.0,
-    );
+    final year = (await database.yearsFor('0000320193')).single;
+    expect(year.profitLoss, 64041000.0);
+    expect(year.backlog, 34000000000.0);
+    // And version 17's four, which the same insert proves are there: writing
+    // to a column that is missing throws.
+    expect(year.shareBasedCompensation, 12900000000.0);
+    expect(year.operatingLeases, 9000000000.0);
+    expect(year.dividendsPaid, 15000000000.0);
+    expect(year.buybacks, 60000000000.0);
 
     // Same again for what version 13 added: null until a load has been timed,
     // and writable, which is what proves the column is there.

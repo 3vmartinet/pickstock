@@ -46,6 +46,14 @@ const int _maxAnnualDays = 400;
 ///
 /// Shared by the bulk ingest and anything else reading the same JSON, so the
 /// two can never disagree about what a number means.
+/// [a] plus [b], where either may be absent and both being absent is itself an
+/// absence: a company reporting neither borrowings nor leases owes nothing that
+/// is known, which is not the same as owing nothing.
+double? _plus(double? a, double? b) {
+  if (a == null && b == null) return null;
+  return (a ?? 0) + (b ?? 0);
+}
+
 abstract final class CompanyFactsParser {
   /// The registrant name carried in the payload, if present.
   static String? entityName(Map<String, dynamic> facts) =>
@@ -371,6 +379,12 @@ abstract final class CompanyFactsParser {
       );
     }
 
+    // Both halves where the filer splits them, the single total where it does
+    // not — never both, which would count the same rent twice.
+    final leases =
+        sumOf(XbrlMetric.leaseComponents) ??
+        valueOf(XbrlMetric.operatingLeaseTotal);
+
     return FiscalYearFigures(
       fiscalYear: year,
       revenue: valueOf(XbrlMetric.revenue),
@@ -378,7 +392,11 @@ abstract final class CompanyFactsParser {
       netIncome: valueOf(XbrlMetric.netIncome),
       operatingCashFlow: valueOf(XbrlMetric.operatingCashFlow),
       capitalExpenditure: valueOf(XbrlMetric.capitalExpenditure),
-      totalDebt: sumOf(XbrlMetric.debtComponents),
+      // Leases fold into the debt rather than sitting beside it, so every
+      // figure struck against debt — net debt, the balance-sheet check, the
+      // enterprise value, the debt-free filter — counts a fifteen-year lease
+      // the way it counts a fifteen-year loan.
+      totalDebt: _plus(sumOf(XbrlMetric.debtComponents), leases),
       cash: sumOf(XbrlMetric.cashComponents),
       dilutedShares: valueOf(XbrlMetric.dilutedShares),
       operatingIncome: valueOf(XbrlMetric.operatingIncome),
@@ -386,6 +404,12 @@ abstract final class CompanyFactsParser {
       totalAssets: valueOf(XbrlMetric.totalAssets),
       shareholdersEquity: valueOf(XbrlMetric.shareholdersEquity),
       profitLoss: valueOf(XbrlMetric.profitLoss),
+      backlog: valueOf(XbrlMetric.backlog),
+      priorBacklog: seriesByMetric[XbrlMetric.backlog]![year - 1],
+      shareBasedCompensation: valueOf(XbrlMetric.shareBasedCompensation),
+      operatingLeases: leases,
+      dividendsPaid: valueOf(XbrlMetric.dividendsPaid),
+      buybacks: valueOf(XbrlMetric.buybacks),
       interestExpense:
           valueOf(XbrlMetric.interestExpense) ??
           _borrowingInterest(

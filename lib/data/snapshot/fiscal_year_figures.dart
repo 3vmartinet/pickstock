@@ -23,6 +23,12 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     this.shareholdersEquity,
     this.interestExpense,
     this.profitLoss,
+    this.backlog,
+    this.priorBacklog,
+    this.shareBasedCompensation,
+    this.operatingLeases,
+    this.dividendsPaid,
+    this.buybacks,
   });
 
   final int fiscalYear;
@@ -67,6 +73,104 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
   /// Profit for the whole group, where [netIncome] is the parent's share of
   /// it. `null` for a filer with nothing outside the parent.
   final double? profitLoss;
+
+  /// Revenue under contract and not yet earned, as at the year end. `null` for
+  /// the great majority of filers, which report no order book.
+  final double? backlog;
+
+  /// The year before's, carried here so the book's own direction stays a
+  /// property of the year rather than something the UI has to look up.
+  final double? priorBacklog;
+
+  /// What the company paid its staff in shares rather than money.
+  final double? shareBasedCompensation;
+
+  /// Rent committed to and not yet paid. Counted inside [totalDebt] as well,
+  /// because it is a borrowing in all but name; kept separately so the report
+  /// can say how much of the obligation is rent.
+  final double? operatingLeases;
+
+  final double? dividendsPaid;
+  final double? buybacks;
+
+  /// Free cash flow less what was paid in shares.
+  ///
+  /// The cash flow statement adds stock pay back because none of it left the
+  /// building, which is true and beside the point: the shares were printed and
+  /// every holder owns a little less for it. Valuing the whole equity on the
+  /// figure before this, then dividing by today's share count, charges nobody
+  /// for the shares tomorrow's count will carry.
+  double? get freeCashFlowAfterStockPay {
+    final cash = freeCashFlow;
+    final stock = shareBasedCompensation;
+    if (cash == null) return null;
+    return stock == null ? cash : cash - stock;
+  }
+
+  /// How much of the spare cash was paid in shares, as a percentage.
+  double? get stockPayShareOfCashPercent {
+    final cash = freeCashFlow;
+    final stock = shareBasedCompensation;
+    if (cash == null || stock == null || cash <= 0) return null;
+    return stock / cash * 100;
+  }
+
+  /// Cash handed back to shareholders in the year, dividends and buybacks
+  /// together. `null` where the company reported neither.
+  double? get capitalReturned {
+    final dividends = dividendsPaid;
+    final repurchases = buybacks;
+    if (dividends == null && repurchases == null) return null;
+    return (dividends ?? 0) + (repurchases ?? 0);
+  }
+
+  /// What share of the year's spare cash came back to the owners.
+  double? get capitalReturnedPercent {
+    final returned = capitalReturned;
+    final cash = freeCashFlow;
+    if (returned == null || cash == null || cash <= 0) return null;
+    return returned / cash * 100;
+  }
+
+  /// What share of the borrowings is rent rather than debt proper.
+  double? get leaseShareOfDebtPercent {
+    final leases = operatingLeases;
+    final debt = totalDebt;
+    if (leases == null || debt == null || debt <= 0) return null;
+    return leases / debt * 100;
+  }
+
+  /// How many years of revenue the order book represents, at the latest year's
+  /// rate. Two and a half years for Lockheed, half a year for Accenture — the
+  /// figure says how much of the future is already sold.
+  double? get backlogYears {
+    final book = backlog;
+    final sales = revenue;
+    if (book == null || sales == null || sales <= 0) return null;
+    return book / sales;
+  }
+
+  /// Which way the book is going, year on year.
+  double? get backlogGrowthPercent {
+    final book = backlog;
+    final before = priorBacklog;
+    if (book == null || before == null || before <= 0) return null;
+    return (book - before) / before * 100;
+  }
+
+  /// Whether the order book is shrinking while revenue is not.
+  ///
+  /// The earliest warning a filing gives, and the one thing in the report that
+  /// looks forwards: revenue is what has already been earned, and a book
+  /// falling underneath it says the years after this one are being sold more
+  /// slowly than they are being delivered. `null` where the company reports no
+  /// book, which is most of them.
+  bool? get isBookShrinkingUnderRevenue {
+    final book = backlogGrowthPercent;
+    final sales = revenueGrowthPercent;
+    if (book == null || sales == null) return null;
+    return book < 0 && sales >= 0;
+  }
 
   /// How much of the group the listed shares own, as a fraction, from the two
   /// profit figures. `1` where the filing gives no reason to think otherwise.
@@ -185,5 +289,11 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     shareholdersEquity,
     interestExpense,
     profitLoss,
+    backlog,
+    priorBacklog,
+    shareBasedCompensation,
+    operatingLeases,
+    dividendsPaid,
+    buybacks,
   ];
 }

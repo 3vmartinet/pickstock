@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -54,10 +55,41 @@ const String _jsonSuffix = '.json';
 const int _cikDigits = 10;
 const String _cikPadding = '0';
 
-/// Filers handed to one background isolate at a time. Each slice is roughly
-/// 150 MB of JSON — about a second of work, so the progress bar moves visibly
-/// while isolate spawns stay negligible.
-const int _sliceSize = 150;
+/// Filers handed to one background worker at a time.
+///
+/// Short, because a slice is the unit of load balancing: filers differ in size
+/// by three orders of magnitude, and a worker that draws a run of large ones
+/// should not hold up the others. What used to make short slices expensive —
+/// reopening the archive for every one — is gone now that a worker stays open.
+const int _sliceSize = 64;
+
+/// The most archive readers to run at once, however many cores are on offer.
+///
+/// Four, which is fewer than it looks like it should be. Measured on a
+/// twelve-core machine against a synthetic archive of the same shape as SEC's,
+/// a load took 18.4s at one worker, 12.2s at two, 8.0s at four — and then 11.4s
+/// at six and 15.2s at eight, nearly back to where it started.
+///
+/// Readers stop competing for cores long before they run out of them: each is
+/// inflating a megabyte of JSON into an object graph and throwing it away
+/// again, so past a handful they are contending for memory bandwidth and the
+/// allocator rather than for anything more of them would help with.
+const int _maxParseWorkers = 4;
+
+/// How many archive readers this machine should run.
+///
+/// Half the cores, up to [_maxParseWorkers]: parsing is the expensive half of a
+/// load — 19 GB of JSON to decompress and decode — but the other half still
+/// needs a machine to run on, and the measurements above say the second half of
+/// the cores buys nothing anyway.
+///
+/// A two-core laptop still gets one background worker rather than none. With
+/// the archive open on the far side of a port it reads the next slice while
+/// this one is being written, which the loop this replaced could not do.
+int parseWorkerCount({int? processors}) {
+  final cores = processors ?? Platform.numberOfProcessors;
+  return math.max(1, math.min(cores ~/ 2, _maxParseWorkers));
+}
 
 /// One filer's extracted figures — small enough to hand back from a
 /// background isolate, where the full payload would be wasteful to copy.
@@ -84,51 +116,309 @@ class IngestedCompany {
 
 /// Decompresses and parses the archive entries at [entryIndices].
 ///
-/// Top-level so it can run under [Isolate.run]. Only the extracted figures
-/// come back: about 2 KB per filer instead of the ~1 MB payload each was
-/// parsed from.
+/// Takes an archive already opened rather than a path, because opening one
+/// means reading a central directory of twenty thousand entries and a load
+/// works through hundreds of slices. Only the extracted figures come back:
+/// about 2 KB per filer instead of the ~1 MB payload each was parsed from.
+List<IngestedCompany> parseArchiveEntries(
+  Archive archive,
+  List<int> entryIndices,
+) {
+  final parsed = <IngestedCompany>[];
+
+  for (final index in entryIndices) {
+    final entry = archive[index];
+    final cik = _cikOf(entry.name);
+    if (cik == null) continue;
+
+    final Map<String, dynamic> facts;
+    try {
+      facts =
+          jsonDecode(utf8.decode(entry.readBytes()!)) as Map<String, dynamic>;
+    } on Object catch (_) {
+      // One malformed filer should not abandon the other twenty thousand.
+      continue;
+    }
+
+    final years = CompanyFactsParser.parse(facts);
+    if (years.isEmpty) continue;
+
+    parsed.add(
+      IngestedCompany(
+        cik: cik,
+        name: CompanyFactsParser.entityName(facts) ?? cik,
+        years: years,
+        quarters: CompanyFactsParser.parseQuarters(facts),
+        sharesOutstanding: CompanyFactsParser.latestSharesOutstanding(facts),
+        sharesLastFiled: CompanyFactsParser.lastFiledShareCount(facts),
+      ),
+    );
+  }
+  return parsed;
+}
+
+/// [parseArchiveEntries] against an archive opened for this call alone.
+///
+/// The straightforward way to read a slice, and what the pooled workers below
+/// amount to with the opening hoisted out of the loop.
 List<IngestedCompany> parseArchiveSlice(
   String archivePath,
   List<int> entryIndices,
 ) {
   final input = InputFileStream(archivePath);
   try {
-    final archive = ZipDecoder().decodeStream(input);
-    final parsed = <IngestedCompany>[];
-
-    for (final index in entryIndices) {
-      final entry = archive[index];
-      final cik = _cikOf(entry.name);
-      if (cik == null) continue;
-
-      final Map<String, dynamic> facts;
-      try {
-        facts =
-            jsonDecode(utf8.decode(entry.readBytes()!)) as Map<String, dynamic>;
-      } on Object catch (_) {
-        // One malformed filer should not abandon the other twenty thousand.
-        continue;
-      }
-
-      final years = CompanyFactsParser.parse(facts);
-      if (years.isEmpty) continue;
-
-      parsed.add(
-        IngestedCompany(
-          cik: cik,
-          name: CompanyFactsParser.entityName(facts) ?? cik,
-          years: years,
-          quarters: CompanyFactsParser.parseQuarters(facts),
-          sharesOutstanding: CompanyFactsParser.latestSharesOutstanding(facts),
-          sharesLastFiled: CompanyFactsParser.lastFiledShareCount(facts),
-        ),
-      );
-    }
-    return parsed;
+    return parseArchiveEntries(ZipDecoder().decodeStream(input), entryIndices);
   } finally {
     input.closeSync();
   }
 }
+
+/// What a freshly spawned parse worker is told.
+class _WorkerBoot {
+  const _WorkerBoot({
+    required this.archivePath,
+    required this.readyTo,
+    required this.replyTo,
+    required this.index,
+  });
+
+  final String archivePath;
+
+  /// Where the worker says whether it managed to open the archive.
+  final SendPort readyTo;
+
+  /// Where parsed slices go, shared by every worker in the pool.
+  final SendPort replyTo;
+
+  /// Which worker this is, so a reply says who has come free.
+  final int index;
+}
+
+/// A worker reporting for duty, or explaining why it cannot.
+class _WorkerReady {
+  const _WorkerReady({this.commands, this.failure});
+
+  /// Where to send this worker its slices. `null` when [failure] is set.
+  final SendPort? commands;
+
+  /// Why the archive could not be opened, if it could not be.
+  final String? failure;
+}
+
+/// Entries for a worker to read.
+class _SliceRequest {
+  const _SliceRequest(this.entryIndices);
+
+  final List<int> entryIndices;
+}
+
+/// Anything that is not a [_SliceRequest] stops a worker; this says so plainly.
+class _WorkerStop {
+  const _WorkerStop();
+}
+
+/// One slice read, and the worker that is now free.
+class _SliceParsed {
+  const _SliceParsed({
+    required this.worker,
+    required this.entryCount,
+    required this.companies,
+  });
+
+  final int worker;
+
+  /// Entries worked through, which is what the progress bar counts: a filer
+  /// that yields no figures was still read.
+  final int entryCount;
+
+  final List<IngestedCompany> companies;
+}
+
+/// A slice that could not be read at all.
+class _SliceFailed {
+  const _SliceFailed({required this.worker, required this.error});
+
+  final int worker;
+  final String error;
+}
+
+/// A parse worker: opens the archive once, then reads whatever slices it is
+/// sent until it is told to stop.
+///
+/// Top-level so it can be an [Isolate.spawn] entry point.
+Future<void> _parseWorkerMain(_WorkerBoot boot) async {
+  final commands = ReceivePort();
+  final InputFileStream input;
+  final Archive archive;
+  try {
+    input = InputFileStream(boot.archivePath);
+    archive = ZipDecoder().decodeStream(input);
+  } on Object catch (error) {
+    // Reported rather than thrown: an isolate that dies during start-up leaves
+    // whoever spawned it waiting on a handshake that will never come.
+    commands.close();
+    boot.readyTo.send(_WorkerReady(failure: '$error'));
+    return;
+  }
+  boot.readyTo.send(_WorkerReady(commands: commands.sendPort));
+
+  await for (final message in commands) {
+    if (message is! _SliceRequest) break;
+    try {
+      boot.replyTo.send(
+        _SliceParsed(
+          worker: boot.index,
+          entryCount: message.entryIndices.length,
+          companies: parseArchiveEntries(archive, message.entryIndices),
+        ),
+      );
+    } on Object catch (error) {
+      // A malformed filer is already skipped inside the parse, so reaching
+      // here means the archive itself is not what it claimed to be.
+      boot.replyTo.send(_SliceFailed(worker: boot.index, error: '$error'));
+    }
+  }
+  input.closeSync();
+}
+
+/// Background isolates that read the archive, one slice at a time each.
+///
+/// Two things make this faster than parsing a slice at a time on a single
+/// spawned isolate. Every core the machine can spare is used, where before one
+/// was; and a worker is handed its next slice the moment it reports the last,
+/// so parsing carries on while the isolate that owns the database writes what
+/// came back — the two used to take turns.
+///
+/// The archive's index is also read once per worker instead of once per slice,
+/// which for twenty thousand entries across hundreds of slices is not nothing.
+///
+/// Worth roughly 2.3x on a twelve-core machine; see [_maxParseWorkers] for why
+/// it is not worth more.
+class _ParsePool {
+  _ParsePool._(this._isolates, this._commands, this._replies, this._exits);
+
+  final List<Isolate> _isolates;
+  final List<SendPort> _commands;
+  final ReceivePort _replies;
+  final ReceivePort _exits;
+
+  /// Spawns [workers] readers of the archive at [archivePath].
+  ///
+  /// Throws if any of them cannot open it, having stopped the ones that could:
+  /// a load that would silently drop part of the archive is worse than one that
+  /// does not start.
+  static Future<_ParsePool> open(String archivePath, int workers) async {
+    final pool = _ParsePool._([], [], ReceivePort(), ReceivePort());
+    try {
+      for (var index = 0; index < workers; index++) {
+        final handshake = ReceivePort();
+        pool._isolates.add(
+          await Isolate.spawn(
+            _parseWorkerMain,
+            _WorkerBoot(
+              archivePath: archivePath,
+              readyTo: handshake.sendPort,
+              replyTo: pool._replies.sendPort,
+              index: index,
+            ),
+            onExit: pool._exits.sendPort,
+            debugName: 'sec-parse-$index',
+          ),
+        );
+        final ready = await handshake.first as _WorkerReady;
+        final failure = ready.failure;
+        if (failure != null) {
+          throw FormatException('The archive could not be opened: $failure');
+        }
+        pool._commands.add(ready.commands!);
+      }
+      return pool;
+    } on Object {
+      await pool.close();
+      rethrow;
+    }
+  }
+
+  /// Reads [slices], reporting each as it comes back.
+  ///
+  /// Order is not preserved — a worker that drew a run of small filers finishes
+  /// first — and nothing downstream depends on it: the slices are disjoint sets
+  /// of entries, so each is a set of companies the others do not contain.
+  Stream<_SliceParsed> parse(List<List<int>> slices) {
+    final results = StreamController<_SliceParsed>();
+    var next = 0;
+    var working = 0;
+
+    void hand(int worker) {
+      if (next >= slices.length) return;
+      _commands[worker].send(_SliceRequest(slices[next++]));
+      working++;
+    }
+
+    void closeIfIdle() {
+      if (working == 0 && !results.isClosed) results.close();
+    }
+
+    _replies.listen((message) {
+      if (results.isClosed) return;
+      switch (message) {
+        case final _SliceParsed parsed:
+          working--;
+          results.add(parsed);
+          hand(parsed.worker);
+        case final _SliceFailed failed:
+          working--;
+          // Nothing further is handed out: the remaining workers are reading
+          // the same archive, and a half-loaded database is worse than a load
+          // that failed.
+          next = slices.length;
+          results.addError(FormatException(failed.error));
+        default:
+          return;
+      }
+      closeIfIdle();
+    });
+
+    // Every worker starts with one slice; from here each earns its next by
+    // finishing the one it has.
+    for (var worker = 0; worker < _commands.length; worker++) {
+      hand(worker);
+    }
+    closeIfIdle();
+    return results.stream;
+  }
+
+  /// Stops every worker and waits for it to let go of the archive.
+  Future<void> close() async {
+    for (final command in _commands) {
+      command.send(const _WorkerStop());
+    }
+    _commands.clear();
+    _replies.close();
+
+    if (_isolates.isNotEmpty) {
+      try {
+        // A worker part-way through a slice reaches the stop message only once
+        // it is done, which is where the wait goes. Past that it is not worth
+        // waiting on: the archive it holds is about to be deleted, and both
+        // platforms allow deleting a file somebody still has open.
+        await _exits.take(_isolates.length).drain<void>().timeout(_stopGrace);
+      } on TimeoutException {
+        logWarning(() => 'A parse worker did not stop in time');
+      }
+    }
+    _exits.close();
+    for (final isolate in _isolates) {
+      // A no-op for one that has already exited, which is nearly always all of
+      // them; insurance against the one that has not.
+      isolate.kill(priority: Isolate.immediate);
+    }
+    _isolates.clear();
+  }
+}
+
+/// How long a worker is given to finish its slice and stop of its own accord.
+const Duration _stopGrace = Duration(seconds: 30);
 
 /// SEC's ticker directory payload as rows for the `tickers` table.
 List<TickersCompanion> _parseTickerDirectory(String payload) {
@@ -336,10 +626,17 @@ const String _lastModifiedHeader = 'last-modified';
 
 /// Downloads SEC's bulk company facts archive and loads it into the database.
 class BulkIngestRepo {
-  BulkIngestRepo({http.Client? client, this.workingDirectory})
-    : _client = client ?? http.Client();
+  BulkIngestRepo({
+    http.Client? client,
+    this.workingDirectory,
+    this.parseWorkers,
+  }) : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  /// How many archive readers a load runs, overriding what the hardware
+  /// suggests. Set by tests, which need a fixed number to compare across.
+  final int? parseWorkers;
 
   /// Where the archive is staged. Overridden by tests; otherwise the platform
   /// temporary directory.
@@ -742,39 +1039,56 @@ class BulkIngestRepo {
     // so the next refresh can say how long that will be.
     final startedAt = DateTime.now();
 
-    final archivePath = archiveFile.path;
+    final slices = <List<int>>[
+      for (var start = 0; start < total; start += _sliceSize)
+        filerEntries.sublist(start, math.min(start + _sliceSize, total)),
+    ];
+    // Never more workers than there is work: an archive of two filers in a
+    // test spawns one reader, not four.
+    final workers = math.min(parseWorkers ?? parseWorkerCount(), slices.length);
+
     // `loaded` counts entries worked through, which is what the bar measures;
     // `stored` counts filers that actually yielded figures, which is what the
     // database holds and what the user is told at the end.
     var loaded = 0;
     var stored = 0;
-    for (var start = 0; start < total; start += _sliceSize) {
-      final slice = filerEntries.sublist(
-        start,
-        math.min(start + _sliceSize, total),
-      );
-      // Off the UI isolate: 19 GB of JSON takes minutes to decode, and doing
-      // it here would freeze the app — progress bar included.
-      final parsed = await Isolate.run(
-        () => parseArchiveSlice(archivePath, slice),
-      );
-      await _insert(parsed, sicByCik);
+    // Split out because it decides where any further work belongs: if writing
+    // is most of the load then parsing wider will not help again.
+    var writing = Duration.zero;
 
-      loaded += slice.length;
-      stored += parsed.length;
-      yield IngestLoading(companiesLoaded: loaded, totalCompanies: total);
+    // Off the isolate drawing the app: 19 GB of JSON takes minutes to decode,
+    // and doing it here would freeze the progress bar reporting it.
+    final pool = await _ParsePool.open(archiveFile.path, workers);
+    try {
+      await for (final slice in pool.parse(slices)) {
+        final writeStarted = DateTime.now();
+        await _insert(slice.companies, sicByCik);
+        writing += DateTime.now().difference(writeStarted);
+
+        loaded += slice.entryCount;
+        stored += slice.companies.length;
+        yield IngestLoading(companiesLoaded: loaded, totalCompanies: total);
+      }
+    } finally {
+      await pool.close();
     }
 
     if (stored == 0) {
       throw const FormatException('No filer in the archive could be parsed');
     }
 
+    final took = DateTime.now().difference(startedAt);
     await _database.recordIngest(
       stored,
       archiveLastModified: staged.archiveLastModified,
-      loadDuration: DateTime.now().difference(startedAt),
+      loadDuration: took,
     );
-    logInfo(() => 'Ingested $stored companies from $total entries');
+    logInfo(
+      () =>
+          'Ingested $stored companies from $total entries in ${took.inSeconds}s '
+          'across $workers workers, ${writing.inSeconds}s of it writing '
+          '${slices.length} batches',
+    );
     yield IngestDone(companyCount: stored);
   }
 
@@ -832,6 +1146,11 @@ class BulkIngestRepo {
               shareholdersEquity: Value(year.shareholdersEquity),
               interestExpense: Value(year.interestExpense),
               profitLoss: Value(year.profitLoss),
+              backlog: Value(year.backlog),
+              shareBasedCompensation: Value(year.shareBasedCompensation),
+              operatingLeases: Value(year.operatingLeases),
+              dividendsPaid: Value(year.dividendsPaid),
+              buybacks: Value(year.buybacks),
             ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalQuarters, [

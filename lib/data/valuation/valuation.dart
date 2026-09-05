@@ -51,6 +51,7 @@ class Valuation extends Equatable {
       netIncome: latest.netIncome,
       operatingIncome: latest.operatingIncome,
       freeCashFlow: latest.freeCashFlow,
+      shareBasedCompensation: latest.shareBasedCompensation,
       parentStake: latest.parentStake,
       revenue: latest.revenue,
       netDebt: latest.netDebt,
@@ -71,6 +72,7 @@ class Valuation extends Equatable {
     required this.netIncome,
     required this.operatingIncome,
     required this.freeCashFlow,
+    required this.shareBasedCompensation,
     required this.parentStake,
     required this.revenue,
     required this.netDebt,
@@ -112,6 +114,10 @@ class Valuation extends Equatable {
   final double? operatingIncome;
 
   final double? freeCashFlow;
+
+  /// What the year's staff were paid in shares rather than money.
+  final double? shareBasedCompensation;
+
   final double? revenue;
   final double? netDebt;
 
@@ -127,6 +133,38 @@ class Valuation extends Equatable {
   /// so the worked example can say that they were.
   bool get hasOutsideOwners => parentStake < 1;
 
+  /// Free cash flow less what the staff were paid in shares.
+  ///
+  /// The cash flow statement adds stock pay back because none of it left the
+  /// building, which is true and beside the point: those shares were printed,
+  /// and every existing holder owns a little less because of it. The band
+  /// below values the whole equity and then divides by today's share count, so
+  /// without this nobody is charged for the shares tomorrow's count will
+  /// carry — and Alphabet's $73.3B of spare cash values a company that in fact
+  /// generated $48.3B for its owners.
+  ///
+  /// Subtracted where the filer reports it, which is nearly three quarters of
+  /// them; left alone where it does not, since a company that tags no stock
+  /// pay is usually one that hands out none.
+  double? get _freeCashFlowAfterStockPay {
+    final cash = freeCashFlow;
+    if (cash == null) return null;
+    final stock = shareBasedCompensation;
+    return stock == null ? cash : cash - stock;
+  }
+
+  /// How much of the spare cash went out in shares, as a percentage — the
+  /// figure the worked example states so the subtraction is not a surprise.
+  double? get stockPayShareOfCashPercent {
+    final cash = freeCashFlow;
+    final stock = shareBasedCompensation;
+    if (cash == null || stock == null || cash <= 0) return null;
+    return stock / cash * 100;
+  }
+
+  /// Whether stock pay is doing anything here, so the report can say it is.
+  bool get hasStockPay => (shareBasedCompensation ?? 0) > 0;
+
   /// Free cash flow, less the part of it that belongs to owners outside the
   /// listed company.
   ///
@@ -136,7 +174,7 @@ class Valuation extends Equatable {
   /// profit went to its Class B unitholders and the shares' own claim was
   /// $1.64.
   double? get freeCashFlowToShareholders {
-    final cash = freeCashFlow;
+    final cash = _freeCashFlowAfterStockPay;
     return cash == null ? null : cash * parentStake;
   }
 
@@ -396,6 +434,7 @@ class Valuation extends Equatable {
     netIncome,
     operatingIncome,
     freeCashFlow,
+    shareBasedCompensation,
     parentStake,
     revenue,
     netDebt,

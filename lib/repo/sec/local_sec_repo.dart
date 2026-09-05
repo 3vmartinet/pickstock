@@ -78,6 +78,17 @@ class LocalSecRepo implements SecRepo {
             shareholdersEquity: row.shareholdersEquity,
             interestExpense: row.interestExpense,
             profitLoss: row.profitLoss,
+            backlog: row.backlog,
+            shareBasedCompensation: row.shareBasedCompensation,
+            operatingLeases: row.operatingLeases,
+            dividendsPaid: row.dividendsPaid,
+            buybacks: row.buybacks,
+            // The year before's, for the same reason revenue needs one: the
+            // book's direction is the part that says anything.
+            priorBacklog: rows
+                .where((other) => other.fiscalYear == row.fiscalYear - 1)
+                .firstOrNull
+                ?.backlog,
           ),
       ],
       quarters: _quartersFrom(quarterRows),

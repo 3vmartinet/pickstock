@@ -11,7 +11,10 @@ void main() {
     expect(SicIndustry.of(7372), 'Services-Prepackaged Software');
     expect(SicIndustry.of(5961), 'Retail-Catalog & Mail-Order Houses');
     expect(SicIndustry.of(6331), 'Fire, Marine & Casualty Insurance');
-    expect(SicIndustry.of(4813), 'Telephone Communications (No Radiotelephone)');
+    expect(
+      SicIndustry.of(4813),
+      'Telephone Communications (No Radiotelephone)',
+    );
     expect(
       SicIndustry.of(7370),
       'Services-Computer Programming, Data Processing, Etc.',
