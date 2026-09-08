@@ -1,3 +1,9 @@
+// The one material import in the app, for the one thing shadcn has no answer
+// to. Selection needs platform handles, a magnifier and a copy menu, and all
+// three live in material; `SelectableRegion` in `widgets` takes them as
+// required arguments rather than providing them. Narrowed to the single name
+// so material's `Theme`, `Text` and the rest stay out of this file.
+import 'package:flutter/material.dart' show SelectionArea;
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/sic_industry.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
@@ -65,19 +71,33 @@ class _CompanyIdentity extends StatelessWidget {
     );
     if (company == null) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: ThemeRepo.spaceXSmall,
-      children: [
-        Row(
-          spacing: ThemeRepo.spaceSmall,
-          children: [
-            PrimaryBadge(child: Text(company.ticker)),
-            Flexible(child: Text(company.name).h3().singleLine().ellipsis()),
-          ],
-        ),
-        Text(_subtitleOf(context, company)).muted().xSmall().ellipsis(),
-      ],
+    // Selectable, because this block is the one part of the report a reader
+    // takes elsewhere: the registrant's name as SEC spells it, and the CIK,
+    // are what a search of EDGAR or a note to somebody else needs, and
+    // retyping either from the screen is how a digit gets dropped.
+    //
+    // One region over the whole identity rather than one per line, so a drag
+    // that starts on the name and ends on the CIK takes both — which is what
+    // dragging across two lines means everywhere else.
+    //
+    // The rest of the report is left alone. A selection layer over figures
+    // that are already labelled, sourced and explained buys nothing, and
+    // every region is a gesture competing with the presses on top of it.
+    return SelectionArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: ThemeRepo.spaceXSmall,
+        children: [
+          Row(
+            spacing: ThemeRepo.spaceSmall,
+            children: [
+              PrimaryBadge(child: Text(company.ticker)),
+              Flexible(child: Text(company.name).h3().singleLine().ellipsis()),
+            ],
+          ),
+          Text(_subtitleOf(context, company)).muted().xSmall().ellipsis(),
+        ],
+      ),
     );
   }
 }

@@ -16,6 +16,7 @@ import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 
 /// Run with `--dart-define=PICKSTOCK_MOCK_DATA=true` to drive the UI from the
@@ -52,6 +53,10 @@ abstract final class DependenciesRepo {
       ..registerLazySingleton<OllamaRepo>(
         () => OllamaRepo(search: GetIt.I.get<WebSearchRepo>()),
       )
+      // App-level rather than screen-level: a question to the local model
+      // takes about a minute and the reader will have moved on well before it
+      // is answered.
+      ..registerLazySingleton<ResearchQueue>(ResearchQueue.new)
       ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)
       ..registerLazySingleton<ReportRepo>(LocalReportRepo.new)
       ..registerLazySingleton<SettingsRepo>(

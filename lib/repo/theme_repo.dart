@@ -62,6 +62,17 @@ class ThemeRepo {
   /// The jobs panel: wide enough for a report's name and its date on one
   /// line, and capped so a long history scrolls rather than filling the app.
   static const double jobsPanelWidth = 360;
+
+  /// How long the ring around a freshly arrived answer takes to pulse and go.
+  ///
+  /// About a second, which is the length of a blink you notice without being
+  /// interrupted by. Longer and it becomes an animation the reader waits out
+  /// before starting to read.
+  static const Duration freshRingIn = Duration(milliseconds: 180);
+  static const Duration freshRingOut = Duration(milliseconds: 820);
+
+  /// Thick enough to read as a mark rather than as the card's own edge.
+  static const double freshRingWidth = 2;
   static const double jobsPanelMaxListHeight = 260;
 
   /// A tooltip wraps at about a comfortable line length rather than running
@@ -182,6 +193,17 @@ class ThemeRepo {
   /// second thing to read.
   static const double updateBadgeSize = 8;
   static const double updateBadgeOffset = -2;
+
+  /// The count on the job button's corner, when there is a count worth
+  /// showing. A stadium rather than a circle: past nine it has two digits in
+  /// it, and a fixed circle would either clip them or be too big for one.
+  static const double countBadgeHeight = 16;
+  static const double countBadgeMinWidth = 16;
+  static const double countBadgeOffset = -5;
+  static const double countBadgeFontSize = 10;
+  static const EdgeInsets countBadgePadding = EdgeInsets.symmetric(
+    horizontal: spaceXSmall,
+  );
 
   /// The sliver of progress along the bottom edge of the download button, and
   /// how faint its unfilled track is. Thin enough to read as part of the

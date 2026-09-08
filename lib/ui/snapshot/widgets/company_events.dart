@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/research/company_event.dart';
+import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -7,6 +8,7 @@ import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/widgets/edge_progress.dart';
 import 'package:pickstock/ui/widgets/hint_tooltip.dart';
+import 'package:pickstock/ui/widgets/just_fetched.dart';
 import 'package:pickstock/ui/widgets/note_age.dart';
 import 'package:pickstock/ui/widgets/section_header.dart';
 import 'package:pickstock/ui/widgets/source_link.dart';
@@ -37,14 +39,19 @@ class CompanyEventsButton extends StatelessWidget {
 
     final state = viewModel.eventsState;
     final isLoading = state == EventsState.loading;
+    // Waiting behind another question. The model takes one at a time, and a
+    // button that said "Reading…" for the whole wait was claiming work that
+    // had not started.
+    final isQueued = state == EventsState.queued;
     // Once read, it is done: the answer is on screen and asking the same
     // question of the same company again would spend another minute to say
     // the same thing. Opening the company afresh is what starts over.
-    final hasRun = state != EventsState.idle && !isLoading;
+    final hasRun = state != EventsState.idle && !isLoading && !isQueued;
 
     final button = Tooltip(
       tooltip: HintTooltip(switch (state) {
         EventsState.loading => context.strings.eventsLoadingHint,
+        EventsState.queued => context.strings.researchQueuedHint,
         EventsState.idle => context.strings.eventsFetchHint,
         _ => context.strings.eventsDoneHint,
       }).call,
@@ -52,16 +59,18 @@ class CompanyEventsButton extends StatelessWidget {
         // The same weight and density as the list button above it, so the two
         // read as a pair rather than as a control that wandered in.
         density: context.isCompact ? ButtonDensity.icon : ButtonDensity.normal,
-        enabled: !isLoading && !hasRun,
-        onPressed: isLoading || hasRun ? null : viewModel.loadEvents,
+        enabled: !isLoading && !isQueued && !hasRun,
+        onPressed: isLoading || isQueued || hasRun
+            ? null
+            : viewModel.loadEvents,
         leading: const Icon(LucideIcons.newspaper).iconSmall(),
         child: context.isCompact
             ? const SizedBox.shrink()
-            : Text(
-                isLoading
-                    ? context.strings.eventsLoading
-                    : context.strings.eventsFetch,
-              ),
+            : Text(switch (state) {
+                EventsState.loading => context.strings.eventsLoading,
+                EventsState.queued => context.strings.researchQueued,
+                _ => context.strings.eventsFetch,
+              }),
       ),
     );
 
@@ -95,8 +104,9 @@ class CompanyEvents extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<SnapshotViewModel>();
     if (!viewModel.hasEventsToShow) return const SizedBox.shrink();
+    final isFresh = viewModel.highlightedKind == eventsNoteKind;
 
-    return Container(
+    final panel = Container(
       key: eventsPanelKey,
       padding: ThemeRepo.eventsPanelPadding,
       decoration: BoxDecoration(
@@ -121,6 +131,7 @@ class CompanyEvents extends StatelessWidget {
                   title: context.strings.eventsTitle,
                 ),
               ),
+              if (isFresh) const JustFetchedBadge(),
             ],
           ),
           switch (viewModel.eventsState) {
@@ -160,6 +171,8 @@ class CompanyEvents extends StatelessWidget {
         ],
       ),
     );
+
+    return isFresh ? JustFetched(child: panel) : panel;
   }
 }
 

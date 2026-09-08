@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
@@ -43,6 +44,55 @@ void main() {
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('the name and the number under it can be copied out', (
+    tester,
+  ) async {
+    // Where a copy ends up. The channel is the platform's, so a test has to
+    // stand in for it or `Clipboard.setData` goes nowhere.
+    final copied = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String);
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+
+    await openApple(tester, _wideSize);
+
+    // Dragged from the start of the name to the end of the line under it, as
+    // a hand would: the two are one region, so one drag takes both.
+    final name = tester.getRect(find.text('Apple Inc.').last);
+    final subtitle = tester.getRect(
+      find.textContaining('0000320193').last,
+    );
+    final gesture = await tester.startGesture(name.centerLeft);
+    await tester.pump(const Duration(milliseconds: 500));
+    await gesture.moveTo(subtitle.centerRight);
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    // The registrant's name as SEC spells it, and the CIK, which is what a
+    // search of EDGAR needs and what a reader would otherwise retype.
+    expect(copied, hasLength(1));
+    expect(copied.single, contains('Apple Inc.'));
+    expect(copied.single, contains('0000320193'));
+  });
 
   testWidgets('follows the company from the title\'s own row', (tester) async {
     await openApple(tester, _wideSize);

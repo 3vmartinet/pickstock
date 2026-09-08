@@ -64,6 +64,14 @@ enum UpdatePhase {
   /// Downloading, with the app still usable.
   downloading,
 
+  /// A stop has been asked for and the download is unwinding.
+  ///
+  /// A phase of its own because it is not instant: a download is tens of
+  /// seconds of fetching and decompressing between one report and the next,
+  /// and a button that sat there saying "Downloading" until the stream noticed
+  /// read as a cancel that had not worked.
+  cancelling,
+
   /// Downloaded and waiting for the go-ahead to touch the database.
   staged,
 
@@ -217,7 +225,12 @@ class IngestViewModel extends ChangeNotifier {
 
   /// Whether anything is under way, blocking or not, so neither step of a
   /// refresh can be started on top of the other.
-  bool get _isBusy => isRunning || _updatePhase == UpdatePhase.downloading;
+  bool get _isBusy =>
+      isRunning ||
+      _updatePhase == UpdatePhase.downloading ||
+      // A cancelled download is still running until it unwinds, and a second
+      // one started on top would fight it for the same staging directory.
+      _updatePhase == UpdatePhase.cancelling;
 
   /// Decides whether the app can start, loading the ticker directory if so.
   Future<void> check() async {
@@ -275,7 +288,9 @@ class IngestViewModel extends ChangeNotifier {
     _setUpdatePhase(UpdatePhase.downloading);
 
     try {
-      await for (final progress in _bulkIngestRepo.download()) {
+      await for (final progress in _bulkIngestRepo.download(
+        isCancelled: () => _cancelDownload,
+      )) {
         // Checked before the report is looked at, so a cancel means a cancel
         // even in the moment the last chunk lands: pressing stop and being
         // handed a finished download instead reads as the button not working.
@@ -290,7 +305,9 @@ class IngestViewModel extends ChangeNotifier {
         _reportUpdatePercent(progress);
       }
 
-      if (_staged != null) return _setUpdatePhase(UpdatePhase.staged);
+      if (_staged != null && !_cancelDownload) {
+        return _setUpdatePhase(UpdatePhase.staged);
+      }
       await _abandonDownload();
     } on Object catch (error) {
       // Nothing was written, so the data already loaded is still good.
@@ -307,6 +324,11 @@ class IngestViewModel extends ChangeNotifier {
   void cancelDownload() {
     if (_updatePhase != UpdatePhase.downloading) return;
     _cancelDownload = true;
+    // Said at once rather than when the stream gets round to noticing. The
+    // signal is read at every await a download has, so this is usually brief —
+    // but "usually" is not something a button can be built on, and one that
+    // acknowledged nothing was indistinguishable from one that did nothing.
+    _setUpdatePhase(UpdatePhase.cancelling);
   }
 
   /// Puts things back as they were before a cancelled download started.
@@ -316,6 +338,7 @@ class IngestViewModel extends ChangeNotifier {
     // finished one is the one case it deliberately leaves on disk.
     await _bulkIngestRepo.discardStaged();
     _updatePercent = null;
+    _cancelDownload = false;
     _setUpdatePhase(isUpdateAvailable ? UpdatePhase.offered : UpdatePhase.none);
   }
 

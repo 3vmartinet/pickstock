@@ -37,6 +37,7 @@ class IngestButton extends StatelessWidget {
       UpdatePhase.none => const _DataDate(),
       UpdatePhase.offered => const _Offer(),
       UpdatePhase.downloading => const _Downloading(),
+      UpdatePhase.cancelling => const _Cancelling(),
       UpdatePhase.staged => const _Staged(),
       UpdatePhase.failed => const _Failed(),
     };
@@ -232,6 +233,28 @@ class _CancelButton extends StatelessWidget {
         onPressed: context.read<IngestViewModel>().cancelDownload,
         child: const Icon(LucideIcons.x).iconSmall(),
       ),
+    );
+  }
+}
+
+/// The stop has been asked for and the download is unwinding.
+///
+/// Its own state rather than a straight jump back to the offer: a download
+/// stops at the next point it can be left, which is usually immediate and is
+/// occasionally a data set's worth of waiting. Saying so keeps the press
+/// acknowledged without claiming the download is already gone — and, with the
+/// cancel button withdrawn, without inviting a second press at a button that
+/// has nothing left to do.
+class _Cancelling extends StatelessWidget {
+  const _Cancelling();
+
+  @override
+  Widget build(BuildContext context) {
+    return _ActionButton(
+      hint: context.strings.updateCancellingHint,
+      leading: const Icon(LucideIcons.x),
+      label: context.strings.updateCancelling,
+      onPressed: null,
     );
   }
 }

@@ -187,6 +187,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stop the download and throw away what has come down. An archive is only usable whole, so there is nothing to resume — starting again starts from the beginning.';
 
   @override
+  String get updateCancelling => 'Stopping update…';
+
+  @override
+  String get updateCancellingHint =>
+      'The download is being stopped. It reads a data set at a time, so it can take a moment to reach a point where it can be left — nothing is written either way.';
+
+  @override
   String get updateReady => 'Finish update';
 
   @override
@@ -471,6 +478,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get eventsFailedOther => 'The search did not finish. Try again.';
+
+  @override
+  String get researchTitle => 'Questions to the model';
+
+  @override
+  String get researchNote =>
+      'One at a time — a model on this machine cannot answer two at once.';
+
+  @override
+  String get researchNewsAction => 'Read recent news';
+
+  @override
+  String get researchStatusQueued => 'Waiting its turn';
+
+  @override
+  String get researchStatusRunning => 'Searching and reading…';
+
+  @override
+  String get researchStatusReady => 'Ready — open it';
+
+  @override
+  String get researchStatusFailed => 'Did not finish — open it to see why';
+
+  @override
+  String get researchCancelHint =>
+      'Drop this question. Nothing is kept, and the next one in the line starts.';
+
+  @override
+  String researchOpenHint(String company) {
+    return 'Open $company where the answer landed.';
+  }
+
+  @override
+  String get researchQueued => 'Queued';
+
+  @override
+  String get researchQueuedHint =>
+      'Waiting its turn. The model answers one question at a time; the job list in the app bar has the line, and the way out of it.';
+
+  @override
+  String get researchJustFetched => 'Just fetched';
 
   @override
   String get jobsTooltip => 'Reports and running jobs';

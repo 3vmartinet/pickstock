@@ -346,6 +346,18 @@ abstract class AppLocalizations {
   /// **'Stop the download and throw away what has come down. An archive is only usable whole, so there is nothing to resume — starting again starts from the beginning.'**
   String get updateCancelHint;
 
+  /// No description provided for @updateCancelling.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping update…'**
+  String get updateCancelling;
+
+  /// No description provided for @updateCancellingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The download is being stopped. It reads a data set at a time, so it can take a moment to reach a point where it can be left — nothing is written either way.'**
+  String get updateCancellingHint;
+
   /// No description provided for @updateReady.
   ///
   /// In en, this message translates to:
@@ -747,6 +759,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The search did not finish. Try again.'**
   String get eventsFailedOther;
+
+  /// No description provided for @researchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Questions to the model'**
+  String get researchTitle;
+
+  /// No description provided for @researchNote.
+  ///
+  /// In en, this message translates to:
+  /// **'One at a time — a model on this machine cannot answer two at once.'**
+  String get researchNote;
+
+  /// No description provided for @researchNewsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Read recent news'**
+  String get researchNewsAction;
+
+  /// No description provided for @researchStatusQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting its turn'**
+  String get researchStatusQueued;
+
+  /// No description provided for @researchStatusRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching and reading…'**
+  String get researchStatusRunning;
+
+  /// No description provided for @researchStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready — open it'**
+  String get researchStatusReady;
+
+  /// No description provided for @researchStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Did not finish — open it to see why'**
+  String get researchStatusFailed;
+
+  /// No description provided for @researchCancelHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop this question. Nothing is kept, and the next one in the line starts.'**
+  String get researchCancelHint;
+
+  /// No description provided for @researchOpenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {company} where the answer landed.'**
+  String researchOpenHint(String company);
+
+  /// No description provided for @researchQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get researchQueued;
+
+  /// No description provided for @researchQueuedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting its turn. The model answers one question at a time; the job list in the app bar has the line, and the way out of it.'**
+  String get researchQueuedHint;
+
+  /// No description provided for @researchJustFetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Just fetched'**
+  String get researchJustFetched;
 
   /// No description provided for @jobsTooltip.
   ///

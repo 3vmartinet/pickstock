@@ -31,6 +31,7 @@ import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/report/research_queue.dart';
 
 /// A small stand-in for SEC's directory, covering the shapes the app has to
 /// handle: a hyphenated symbol, a seven-character one, two symbols sharing a
@@ -188,12 +189,15 @@ class FakeBulkIngestRepo extends BulkIngestRepo {
   bool wasDiscarded = false;
 
   @override
-  Stream<IngestProgress> download() async* {
+  Stream<IngestProgress> download({CancelSignal? isCancelled}) async* {
     var staged = false;
     try {
       yield const IngestFetchingDirectory();
       yield const IngestDownloading(receivedBytes: 42, totalBytes: 100);
+      // The gap the real download spends fetching and decompressing a data
+      // set, where nothing is reported and only the signal can be seen.
       await finishDownload.future;
+      if (isCancelled?.call() ?? false) return;
       yield IngestStaged(fakeStagedIngest(archiveDate));
       staged = true;
     } finally {
@@ -268,9 +272,16 @@ class FakeOllamaRepo extends OllamaRepo {
   Future<bool> get isAvailable async => true;
 
   @override
-  Future<ResearchAnswer> ask(String question, {String? context}) async {
+  Future<ResearchAnswer> ask(
+    String question, {
+    String? context,
+    bool Function()? isCancelled,
+  }) async {
     questions.add(question);
     await finishAsk?.future;
+    // The shape the real one comes back in when the question was withdrawn
+    // while it ran.
+    if (isCancelled?.call() ?? false) return const ResearchAnswer(text: '');
     final thrown = failure;
     if (thrown != null) throw ResearchException(thrown);
     return answer;
@@ -280,9 +291,11 @@ class FakeOllamaRepo extends OllamaRepo {
   Future<List<CompanyEvent>> eventsFor({
     required String ticker,
     required String name,
+    bool Function()? isCancelled,
   }) async {
     asked++;
     await finishEvents?.future;
+    if (isCancelled?.call() ?? false) return const [];
     final thrown = failure;
     if (thrown != null) throw ResearchException(thrown);
     return events;
@@ -413,6 +426,7 @@ Future<AppDatabase> registerTestDependencies({
     ..registerLazySingleton<OllamaRepo>(
       () => researchRepo ?? FakeOllamaRepo(search: FakeWebSearchRepo()),
     )
+    ..registerLazySingleton<ResearchQueue>(ResearchQueue.new)
     ..registerLazySingleton<SecRepo>(() => const MockSecRepo())
     // The real implementation, against the in-memory database: remembering a
     // price is a round trip through drift and is worth exercising as one.

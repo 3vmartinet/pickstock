@@ -5,6 +5,7 @@ import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/widgets/edge_progress.dart';
 import 'package:pickstock/ui/widgets/hint_tooltip.dart';
+import 'package:pickstock/ui/widgets/just_fetched.dart';
 import 'package:pickstock/ui/widgets/note_age.dart';
 import 'package:pickstock/ui/widgets/source_link.dart';
 import 'package:provider/provider.dart';
@@ -36,12 +37,23 @@ class CompanyInsightCard extends StatelessWidget {
     if (!viewModel.canResearch) return const SizedBox.shrink();
 
     final state = viewModel.insightState(insight);
+    // The one card an answer has just landed in, on a report of a dozen.
+    final isFresh = viewModel.highlightedKind == insight.name;
 
-    return Alert(
+    final alert = Alert(
       leading: Icon(insight.icon).iconSmall().iconMutedForeground(),
-      title: Text(insight.getTitle(context.strings)),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: ThemeRepo.spaceSmall,
+        children: [
+          Flexible(child: Text(insight.getTitle(context.strings))),
+          if (isFresh) const JustFetchedBadge(),
+        ],
+      ),
       content: switch (state) {
-        InsightState.idle || InsightState.loading => Text(
+        InsightState.idle ||
+        InsightState.queued ||
+        InsightState.loading => Text(
           insight.getInvitation(context.strings),
         ).muted().xSmall(),
         InsightState.failed => Text(
@@ -61,6 +73,8 @@ class CompanyInsightCard extends StatelessWidget {
           ? _Age(insight: insight)
           : _Ask(insight: insight, state: state),
     );
+
+    return isFresh ? JustFetched(child: alert) : alert;
   }
 }
 
@@ -74,27 +88,35 @@ class _Ask extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLoading = state == InsightState.loading;
+    // Waiting behind another question, which is where most of them start: the
+    // model takes one at a time. Said plainly rather than shown as "Reading…"
+    // — a button claiming work that has not begun is the reason a minute felt
+    // like three.
+    final isQueued = state == InsightState.queued;
+    final isBusy = isLoading || isQueued;
 
     final button = Tooltip(
-      tooltip: HintTooltip(
-        isLoading
-            ? context.strings.insightReadingHint
-            : insight.getInvitation(context.strings),
-      ).call,
+      tooltip: HintTooltip(switch (state) {
+        InsightState.loading => context.strings.insightReadingHint,
+        InsightState.queued => context.strings.researchQueuedHint,
+        _ => insight.getInvitation(context.strings),
+      }).call,
       child: OutlineButton(
         size: ButtonSize.small,
-        enabled: !isLoading,
-        onPressed: isLoading
+        enabled: !isBusy,
+        onPressed: isBusy
             ? null
             : () => context.read<SnapshotViewModel>().loadInsight(insight),
-        child: Text(
-          isLoading
-              ? context.strings.insightReading
-              : insight.getAction(context.strings),
-        ),
+        child: Text(switch (state) {
+          InsightState.loading => context.strings.insightReading,
+          InsightState.queued => context.strings.researchQueued,
+          _ => insight.getAction(context.strings),
+        }),
       ),
     );
 
+    // Only the one actually being answered gets the bar; a queued question has
+    // nothing under way to report.
     if (!isLoading) return button;
     return EdgeProgress(
       // Indeterminate: a model reading the web reports no fraction of

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/period_figures.dart';
@@ -20,6 +21,8 @@ import 'package:pickstock/data/valuation/discount_rate.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/data/research/research_task.dart';
+import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
@@ -28,6 +31,7 @@ QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 OllamaRepo get _researchRepo => GetIt.I.get<OllamaRepo>();
 ResearchNoteRepo get _noteRepo => GetIt.I.get<ResearchNoteRepo>();
 MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
+ResearchQueue get _queue => GetIt.I.get<ResearchQueue>();
 
 /// How old a stored quote may be before opening a company refetches it.
 ///
@@ -41,10 +45,22 @@ const List<String> suggestedTickers = ['AAPL', 'MSFT', 'NVDA', 'KO', 'F'];
 
 const int _maxRecentTickers = 6;
 
+/// How long a freshly arrived answer stays marked as fresh.
+///
+/// Long enough to be seen by someone who pressed a row in the app bar and is
+/// still looking at where it took them; short enough that it is gone by the
+/// time they have read the paragraph. A mark that outstayed the arrival would
+/// become part of how the card looks.
+const Duration researchHighlightDuration = Duration(seconds: 6);
+
 /// Where a company's reading-around has got to.
 enum EventsState {
   /// Never asked. The header offers the press and shows nothing else.
   idle,
+
+  /// Asked for, and waiting behind another question. The model answers one at
+  /// a time, so most questions start here.
+  queued,
 
   /// The model is searching and reading, which takes about a minute.
   loading,
@@ -60,6 +76,13 @@ enum EventsState {
 }
 
 class SnapshotViewModel extends ChangeNotifier {
+  SnapshotViewModel() {
+    // The queue owns where a question has got to; the report only reads it.
+    // Without this the cards would sit at whatever they last said while the
+    // line moved underneath them.
+    _queue.addListener(notifyListeners);
+  }
+
   SnapshotState _state = const SnapshotIdle();
   SnapshotState get state => _state;
 
@@ -112,7 +135,24 @@ class SnapshotViewModel extends ChangeNotifier {
   /// Where the header's reading-around has got to. Idle until asked: it costs
   /// a minute of a local model's time, so it happens on a press and not on
   /// every company opened.
-  EventsState get eventsState => _eventsState;
+  ///
+  /// Asked of the queue first while a question about this company is still in
+  /// it: waiting and being answered are the queue's to say, and a second copy
+  /// kept here would be the one that went stale.
+  EventsState get eventsState =>
+      switch (_queuedState(eventsNoteKind)) {
+        ResearchTaskState.pending => EventsState.queued,
+        ResearchTaskState.running => EventsState.loading,
+        _ => _eventsState,
+      };
+
+  /// Where the queue has got to with [kind] for the company on screen, or
+  /// `null` where it has nothing about it.
+  ResearchTaskState? _queuedState(String kind) {
+    final cik = snapshot?.company.cik;
+    if (cik == null) return null;
+    return _queue.taskFor(cik: cik, kind: kind)?.state;
+  }
 
   DateTime? _eventsGeneratedAt;
 
@@ -142,33 +182,48 @@ class SnapshotViewModel extends ChangeNotifier {
   /// The name gets the whole row until there is news, and takes it back when
   /// the reader moves to another company: an empty column that still claimed
   /// its share truncated the company's own name to make room for nothing.
-  bool get hasEventsToShow => switch (_eventsState) {
-    EventsState.idle || EventsState.loading => false,
+  bool get hasEventsToShow => switch (eventsState) {
+    EventsState.idle || EventsState.queued || EventsState.loading => false,
     EventsState.ready || EventsState.empty || EventsState.failed => true,
   };
 
-  /// Asks the local model what has been happening to the company on screen.
+  /// Puts "what has been happening here" to the local model.
   ///
-  /// Nothing is cached beyond the company: the news moves, and a reader
-  /// pressing again means "again".
+  /// Queued rather than run: the model answers one question at a time, and a
+  /// press that started a second one alongside the first would only make both
+  /// slower. Nothing is cached beyond the company: the news moves, and a
+  /// reader pressing again means "again".
   Future<void> loadEvents({bool afresh = false}) async {
     final company = snapshot?.company;
-    if (company == null || _eventsState == EventsState.loading) return;
+    if (company == null) return;
+    final state = eventsState;
+    if (state == EventsState.loading || state == EventsState.queued) return;
     // Refused unless the reader asked again: the answer is on screen, and a
     // second run would spend another minute to say the same thing.
-    if (!afresh && _eventsState != EventsState.idle) return;
+    if (!afresh && state != EventsState.idle) return;
 
-    final generation = _requestGeneration;
     _eventsFailure = null;
     _eventsGeneratedAt = null;
     if (afresh) await _noteRepo.clear(company.cik, eventsNoteKind);
-    _setEventsState(EventsState.loading);
+    _setEventsState(EventsState.idle);
 
+    _queue.enqueue(
+      cik: company.cik,
+      ticker: company.ticker,
+      companyName: company.name,
+      insight: null,
+      work: (isCancelled) => _readAround(company, isCancelled),
+    );
+  }
+
+  Future<void> _readAround(Company company, bool Function() isCancelled) async {
     try {
       final found = await _researchRepo.eventsFor(
         ticker: company.ticker,
         name: company.name,
+        isCancelled: isCancelled,
       );
+      if (isCancelled()) return;
       if (found.isNotEmpty) {
         await _noteRepo.saveEvents(
           cik: company.cik,
@@ -176,24 +231,39 @@ class SnapshotViewModel extends ChangeNotifier {
           events: found,
         );
       }
-      // The reader has moved on; the answer is about a company no longer on
-      // screen.
-      if (generation != _requestGeneration) return;
+      // Written down either way; put on screen only while the company it is
+      // about is the one being looked at. A reader who has moved on gets it
+      // back from disk when they come back — which is what the row in the app
+      // bar is a shortcut to.
+      if (!_isOnScreen(company)) return;
       _events = found;
       _eventsGeneratedAt = DateTime.now();
       _setEventsState(found.isEmpty ? EventsState.empty : EventsState.ready);
     } on ResearchException catch (error) {
-      if (generation != _requestGeneration) return;
       logWarning(() => 'Could not read around ${company.ticker}: $error');
-      _eventsFailure = error.failure;
-      _setEventsState(EventsState.failed);
+      if (_isOnScreen(company)) {
+        _eventsFailure = error.failure;
+        _setEventsState(EventsState.failed);
+      }
+      // Told to the queue as well, so the row says it did not finish rather
+      // than quietly claiming an answer nobody can open.
+      rethrow;
     } on Object catch (error) {
-      if (generation != _requestGeneration) return;
       logSevere(() => 'Reading around ${company.ticker} failed: $error');
-      _eventsFailure = ResearchFailure.failed;
-      _setEventsState(EventsState.failed);
+      if (_isOnScreen(company)) {
+        _eventsFailure = ResearchFailure.failed;
+        _setEventsState(EventsState.failed);
+      }
+      rethrow;
     }
   }
+
+  /// Whether [company] is still the one the report is showing.
+  ///
+  /// By filer rather than by request count: a reader who left and came back is
+  /// looking at the same company, and an answer about it belongs on screen
+  /// however many lookups happened in between.
+  bool _isOnScreen(Company company) => snapshot?.company.cik == company.cik;
 
   /// Whether there are price cases to show beside the verdict.
   ///
@@ -216,8 +286,13 @@ class SnapshotViewModel extends ChangeNotifier {
   DateTime? insightGeneratedAt(CompanyInsight insight) =>
       _insightGeneratedAt[insight];
 
+  /// Where [insight] has got to, the queue's word first.
   InsightState insightState(CompanyInsight insight) =>
-      _insightStates[insight] ?? InsightState.idle;
+      switch (_queuedState(insight.name)) {
+        ResearchTaskState.pending => InsightState.queued,
+        ResearchTaskState.running => InsightState.loading,
+        _ => _insightStates[insight] ?? InsightState.idle,
+      };
 
   ResearchAnswer? insightAnswer(CompanyInsight insight) =>
       _insightAnswers[insight];
@@ -241,20 +316,45 @@ class SnapshotViewModel extends ChangeNotifier {
     final company = snapshot?.company;
     if (company == null) return;
     final state = insightState(insight);
-    if (state == InsightState.loading) return;
+    if (state == InsightState.loading || state == InsightState.queued) return;
     if (!afresh && state != InsightState.idle) return;
 
+    // Built here and held, not built when the queue reaches it: the question
+    // quotes the figures on screen, and by the time its turn comes the reader
+    // may be three companies away.
     final question = _questionFor(insight);
     if (question == null) return;
+    final brief = _brief();
 
-    final generation = _requestGeneration;
     _insightFailures.remove(insight);
     _insightGeneratedAt.remove(insight);
     if (afresh) await _noteRepo.clear(company.cik, insight.name);
-    _setInsightState(insight, InsightState.loading);
+    _setInsightState(insight, InsightState.idle);
 
+    _queue.enqueue(
+      cik: company.cik,
+      ticker: company.ticker,
+      companyName: company.name,
+      insight: insight,
+      work: (isCancelled) =>
+          _answer(company, insight, question, brief, isCancelled),
+    );
+  }
+
+  Future<void> _answer(
+    Company company,
+    CompanyInsight insight,
+    String question,
+    String brief,
+    bool Function() isCancelled,
+  ) async {
     try {
-      final answer = await _researchRepo.ask(question, context: _brief());
+      final answer = await _researchRepo.ask(
+        question,
+        context: brief,
+        isCancelled: isCancelled,
+      );
+      if (isCancelled()) return;
       if (answer.text.isNotEmpty) {
         await _noteRepo.saveAnswer(
           cik: company.cik,
@@ -263,22 +363,24 @@ class SnapshotViewModel extends ChangeNotifier {
           sources: answer.sources,
         );
       }
-      // The reader has moved on; the answer is about a company no longer on
-      // screen.
-      if (generation != _requestGeneration) return;
+      if (!_isOnScreen(company)) return;
       _insightAnswers[insight] = answer;
       _insightGeneratedAt[insight] = DateTime.now();
       _setInsightState(insight, InsightState.ready);
     } on ResearchException catch (error) {
-      if (generation != _requestGeneration) return;
       logWarning(() => 'Insight ${insight.name} failed: $error');
-      _insightFailures[insight] = error.failure;
-      _setInsightState(insight, InsightState.failed);
+      if (_isOnScreen(company)) {
+        _insightFailures[insight] = error.failure;
+        _setInsightState(insight, InsightState.failed);
+      }
+      rethrow;
     } on Object catch (error) {
-      if (generation != _requestGeneration) return;
       logSevere(() => 'Insight ${insight.name} failed: $error');
-      _insightFailures[insight] = ResearchFailure.failed;
-      _setInsightState(insight, InsightState.failed);
+      if (_isOnScreen(company)) {
+        _insightFailures[insight] = ResearchFailure.failed;
+        _setInsightState(insight, InsightState.failed);
+      }
+      rethrow;
     }
   }
 
@@ -422,6 +524,48 @@ class SnapshotViewModel extends ChangeNotifier {
     if (tab == _reportTab) return;
     _reportTab = tab;
     notifyListeners();
+  }
+
+  String? _highlightedKind;
+  Timer? _highlightTimer;
+
+  /// The answer that has just been arrived at, or `null` — which is nearly
+  /// always. Read by the cards so the one that was fetched says so.
+  String? get highlightedKind => _highlightedKind;
+
+  /// Opens [ticker] at [tab] and points at the answer filed under [kind].
+  ///
+  /// The way back from a finished row in the app bar. A minute passed between
+  /// the press and the answer, and landing on a screen of a dozen cards with
+  /// no idea which one changed is landing nowhere — so the destination says
+  /// which one it was, briefly, and then stops saying it.
+  Future<void> revealNote({
+    required String ticker,
+    required ReportTab tab,
+    required String kind,
+  }) async {
+    selectReportTab(tab);
+    // Already here: re-running the lookup would throw away the answer it is
+    // about to point at and fetch it back from disk a frame later.
+    if (selectedTicker?.toUpperCase() != ticker.toUpperCase()) {
+      await search(ticker);
+    }
+    _highlightTimer?.cancel();
+    _highlightedKind = kind;
+    notifyListeners();
+    _highlightTimer = Timer(researchHighlightDuration, () {
+      _highlightedKind = null;
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _highlightTimer?.cancel();
+    // The queue outlives this: it is app-wide, and a listener left on it would
+    // be calling into a disposed notifier for the rest of the session.
+    _queue.removeListener(notifyListeners);
+    super.dispose();
   }
 
   HistoryPeriod _historyPeriod = HistoryPeriod.annual;

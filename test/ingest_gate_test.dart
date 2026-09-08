@@ -141,6 +141,40 @@ void main() {
     expect(find.text('PickStock'), findsOneWidget);
   });
 
+  testWidgets('says the download is stopping the moment it is asked', (
+    tester,
+  ) async {
+    final ingest = FakeBulkIngestRepo();
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
+    await pumpApp(tester);
+
+    await tester.tap(find.text('Update available'));
+    await tester.pump();
+    await tester.pump(_animationStart);
+    expect(find.text('Downloading update…'), findsOneWidget);
+
+    // Nothing is completed here on purpose: this is the gap the real download
+    // spends fetching and decompressing a 60 MB data set, reporting nothing.
+    // A cancel that could only be seen at the next report left the button
+    // saying "Downloading" for all of it, which read as a press that had done
+    // nothing at all.
+    await tester.tap(find.byKey(updateCancelKey));
+    await tester.pump();
+
+    expect(find.text('Stopping update…'), findsOneWidget);
+    expect(find.text('Downloading update…'), findsNothing);
+    // And no second press on offer: there is nothing left for it to do.
+    expect(find.byKey(updateCancelKey), findsNothing);
+
+    // Once the download reaches a point it can be left, the offer is back.
+    ingest.finishDownload.complete();
+    await tester.pumpAndSettle();
+    expect(ingest.wasCancelled, isTrue);
+    expect(ingest.wasDiscarded, isTrue);
+    expect(find.text('Update available'), findsOneWidget);
+    expect(find.text('Stopping update…'), findsNothing);
+  });
+
   testWidgets('waits to be told before it touches the database', (
     tester,
   ) async {

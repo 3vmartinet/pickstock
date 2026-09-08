@@ -55,6 +55,20 @@ const String _jsonSuffix = '.json';
 const int _cikDigits = 10;
 const String _cikPadding = '0';
 
+/// Asked at the points a download can be abandoned.
+///
+/// Leaving the stream is only noticed at a `yield`, and between two of those a
+/// download spends tens of seconds fetching a 60 MB data set and decompressing
+/// it. For all of that a cancel could not be seen at all, which is what made
+/// the button look broken. This is asked at the awaits in between as well.
+typedef CancelSignal = bool Function();
+
+extension on CancelSignal? {
+  /// Whether the caller has asked to stop. `null` — nobody is watching — is
+  /// no, which is what the first-run ingest passes.
+  bool get saysSo => this?.call() ?? false;
+}
+
 /// Filers handed to one background worker at a time.
 ///
 /// Short, because a slice is the unit of load balancing: filers differ in size
@@ -670,7 +684,12 @@ class BulkIngestRepo {
   ///
   /// The final event is an [IngestStaged]; from then on the staged download
   /// belongs to the caller, which must hand it to [load].
-  Stream<IngestProgress> download() async* {
+  ///
+  /// [isCancelled] is asked between the steps as well as during them, so a
+  /// caller that wants to stop does not have to wait for a data set to finish
+  /// arriving before anything notices. Stopping leaves nothing behind: what
+  /// had come down goes with everything else in the staging directory.
+  Stream<IngestProgress> download({CancelSignal? isCancelled}) async* {
     await _clearLegacyStaging();
     final staging = await _stagingDirectory();
 
@@ -706,12 +725,15 @@ class BulkIngestRepo {
         flush: true,
       );
 
+      if (isCancelled.saysSo) return;
+
       final sicByCik = <String, int>{};
       var quarter = 0;
-      await for (final found in _fetchSectors(sicByCik)) {
+      await for (final found in _fetchSectors(sicByCik, isCancelled)) {
         quarter = found;
         yield IngestFetchingSectors(quartersRead: found);
       }
+      if (isCancelled.saysSo) return;
       logInfo(
         () => 'Sectors for ${sicByCik.length} filers from $quarter data sets',
       );
@@ -723,9 +745,12 @@ class BulkIngestRepo {
       // `await for`, not `yield*`: a delegated stream's errors bypass this
       // function's catch clauses entirely, so the download would be kept when
       // it should be discarded.
-      await for (final progress in _download(partial.archiveFile)) {
+      await for (final progress in _download(partial.archiveFile, isCancelled)) {
         yield progress;
       }
+      // The archive stream returns rather than throwing when it is stopped,
+      // so what is on disk here is half a download unless it ran to the end.
+      if (isCancelled.saysSo) return;
 
       final complete = StagedIngest(
         stagingDirectory: staging,
@@ -935,12 +960,15 @@ class BulkIngestRepo {
   /// Missing quarters are normal — the newest is published weeks in arrears —
   /// so absences are skipped rather than treated as failures. Sectors are a
   /// nice-to-have: an ingest still succeeds without them.
-  Stream<int> _fetchSectors(Map<String, int> into) async* {
+  Stream<int> _fetchSectors(
+    Map<String, int> into,
+    CancelSignal? isCancelled,
+  ) async* {
     var found = 0;
     var candidate = DateTime.now().toUtc();
 
     for (var probe = 0; probe < _sectorQuarterProbes; probe++) {
-      if (found >= sectorQuarters) break;
+      if (found >= sectorQuarters || isCancelled.saysSo) break;
       final quarter = (candidate.month - 1) ~/ 3 + 1;
       final url = sectorDatasetUrl(candidate.year, quarter);
 
@@ -971,7 +999,10 @@ class BulkIngestRepo {
     }
   }
 
-  Stream<IngestProgress> _download(File target) async* {
+  Stream<IngestProgress> _download(
+    File target,
+    CancelSignal? isCancelled,
+  ) async* {
     logInfo(() => 'Downloading $bulkCompanyFactsUrl');
     final request = http.Request('GET', Uri.parse(bulkCompanyFactsUrl))
       ..headers['User-Agent'] = _userAgent;
@@ -985,6 +1016,13 @@ class BulkIngestRepo {
     var received = 0;
     try {
       await for (final chunk in response.stream) {
+        // Checked before the chunk is kept: a stopped download is thrown away
+        // whole, so writing one more of it is work for nothing.
+        if (isCancelled.saysSo) {
+          await sink.close();
+          await _deleteQuietly(partial);
+          return;
+        }
         sink.add(chunk);
         received += chunk.length;
         yield IngestDownloading(

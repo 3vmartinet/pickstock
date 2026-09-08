@@ -81,7 +81,7 @@ const Duration _probeTimeout = Duration(seconds: 5);
 
 /// What the model came back with, and what it read to get there.
 class ResearchAnswer {
-  const ResearchAnswer({required this.text, required this.sources});
+  const ResearchAnswer({required this.text, this.sources = const []});
 
   final String text;
 
@@ -182,7 +182,16 @@ class OllamaRepo {
   /// [context] is handed over as a system message: the figures the app already
   /// holds, so the model comments on the company in front of the reader rather
   /// than on whatever it finds under the same name.
-  Future<ResearchAnswer> ask(String question, {String? context}) async {
+  /// [isCancelled] is asked between rounds. A question is several minutes of
+  /// searching and reading, and a reader who has withdrawn it should not have
+  /// the machine still working through it — nor should the next question in
+  /// the line wait behind one nobody wants. What comes back then is empty,
+  /// which is what a caller that no longer wants an answer does with one.
+  Future<ResearchAnswer> ask(
+    String question, {
+    String? context,
+    bool Function()? isCancelled,
+  }) async {
     if (!search.isConfigured) {
       throw const ResearchException(ResearchFailure.searchNotConfigured);
     }
@@ -194,6 +203,7 @@ class OllamaRepo {
     final sources = <SearchResult>[];
 
     for (var round = 0; round <= _maximumToolRounds; round++) {
+      if (isCancelled?.call() ?? false) return const ResearchAnswer(text: '');
       final reply = await _chat(
         messages,
         withTools: round < _maximumToolRounds,
@@ -237,6 +247,7 @@ class OllamaRepo {
   Future<List<CompanyEvent>> eventsFor({
     required String ticker,
     required String name,
+    bool Function()? isCancelled,
   }) async {
     final research = await ask(
       'Find the three most recent developments at $name ($ticker) that would '
@@ -248,8 +259,11 @@ class OllamaRepo {
       context:
           'You are researching one company for an investor who is looking at '
           'its SEC filings. Today is ${DateTime.now().toIso8601String()}.',
+      isCancelled: isCancelled,
     );
 
+    // Also the shape a withdrawn question comes back in, which is why the
+    // second pass — a minute of distilling — is never reached for one.
     if (research.sources.isEmpty) return const [];
     final pages = {for (final source in research.sources) source.url};
 

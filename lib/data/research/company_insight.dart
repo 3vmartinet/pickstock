@@ -70,4 +70,7 @@ const String eventsNoteKind = 'events';
 
 /// Where an insight has got to. One per insight per company: reading around
 /// costs a minute of a local model, so each is asked for on its own.
-enum InsightState { idle, loading, ready, failed }
+///
+/// [queued] is the common opening state, not an edge case: the model answers
+/// one question at a time, so anything asked while it is busy waits its turn.
+enum InsightState { idle, queued, loading, ready, failed }
