@@ -8,7 +8,7 @@
 // say, and if the curve peaks somewhere other than four then that is what
 // `_maxParseWorkers` should say.
 //
-//   fvm flutter test test/ingest_benchmark.dart -r expanded
+//   flutter test test/ingest_benchmark.dart -r expanded
 //
 // The synthetic archive is built once and cached; deleting it forces a rebuild,
 // which takes a couple of minutes.

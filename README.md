@@ -256,7 +256,7 @@ loss, for instance).
 built in:
 
 ```sh
-fvm flutter test --dart-define-from-file=env.json test/live_quote_test.dart
+flutter test --dart-define-from-file=env.json test/live_quote_test.dart
 ```
 
 ### Reading around the figures
@@ -281,7 +281,7 @@ question that answered in 31 seconds trimmed took past four minutes whole. The
 page is still kept unabridged for the reader, who is not the one paying for it.
 
 ```sh
-fvm flutter test --dart-define-from-file=env.json test/live_research_test.dart
+flutter test --dart-define-from-file=env.json test/live_research_test.dart
 ```
 
 Proves the key arrives, that the hosted search answers the shape the parser
@@ -544,15 +544,15 @@ reports a prior year's figure — or a quarter — under the wrong heading.
 
 ## Running it
 
-The Flutter SDK is managed by [fvm](https://fvm.app) and tracked to the `stable`
-channel in `.fvmrc`, so no version is pinned. Run `fvm install` once, then:
+This uses the Flutter SDK on your `PATH` (stable channel; developed against
+3.47.2). No per-project pin.
 
 ```shell
 cp env.example.json env.json   # then paste a Finnhub key, or leave it empty
-fvm flutter run -d macos --dart-define-from-file=env.json   # or -d linux
+flutter run -d macos --dart-define-from-file=env.json   # or -d linux
 ```
 
-The define is optional — `fvm flutter run -d macos` works, with the share price
+The define is optional — `flutter run -d macos` works, with the share price
 typed in rather than quoted. `.vscode/launch.json` passes it for you.
 
 `--dart-define=PICKSTOCK_MOCK_DATA=true` swaps the database for a fixture

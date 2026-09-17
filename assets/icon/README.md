@@ -19,7 +19,7 @@ After editing either SVG, re-export the PNG and rebuild the icon set:
 
 ```sh
 rsvg-convert -w 1024 -h 1024 assets/icon/app_icon_macos.svg -o assets/icon/app_icon_macos.png
-fvm dart run flutter_launcher_icons
+dart run flutter_launcher_icons
 ```
 
 That rewrites `macos/Runner/Assets.xcassets/AppIcon.appiconset/`. Any SVG

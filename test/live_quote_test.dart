@@ -8,7 +8,7 @@ import 'package:pickstock/repo/quote/finnhub_quote_repo.dart';
 /// Skipped unless a key is built in, so the suite stays offline by default:
 ///
 /// ```sh
-/// fvm flutter test --dart-define-from-file=env.json test/live_quote_test.dart
+/// flutter test --dart-define-from-file=env.json test/live_quote_test.dart
 /// ```
 /// Skipped rather than silently absent, so a run without a key says so.
 final Object? _skip = finnhubApiKey.isEmpty

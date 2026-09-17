@@ -60,7 +60,7 @@ flutter:
   generate: true
 
 # The macOS launcher icon, generated from the app's own mark. Regenerate with
-# `fvm dart run flutter_launcher_icons` after editing assets/icon/app_icon_macos.svg
+# `dart run flutter_launcher_icons` after editing assets/icon/app_icon_macos.svg
 # and re-exporting its PNG (see assets/icon/README.md).
 flutter_launcher_icons:
   macos:

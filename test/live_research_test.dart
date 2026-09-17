@@ -9,7 +9,7 @@ import 'package:pickstock/repo/research/web_search_repo.dart';
 /// Skipped unless a key is built in, so the suite stays offline by default:
 ///
 /// ```sh
-/// fvm flutter test --dart-define-from-file=env.json test/live_research_test.dart
+/// flutter test --dart-define-from-file=env.json test/live_research_test.dart
 /// ```
 ///
 /// Skipped rather than silently absent, so a run without a key says so. The
