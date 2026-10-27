@@ -754,6 +754,12 @@ abstract class AppLocalizations {
   /// **'Ollama is running but has not pulled the model this build asks for.'**
   String get eventsFailedNoModel;
 
+  /// No description provided for @researchFailedSearchRefusedUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'The web search is rate limited until about {time}, so this was not read up on. Try again then.'**
+  String researchFailedSearchRefusedUntil(String time);
+
   /// No description provided for @researchFailedSearchRefused.
   ///
   /// In en, this message translates to:

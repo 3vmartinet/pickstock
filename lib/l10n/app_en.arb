@@ -142,6 +142,8 @@
   "eventsFailedNoKey": "No Ollama key is built in, so there is nothing to search with. Copy env.example.json to env.json and paste one.",
   "eventsFailedNoServer": "Nothing is answering on this machine. Start Ollama and try again.",
   "eventsFailedNoModel": "Ollama is running but has not pulled the model this build asks for.",
+  "researchFailedSearchRefusedUntil": "The web search is rate limited until about {time}, so this was not read up on. Try again then.",
+  "@researchFailedSearchRefusedUntil": { "placeholders": { "time": { "type": "String" } } },
   "researchFailedSearchRefused": "The web search refused every request — it is most likely rate limited — so this was not read up on. Try again in a few minutes.",
   "eventsFailedOther": "The search did not finish. Try again.",
 

@@ -240,6 +240,18 @@ void main() {
     expect(find.textContaining('most likely rate limited'), findsWidgets);
   });
 
+  testWidgets('a limit with a wait says when to come back', (tester) async {
+    // What Ollama's search answered the day this was written: two hours.
+    research
+      ..failure = ResearchFailure.searchRefused
+      ..retryAfter = const Duration(hours: 2);
+    await openFramework(tester);
+    await run(tester);
+
+    expect(find.textContaining('rate limited until about'), findsWidgets);
+    expect(find.textContaining('a few minutes'), findsNothing);
+  });
+
   testWidgets('without a key there is nothing to run, but the filings show', (
     tester,
   ) async {

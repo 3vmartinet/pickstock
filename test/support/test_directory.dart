@@ -254,6 +254,9 @@ class FakeOllamaRepo extends OllamaRepo {
   /// What it throws instead of answering.
   ResearchFailure? failure;
 
+  /// The wait a refused search is said to have asked for.
+  Duration? retryAfter;
+
   /// What the next question is answered with.
   ResearchAnswer answer = const ResearchAnswer(text: '', sources: []);
 
@@ -315,7 +318,9 @@ class FakeOllamaRepo extends OllamaRepo {
     await finishScreen?.future;
     if (isCancelled?.call() ?? false) return null;
     final thrown = failure;
-    if (thrown != null) throw ResearchException(thrown);
+    if (thrown != null) {
+      throw ResearchException(thrown, retryAfter: retryAfter);
+    }
     return FrameworkReading(
       answer:
           frameworkAnswers[question] ??

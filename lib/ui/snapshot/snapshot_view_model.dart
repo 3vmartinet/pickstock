@@ -434,6 +434,18 @@ class SnapshotViewModel extends ChangeNotifier {
     return InsightState.idle;
   }
 
+  DateTime? _searchAvailableAt;
+
+  /// When the web search said it would answer again, after refusing a run,
+  /// or `null` where it gave no time or that time has passed.
+  ///
+  /// App-wide rather than per company: it is one allowance, spent on all of
+  /// them.
+  DateTime? get searchAvailableAt {
+    final at = _searchAvailableAt;
+    return at == null || at.isBefore(DateTime.now()) ? null : at;
+  }
+
   /// The run of all seven still owed for this company, for its progress.
   ResearchTask? get frameworkRun {
     final cik = snapshot?.company.cik;
@@ -550,6 +562,9 @@ class SnapshotViewModel extends ChangeNotifier {
       } on ResearchException catch (error) {
         logWarning(() => 'Framework ${question.name} failed: $error');
         failure = error;
+        if (error.retryAfter case final wait?) {
+          _searchAvailableAt = DateTime.now().add(wait);
+        }
         final remaining = error.failure == ResearchFailure.failed
             ? [question]
             : questions.sublist(step);

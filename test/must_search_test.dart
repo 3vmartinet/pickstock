@@ -33,16 +33,21 @@ class _OnePageSearch implements WebSearchRepo {
 /// A search that has been rate limited, as Ollama's hosted one is after a
 /// day of live runs.
 class _RateLimitedSearch implements WebSearchRepo {
+  _RateLimitedSearch({this.wait});
+
+  /// The wait the refusal asks for, if any.
+  final Duration? wait;
+
   @override
   bool get isConfigured => true;
 
   @override
   Future<List<SearchResult>> search(String query, {int maxResults = 5}) =>
-      throw const SearchException(SearchFailure.rateLimited);
+      throw SearchException(SearchFailure.rateLimited, retryAfter: wait);
 
   @override
   Future<SearchResult> fetch(String url) =>
-      throw const SearchException(SearchFailure.rateLimited);
+      throw SearchException(SearchFailure.rateLimited, retryAfter: wait);
 }
 
 /// The model's turns, in order, and every request it was sent.
@@ -125,6 +130,62 @@ void main() {
         ),
       ),
     );
+  });
+
+  group('reading Retry-After', () {
+    test('as seconds', () {
+      expect(retryAfterOf('7150'), const Duration(seconds: 7150));
+    });
+
+    test('as the date to wait until', () {
+      final now = DateTime.utc(2026, 10, 27, 16);
+      expect(
+        retryAfterOf('Tue, 27 Oct 2026 18:00:00 GMT', now: now),
+        const Duration(hours: 2),
+      );
+    });
+
+    test('as nothing, where it is missing or nonsense', () {
+      expect(retryAfterOf(null), isNull);
+      expect(retryAfterOf('soon'), isNull);
+    });
+
+    test('from the search service, onto the refusal', () async {
+      final search = OllamaWebSearchRepo(
+        apiKey: 'test',
+        client: MockClient(
+          (_) async => http.Response('', 429, headers: {'retry-after': '7150'}),
+        ),
+      );
+      await expectLater(
+        search.search('AppLovin'),
+        throwsA(
+          isA<SearchException>().having(
+            (error) => error.retryAfter,
+            'retryAfter',
+            const Duration(seconds: 7150),
+          ),
+        ),
+      );
+    });
+
+    test('through to the question that could not be read up on', () async {
+      final model = _ScriptedModel([_searches, _answersFromMemory]);
+      final repo = OllamaRepo(
+        search: _RateLimitedSearch(wait: const Duration(hours: 2)),
+        client: model.client,
+      );
+      await expectLater(
+        repo.ask('Is AppLovin growing?', mustSearch: true),
+        throwsA(
+          isA<ResearchException>().having(
+            (error) => error.retryAfter,
+            'retryAfter',
+            const Duration(hours: 2),
+          ),
+        ),
+      );
+    });
   });
 
   test('a refused search still leaves other questions their answer', () async {

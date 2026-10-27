@@ -60,13 +60,36 @@ enum SearchFailure {
 }
 
 class SearchException implements Exception {
-  const SearchException(this.failure, {this.cause});
+  const SearchException(this.failure, {this.cause, this.retryAfter});
 
   final SearchFailure failure;
   final Object? cause;
 
+  /// How long the service asked to be left alone, where it said. Ollama's
+  /// hosted search answers a spent allowance with hours, not seconds — two,
+  /// the day this was written — and "try again in a few minutes" was a lie.
+  final Duration? retryAfter;
+
   @override
   String toString() => 'SearchException(${failure.name}, cause: $cause)';
+}
+
+/// A `Retry-After` header as a wait: seconds, or the date to wait until, as
+/// HTTP allows either. `null` for anything else.
+Duration? retryAfterOf(String? header, {DateTime? now}) {
+  final value = header?.trim();
+  if (value == null || value.isEmpty) return null;
+  final seconds = int.tryParse(value);
+  if (seconds != null) return seconds < 0 ? null : Duration(seconds: seconds);
+  try {
+    final until = HttpDate.parse(value);
+    final wait = until.difference(now ?? DateTime.now());
+    return wait.isNegative ? Duration.zero : wait;
+  } on HttpException {
+    return null;
+  } on FormatException {
+    return null;
+  }
 }
 
 /// Searches the web, and reads a page in full.
@@ -164,7 +187,12 @@ class OllamaWebSearchRepo implements WebSearchRepo {
       case HttpStatus.forbidden:
         throw const SearchException(SearchFailure.unauthorised);
       case HttpStatus.tooManyRequests:
-        throw const SearchException(SearchFailure.rateLimited);
+        throw SearchException(
+          SearchFailure.rateLimited,
+          retryAfter: retryAfterOf(
+            response.headers[HttpHeaders.retryAfterHeader],
+          ),
+        );
       default:
         logWarning(() => 'Web search answered ${response.statusCode}');
         throw const SearchException(SearchFailure.unavailable);

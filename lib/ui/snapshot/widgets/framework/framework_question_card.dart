@@ -4,6 +4,8 @@ import 'package:pickstock/data/research/framework_evidence.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
+import 'package:pickstock/repo/format_repo.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
@@ -18,6 +20,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
+FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
 /// The colour a verdict is shown in: the theme's good and bad, and caution
 /// for a question the model could not settle — it is neither, and it still
@@ -260,8 +263,16 @@ class _Reading extends StatelessWidget {
     final isBusy =
         state == InsightState.queued || state == InsightState.loading;
 
-    final failureLine = state == InsightState.failed && failure != null
-        ? Text(strings.frameworkFailed(failure.describe(strings)))
+    final until = viewModel.searchAvailableAt;
+    final reason = switch (failure) {
+      // The wait the service gave, where it gave one: two hours is not "a few
+      // minutes", and a reader told the latter tries again and fails again.
+      ResearchFailure.searchRefused when until != null =>
+        strings.researchFailedSearchRefusedUntil(_formatRepo.timeOrDate(until)),
+      _ => failure?.describe(strings),
+    };
+    final failureLine = state == InsightState.failed && reason != null
+        ? Text(strings.frameworkFailed(reason))
               .xSmall(color: _themeRepo.negative(context.theme))
         : null;
 

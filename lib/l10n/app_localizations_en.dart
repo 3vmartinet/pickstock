@@ -477,6 +477,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ollama is running but has not pulled the model this build asks for.';
 
   @override
+  String researchFailedSearchRefusedUntil(String time) {
+    return 'The web search is rate limited until about $time, so this was not read up on. Try again then.';
+  }
+
+  @override
   String get researchFailedSearchRefused =>
       'The web search refused every request — it is most likely rate limited — so this was not read up on. Try again in a few minutes.';
 

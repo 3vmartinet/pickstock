@@ -130,10 +130,13 @@ enum ResearchFailure {
 }
 
 class ResearchException implements Exception {
-  const ResearchException(this.failure, {this.cause});
+  const ResearchException(this.failure, {this.cause, this.retryAfter});
 
   final ResearchFailure failure;
   final Object? cause;
+
+  /// For a refused search, how long the service said to wait, if it said.
+  final Duration? retryAfter;
 
   @override
   String toString() => 'ResearchException(${failure.name}, cause: $cause)';
@@ -214,7 +217,7 @@ class OllamaRepo {
       {_roleKey: _userRole, _contentKey: question},
     ];
     final sources = <SearchResult>[];
-    final refusals = <SearchFailure>[];
+    final refusals = <SearchException>[];
     var hasBeenTold = false;
 
     for (var round = 0; round <= _maximumToolRounds; round++) {
@@ -234,7 +237,8 @@ class OllamaRepo {
           refusals.isNotEmpty) {
         throw ResearchException(
           ResearchFailure.searchRefused,
-          cause: refusals.last,
+          cause: refusals.last.failure,
+          retryAfter: refusals.last.retryAfter,
         );
       }
 
@@ -514,7 +518,7 @@ class OllamaRepo {
   Future<Map<String, Object?>> _answerCall(
     Map<String, dynamic> call,
     List<SearchResult> sources,
-    List<SearchFailure> refusals,
+    List<SearchException> refusals,
   ) async {
     final function = call[_functionKey] as Map<String, dynamic>? ?? const {};
     final name = function[_nameKey] as String? ?? '';
@@ -549,7 +553,7 @@ class OllamaRepo {
       // something it can work around, and an answer with a gap in it beats no
       // answer at all.
       logWarning(() => 'Tool $name failed: $error');
-      refusals.add(error.failure);
+      refusals.add(error);
       content = jsonEncode({_errorArgument: error.failure.name});
     }
 
