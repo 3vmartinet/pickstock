@@ -156,6 +156,51 @@ void main() {
     });
   });
 
+  test('a revenue fall the size of a divestiture is flagged as one', () {
+    // AppLovin: FY2023 restated without the apps business it sold, FY2022
+    // not.
+    final prompts = FrameworkPrompts(
+      snapshot: const FinancialSnapshot(
+        company: Company(ticker: 'APP', cik: '0001751008', name: 'AppLovin'),
+        years: [
+          FiscalYearFigures(fiscalYear: 2022, revenue: 2817.1 * _million),
+          FiscalYearFigures(
+            fiscalYear: 2023,
+            revenue: 1841.8 * _million,
+            priorRevenue: 2817.1 * _million,
+          ),
+          FiscalYearFigures(
+            fiscalYear: 2024,
+            revenue: 3224.1 * _million,
+            priorRevenue: 1841.8 * _million,
+          ),
+        ],
+      ),
+    );
+    expect(
+      prompts.figures,
+      contains('FY2023 revenue is 34.6% below FY2022. A fall that size'),
+    );
+    expect(
+      prompts.promptFor(FrameworkQuestion.growth).rule,
+      contains('business sold or discontinued'),
+    );
+    // And not a dip an ongoing business has: Crocs' 1.5% is just a dip.
+    final crocs = FrameworkPrompts(
+      snapshot: const FinancialSnapshot(
+        company: Company(ticker: 'CROX', cik: '1', name: 'Crocs'),
+        years: [
+          FiscalYearFigures(
+            fiscalYear: 2025,
+            revenue: 4040.6 * _million,
+            priorRevenue: 4102.1 * _million,
+          ),
+        ],
+      ),
+    );
+    expect(crocs.figures, isNot(contains('A fall that size')));
+  });
+
   test('the margin and risk panels show the charge beside the drop', () {
     const snapshot = FinancialSnapshot(
       company: Company(ticker: 'CROX', cik: '0001334036', name: 'Crocs, Inc.'),

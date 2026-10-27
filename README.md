@@ -326,7 +326,11 @@ alone. A reply that read nothing is sent back once with an instruction to
 search. If every search it tries is **refused** — Ollama's hosted search rate
 limits, and a day of live test runs was enough to hit it — the question fails
 with that reason and the rest of the run stops, rather than seven answers
-written from the brief that read exactly like researched ones.
+written from the brief that read exactly like researched ones. The limit is
+metered over a window, not only a total: after a day of live runs the service
+answered `429` with `Retry-After: 7150` — two hours — with allowance still
+showing. The header is read, and the card says when to come back ("rate
+limited until about 18:40") rather than "in a few minutes".
 
 **Where a point came from** is shown on each: the page it cites, *Filings* only
 when it quotes a figure actually in the brief (allowing for rounding and
@@ -353,6 +357,13 @@ and operating profit, cash flow, debt, buybacks and share count — so the model
 argues from the filings and searches for what they cannot say. Against
 `gemma4:12b-mlx` each question takes 20 to 70 seconds and one to three
 searches.
+
+**Restatements.** A year whose revenue is more than a quarter below the year
+before is flagged in the brief as possibly a business sold or discontinued,
+with the years after restated to exclude it, and the growth rule says to judge
+the business that remains. AppLovin is why: it sold its apps business in 2025,
+its latest 10-K restates FY2023 onwards without it, and FY2023 reads 34.6%
+below FY2022 — the fastest grower in the directory, shown shrinking by a third.
 
 **Gross profit** is read for question 4: `GrossProfit` where tagged, otherwise
 revenue less `CostOfRevenue` / `CostOfGoodsAndServicesSold` / `CostOfGoodsSold`,

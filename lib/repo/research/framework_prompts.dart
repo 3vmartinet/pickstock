@@ -7,6 +7,17 @@ import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 
+/// A one-year fall in revenue, in percent, past which the brief warns that it
+/// may be a restatement rather than a decline.
+///
+/// AppLovin is why. It sold its apps business in 2025 and restated FY2023
+/// onwards without it, so FY2023 reads 34.6% below FY2022 — the fastest
+/// grower in the directory shown shrinking by a third, and its three-year
+/// rate struck from the unrestated base. A quarter is past what an ongoing
+/// business loses in a bad year, and well short of what a divestiture
+/// removes.
+const double _restatementDrop = 25;
+
 /// How many fiscal years the model is shown. Five is the window the framework
 /// itself names for growth and the "three or more" it wants for margins, with
 /// a sixth so the first of them has a year-over-year change.
@@ -119,6 +130,21 @@ class FrameworkPrompts {
       lines.add('Gross profit is not tagged in these filings.');
     }
 
+    // Before the growth rates, which a restatement makes wrong: said first,
+    // it is the reading of them.
+    for (final year in _years) {
+      final change = year.revenueGrowthPercent;
+      if (change == null || change > -_restatementDrop) continue;
+      lines.add(
+        'FY${year.fiscalYear} revenue is ${_pct(-change)} below '
+        'FY${year.fiscalYear - 1}. A fall that size is as often a business sold '
+        'or discontinued, with later years restated to exclude it, as a real '
+        'decline: years either side of a restatement are not comparable, and '
+        'growth rates spanning it are not either. Check which before judging '
+        'growth on it.',
+      );
+    }
+
     final growth = [
       for (final span in const [3, 5])
         if (_cagr(span) case final rate?) '$span years ${_pct(rate)}',
@@ -221,7 +247,9 @@ class FrameworkPrompts {
           'most recent trend is still up; no if it is flat or declining. A '
           'single down year inside a clear rise is not a no on its own, but a '
           'latest year that reverses the trend, with no guidance that it '
-          'recovers, is.',
+          'recovers, is. Where a fall turns out to be a business sold or '
+          'discontinued, judge growth on the business that remains, from the '
+          'years after the restatement and from its latest quarters.',
       points: 'two to four pieces of evidence for the verdict.',
     ),
     FrameworkQuestion.moat => FrameworkPrompt(
