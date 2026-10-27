@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:pickstock/data/snapshot/fiscal_quarter_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/xbrl/xbrl_metric.dart';
@@ -410,6 +412,15 @@ abstract final class CompanyFactsParser {
       operatingLeases: leases,
       dividendsPaid: valueOf(XbrlMetric.dividendsPaid),
       buybacks: valueOf(XbrlMetric.buybacks),
+      impairment: _larger(
+        valueOf(XbrlMetric.impairmentTotal),
+        sumOf(XbrlMetric.impairmentComponents),
+      ),
+      grossProfit: _grossProfit(
+        tagged: valueOf(XbrlMetric.grossProfit),
+        revenue: valueOf(XbrlMetric.revenue),
+        cost: valueOf(XbrlMetric.costOfRevenue),
+      ),
       interestExpense:
           valueOf(XbrlMetric.interestExpense) ??
           _borrowingInterest(
@@ -417,6 +428,35 @@ abstract final class CompanyFactsParser {
             assets: valueOf(XbrlMetric.totalAssets),
           ),
     );
+  }
+
+  /// The larger of a write-down's total and the sum of its parts, either of
+  /// which may be missing.
+  ///
+  /// Never their sum: a filer tagging both reports the same goodwill twice.
+  /// The larger, because a total can leave out a part filed elsewhere — and a
+  /// filer's parts can miss a write-down of plant the total includes.
+  static double? _larger(double? total, double? parts) {
+    if (total == null) return parts;
+    if (parts == null) return total;
+    return math.max(total, parts);
+  }
+
+  /// Gross profit as tagged, or worked out from revenue and the cost of it.
+  ///
+  /// The tag first, because a filer that states its gross profit has decided
+  /// what belongs in the cost. A figure above revenue is not a gross profit
+  /// at all — it is a filer tagging some other subtotal with the concept — and
+  /// is dropped rather than turned into a margin over 100%.
+  static double? _grossProfit({
+    required double? tagged,
+    required double? revenue,
+    required double? cost,
+  }) {
+    final profit =
+        tagged ?? (revenue == null || cost == null ? null : revenue - cost);
+    if (profit == null || revenue == null || revenue <= 0) return profit;
+    return profit > revenue ? null : profit;
   }
 
   /// Cash interest large enough to be the price of borrowings, or `null`.

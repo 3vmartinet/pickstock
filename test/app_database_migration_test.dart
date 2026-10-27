@@ -161,9 +161,11 @@ void main() {
     // migration had to add, and writing to one that is missing throws.
     await database.customStatement(
       'INSERT INTO fiscal_years (cik, fiscal_year, profit_loss, backlog, '
-      'share_based_compensation, operating_leases, dividends_paid, buybacks) '
+      'share_based_compensation, operating_leases, dividends_paid, buybacks, '
+      'gross_profit, impairment) '
       "VALUES ('0000320193', 2025, 64041000.0, 34000000000.0, "
-      '12900000000.0, 9000000000.0, 15000000000.0, 60000000000.0)',
+      '12900000000.0, 9000000000.0, 15000000000.0, 60000000000.0, '
+      '195200000000.0, 738115000.0)',
     );
     final year = (await database.yearsFor('0000320193')).single;
     expect(year.profitLoss, 64041000.0);
@@ -174,6 +176,9 @@ void main() {
     expect(year.operatingLeases, 9000000000.0);
     expect(year.dividendsPaid, 15000000000.0);
     expect(year.buybacks, 60000000000.0);
+    // And version 18's gross profit and write-downs, by the same proof.
+    expect(year.grossProfit, 195200000000.0);
+    expect(year.impairment, 738115000.0);
 
     // Same again for what version 13 added: null until a load has been timed,
     // and writable, which is what proves the column is there.

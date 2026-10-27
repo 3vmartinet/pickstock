@@ -29,6 +29,8 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     this.operatingLeases,
     this.dividendsPaid,
     this.buybacks,
+    this.grossProfit,
+    this.impairment,
   });
 
   final int fiscalYear;
@@ -92,6 +94,14 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
 
   final double? dividendsPaid;
   final double? buybacks;
+
+  /// Revenue less the cost of what was sold. `null` where the filer tagged
+  /// neither the profit nor the cost it is worked out from.
+  final double? grossProfit;
+
+  /// Write-downs charged in the year: goodwill, intangibles, other long-lived
+  /// assets. `null` where the filer tagged none.
+  final double? impairment;
 
   /// Free cash flow less what was paid in shares.
   ///
@@ -202,6 +212,36 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     return profit / sales * 100;
   }
 
+  /// Gross profit as a percentage of revenue: what the company keeps of each
+  /// sale before it pays for anything but the thing sold.
+  double? get grossMarginPercent {
+    final profit = grossProfit;
+    final sales = revenue;
+    if (profit == null || sales == null || sales <= 0) return null;
+    return profit / sales * 100;
+  }
+
+  /// Operating income with the year's write-downs added back, or `null` in a
+  /// year that had none to add back.
+  ///
+  /// Only for years with a write-down, so it is never shown as a second
+  /// figure identical to the first.
+  double? get operatingIncomeBeforeImpairment {
+    final profit = operatingIncome;
+    final charge = impairment;
+    if (profit == null || charge == null || charge <= 0) return null;
+    return profit + charge;
+  }
+
+  /// [operatingIncomeBeforeImpairment] as a percentage of revenue: the margin
+  /// the business earned, as against the one the write-down left.
+  double? get operatingMarginBeforeImpairmentPercent {
+    final profit = operatingIncomeBeforeImpairment;
+    final sales = revenue;
+    if (profit == null || sales == null || sales <= 0) return null;
+    return profit / sales * 100;
+  }
+
   /// Capital spending against the depreciation it has to cover.
   ///
   /// Around 1 means the company is replacing what wears out. Well above it
@@ -295,5 +335,7 @@ class FiscalYearFigures extends Equatable implements PeriodFigures {
     operatingLeases,
     dividendsPaid,
     buybacks,
+    grossProfit,
+    impairment,
   ];
 }

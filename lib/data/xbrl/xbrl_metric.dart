@@ -48,10 +48,50 @@ enum XbrlMetric {
   ///
   /// The margin to watch: a company can grow revenue for years while operating
   /// margin quietly collapses, and revenue growth alone would call that a
-  /// success. `GrossProfit` would be the purer signal but is not dependable —
-  /// Alphabet and Ford do not tag it and Amazon tags a figure that is plainly
-  /// not its gross profit.
+  /// success. [grossProfit] is the purer signal but the less dependable one,
+  /// so this stays the margin every check is struck against.
   operatingIncome(tags: ['OperatingIncomeLoss']),
+
+  /// Revenue less what it cost to make what was sold.
+  ///
+  /// Read for the margin trend the framework tab asks about: gross margin
+  /// falling while operating margin holds is pricing power going, hidden for
+  /// a while by cutting overheads. Not dependable on its own — Alphabet and
+  /// Ford do not tag it and Amazon tags a figure that is plainly not its gross
+  /// profit — which is why [costOfRevenue] is read too, and why the result is
+  /// only ever shown beside the operating margin rather than instead of it.
+  grossProfit(tags: ['GrossProfit']),
+
+  /// Write-downs of goodwill, intangibles and other long-lived assets: a
+  /// non-cash charge that lands in operating income in one year and says
+  /// nothing about the margin the business earns in the next.
+  ///
+  /// Read so the framework's questions can tell a margin that collapsed from
+  /// one that took a write-down. Crocs' FY2025 operating margin is 3.7% as
+  /// filed and 22.0% before the $738.1M it wrote off HEYDUDE; asked from the
+  /// first figure alone, one question called the margin sound on what it read
+  /// on the web and another called it a collapse.
+  ///
+  /// Filers split this differently — a total, the parts, or both — so the
+  /// total and the parts are read separately and the larger taken. Adding
+  /// them would count Crocs' goodwill twice.
+  impairmentTotal(
+    tags: ['AssetImpairmentCharges', 'GoodwillAndIntangibleAssetImpairment'],
+  ),
+  goodwillImpairment(tags: ['GoodwillImpairmentLoss']),
+  intangibleImpairment(
+    tags: [
+      'ImpairmentOfIntangibleAssetsExcludingGoodwill',
+      'ImpairmentOfIntangibleAssetsIndefinitelivedExcludingGoodwill',
+      'ImpairmentOfIntangibleAssetsFinitelived',
+    ],
+  ),
+
+  /// What the goods and services sold cost, for filers that tag the cost but
+  /// not the profit: revenue less this is the same gross profit.
+  costOfRevenue(
+    tags: ['CostOfRevenue', 'CostOfGoodsAndServicesSold', 'CostOfGoodsSold'],
+  ),
 
   /// Depreciation and amortisation, which says whether heavy capital spending
   /// is building something new or merely replacing what wore out.
@@ -376,6 +416,12 @@ enum XbrlMetric {
   static const List<XbrlMetric> leaseComponents = [
     operatingLeaseNoncurrent,
     operatingLeaseCurrent,
+  ];
+
+  /// The parts a write-down is split into by filers that do not tag a total.
+  static const List<XbrlMetric> impairmentComponents = [
+    goodwillImpairment,
+    intangibleImpairment,
   ];
 
   /// The components that add up to liquid holdings, which is what net debt is

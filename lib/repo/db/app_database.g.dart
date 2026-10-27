@@ -883,6 +883,28 @@ class $FiscalYearsTable extends FiscalYears
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _grossProfitMeta = const VerificationMeta(
+    'grossProfit',
+  );
+  @override
+  late final GeneratedColumn<double> grossProfit = GeneratedColumn<double>(
+    'gross_profit',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _impairmentMeta = const VerificationMeta(
+    'impairment',
+  );
+  @override
+  late final GeneratedColumn<double> impairment = GeneratedColumn<double>(
+    'impairment',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cik,
@@ -905,6 +927,8 @@ class $FiscalYearsTable extends FiscalYears
     operatingLeases,
     dividendsPaid,
     buybacks,
+    grossProfit,
+    impairment,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1075,6 +1099,21 @@ class $FiscalYearsTable extends FiscalYears
         buybacks.isAcceptableOrUnknown(data['buybacks']!, _buybacksMeta),
       );
     }
+    if (data.containsKey('gross_profit')) {
+      context.handle(
+        _grossProfitMeta,
+        grossProfit.isAcceptableOrUnknown(
+          data['gross_profit']!,
+          _grossProfitMeta,
+        ),
+      );
+    }
+    if (data.containsKey('impairment')) {
+      context.handle(
+        _impairmentMeta,
+        impairment.isAcceptableOrUnknown(data['impairment']!, _impairmentMeta),
+      );
+    }
     return context;
   }
 
@@ -1164,6 +1203,14 @@ class $FiscalYearsTable extends FiscalYears
         DriftSqlType.double,
         data['${effectivePrefix}buybacks'],
       ),
+      grossProfit: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}gross_profit'],
+      ),
+      impairment: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}impairment'],
+      ),
     );
   }
 
@@ -1211,6 +1258,13 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
   final double? operatingLeases;
   final double? dividendsPaid;
   final double? buybacks;
+
+  /// Revenue less the cost of what was sold. Null where the filer tagged
+  /// neither the profit nor the cost.
+  final double? grossProfit;
+
+  /// Write-downs charged in the year. Null where the filer tagged none.
+  final double? impairment;
   const FiscalYearRow({
     required this.cik,
     required this.fiscalYear,
@@ -1232,6 +1286,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     this.operatingLeases,
     this.dividendsPaid,
     this.buybacks,
+    this.grossProfit,
+    this.impairment,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1296,6 +1352,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     if (!nullToAbsent || buybacks != null) {
       map['buybacks'] = Variable<double>(buybacks);
     }
+    if (!nullToAbsent || grossProfit != null) {
+      map['gross_profit'] = Variable<double>(grossProfit);
+    }
+    if (!nullToAbsent || impairment != null) {
+      map['impairment'] = Variable<double>(impairment);
+    }
     return map;
   }
 
@@ -1355,6 +1417,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       buybacks: buybacks == null && nullToAbsent
           ? const Value.absent()
           : Value(buybacks),
+      grossProfit: grossProfit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(grossProfit),
+      impairment: impairment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(impairment),
     );
   }
 
@@ -1394,6 +1462,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       operatingLeases: serializer.fromJson<double?>(json['operatingLeases']),
       dividendsPaid: serializer.fromJson<double?>(json['dividendsPaid']),
       buybacks: serializer.fromJson<double?>(json['buybacks']),
+      grossProfit: serializer.fromJson<double?>(json['grossProfit']),
+      impairment: serializer.fromJson<double?>(json['impairment']),
     );
   }
   @override
@@ -1424,6 +1494,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
       'operatingLeases': serializer.toJson<double?>(operatingLeases),
       'dividendsPaid': serializer.toJson<double?>(dividendsPaid),
       'buybacks': serializer.toJson<double?>(buybacks),
+      'grossProfit': serializer.toJson<double?>(grossProfit),
+      'impairment': serializer.toJson<double?>(impairment),
     };
   }
 
@@ -1448,6 +1520,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     Value<double?> operatingLeases = const Value.absent(),
     Value<double?> dividendsPaid = const Value.absent(),
     Value<double?> buybacks = const Value.absent(),
+    Value<double?> grossProfit = const Value.absent(),
+    Value<double?> impairment = const Value.absent(),
   }) => FiscalYearRow(
     cik: cik ?? this.cik,
     fiscalYear: fiscalYear ?? this.fiscalYear,
@@ -1489,6 +1563,8 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
         ? dividendsPaid.value
         : this.dividendsPaid,
     buybacks: buybacks.present ? buybacks.value : this.buybacks,
+    grossProfit: grossProfit.present ? grossProfit.value : this.grossProfit,
+    impairment: impairment.present ? impairment.value : this.impairment,
   );
   FiscalYearRow copyWithCompanion(FiscalYearsCompanion data) {
     return FiscalYearRow(
@@ -1538,6 +1614,12 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ? data.dividendsPaid.value
           : this.dividendsPaid,
       buybacks: data.buybacks.present ? data.buybacks.value : this.buybacks,
+      grossProfit: data.grossProfit.present
+          ? data.grossProfit.value
+          : this.grossProfit,
+      impairment: data.impairment.present
+          ? data.impairment.value
+          : this.impairment,
     );
   }
 
@@ -1563,13 +1645,15 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           ..write('shareBasedCompensation: $shareBasedCompensation, ')
           ..write('operatingLeases: $operatingLeases, ')
           ..write('dividendsPaid: $dividendsPaid, ')
-          ..write('buybacks: $buybacks')
+          ..write('buybacks: $buybacks, ')
+          ..write('grossProfit: $grossProfit, ')
+          ..write('impairment: $impairment')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     cik,
     fiscalYear,
     revenue,
@@ -1590,7 +1674,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
     operatingLeases,
     dividendsPaid,
     buybacks,
-  );
+    grossProfit,
+    impairment,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1614,7 +1700,9 @@ class FiscalYearRow extends DataClass implements Insertable<FiscalYearRow> {
           other.shareBasedCompensation == this.shareBasedCompensation &&
           other.operatingLeases == this.operatingLeases &&
           other.dividendsPaid == this.dividendsPaid &&
-          other.buybacks == this.buybacks);
+          other.buybacks == this.buybacks &&
+          other.grossProfit == this.grossProfit &&
+          other.impairment == this.impairment);
 }
 
 class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
@@ -1638,6 +1726,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
   final Value<double?> operatingLeases;
   final Value<double?> dividendsPaid;
   final Value<double?> buybacks;
+  final Value<double?> grossProfit;
+  final Value<double?> impairment;
   final Value<int> rowid;
   const FiscalYearsCompanion({
     this.cik = const Value.absent(),
@@ -1660,6 +1750,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.operatingLeases = const Value.absent(),
     this.dividendsPaid = const Value.absent(),
     this.buybacks = const Value.absent(),
+    this.grossProfit = const Value.absent(),
+    this.impairment = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FiscalYearsCompanion.insert({
@@ -1683,6 +1775,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     this.operatingLeases = const Value.absent(),
     this.dividendsPaid = const Value.absent(),
     this.buybacks = const Value.absent(),
+    this.grossProfit = const Value.absent(),
+    this.impairment = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        fiscalYear = Value(fiscalYear);
@@ -1707,6 +1801,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Expression<double>? operatingLeases,
     Expression<double>? dividendsPaid,
     Expression<double>? buybacks,
+    Expression<double>? grossProfit,
+    Expression<double>? impairment,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1732,6 +1828,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       if (operatingLeases != null) 'operating_leases': operatingLeases,
       if (dividendsPaid != null) 'dividends_paid': dividendsPaid,
       if (buybacks != null) 'buybacks': buybacks,
+      if (grossProfit != null) 'gross_profit': grossProfit,
+      if (impairment != null) 'impairment': impairment,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1757,6 +1855,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     Value<double?>? operatingLeases,
     Value<double?>? dividendsPaid,
     Value<double?>? buybacks,
+    Value<double?>? grossProfit,
+    Value<double?>? impairment,
     Value<int>? rowid,
   }) {
     return FiscalYearsCompanion(
@@ -1782,6 +1882,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
       operatingLeases: operatingLeases ?? this.operatingLeases,
       dividendsPaid: dividendsPaid ?? this.dividendsPaid,
       buybacks: buybacks ?? this.buybacks,
+      grossProfit: grossProfit ?? this.grossProfit,
+      impairment: impairment ?? this.impairment,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1853,6 +1955,12 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
     if (buybacks.present) {
       map['buybacks'] = Variable<double>(buybacks.value);
     }
+    if (grossProfit.present) {
+      map['gross_profit'] = Variable<double>(grossProfit.value);
+    }
+    if (impairment.present) {
+      map['impairment'] = Variable<double>(impairment.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1882,6 +1990,8 @@ class FiscalYearsCompanion extends UpdateCompanion<FiscalYearRow> {
           ..write('operatingLeases: $operatingLeases, ')
           ..write('dividendsPaid: $dividendsPaid, ')
           ..write('buybacks: $buybacks, ')
+          ..write('grossProfit: $grossProfit, ')
+          ..write('impairment: $impairment, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6365,6 +6475,8 @@ typedef $$FiscalYearsTableCreateCompanionBuilder =
       Value<double?> operatingLeases,
       Value<double?> dividendsPaid,
       Value<double?> buybacks,
+      Value<double?> grossProfit,
+      Value<double?> impairment,
       Value<int> rowid,
     });
 typedef $$FiscalYearsTableUpdateCompanionBuilder =
@@ -6389,6 +6501,8 @@ typedef $$FiscalYearsTableUpdateCompanionBuilder =
       Value<double?> operatingLeases,
       Value<double?> dividendsPaid,
       Value<double?> buybacks,
+      Value<double?> grossProfit,
+      Value<double?> impairment,
       Value<int> rowid,
     });
 
@@ -6515,6 +6629,16 @@ class $$FiscalYearsTableFilterComposer
 
   ColumnFilters<double> get buybacks => $composableBuilder(
     column: $table.buybacks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get grossProfit => $composableBuilder(
+    column: $table.grossProfit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get impairment => $composableBuilder(
+    column: $table.impairment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6646,6 +6770,16 @@ class $$FiscalYearsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get grossProfit => $composableBuilder(
+    column: $table.grossProfit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get impairment => $composableBuilder(
+    column: $table.impairment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CompaniesTableOrderingComposer get cik {
     final $$CompaniesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -6762,6 +6896,16 @@ class $$FiscalYearsTableAnnotationComposer
   GeneratedColumn<double> get buybacks =>
       $composableBuilder(column: $table.buybacks, builder: (column) => column);
 
+  GeneratedColumn<double> get grossProfit => $composableBuilder(
+    column: $table.grossProfit,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get impairment => $composableBuilder(
+    column: $table.impairment,
+    builder: (column) => column,
+  );
+
   $$CompaniesTableAnnotationComposer get cik {
     final $$CompaniesTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -6834,6 +6978,8 @@ class $$FiscalYearsTableTableManager
                 Value<double?> operatingLeases = const Value.absent(),
                 Value<double?> dividendsPaid = const Value.absent(),
                 Value<double?> buybacks = const Value.absent(),
+                Value<double?> grossProfit = const Value.absent(),
+                Value<double?> impairment = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion(
                 cik: cik,
@@ -6856,6 +7002,8 @@ class $$FiscalYearsTableTableManager
                 operatingLeases: operatingLeases,
                 dividendsPaid: dividendsPaid,
                 buybacks: buybacks,
+                grossProfit: grossProfit,
+                impairment: impairment,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6880,6 +7028,8 @@ class $$FiscalYearsTableTableManager
                 Value<double?> operatingLeases = const Value.absent(),
                 Value<double?> dividendsPaid = const Value.absent(),
                 Value<double?> buybacks = const Value.absent(),
+                Value<double?> grossProfit = const Value.absent(),
+                Value<double?> impairment = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FiscalYearsCompanion.insert(
                 cik: cik,
@@ -6902,6 +7052,8 @@ class $$FiscalYearsTableTableManager
                 operatingLeases: operatingLeases,
                 dividendsPaid: dividendsPaid,
                 buybacks: buybacks,
+                grossProfit: grossProfit,
+                impairment: impairment,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

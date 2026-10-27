@@ -27,7 +27,13 @@ part 'app_database.g.dart';
 /// operating leases, which are a borrowing in all but name and have been on
 /// the balance sheet since 2019; and the cash actually returned to owners as
 /// dividends and buybacks.
-const int extractorVersion = 11;
+///
+/// 12 reads gross profit — tagged, or revenue less the cost of it — for the
+/// framework tab's margin question, which asks whether pricing power is
+/// holding and needs the margin before overheads to say so. And write-downs,
+/// so a margin that took a one-off impairment is not read as one that
+/// collapsed.
+const int extractorVersion = 12;
 
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
@@ -126,6 +132,13 @@ class FiscalYears extends Table {
 
   RealColumn get dividendsPaid => real().nullable()();
   RealColumn get buybacks => real().nullable()();
+
+  /// Revenue less the cost of what was sold. Null where the filer tagged
+  /// neither the profit nor the cost.
+  RealColumn get grossProfit => real().nullable()();
+
+  /// Write-downs charged in the year. Null where the filer tagged none.
+  RealColumn get impairment => real().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {cik, fiscalYear};
@@ -363,7 +376,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -399,6 +412,13 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        if (from < 18) {
+          // Added, not populated: the figure arrives with the next ingest,
+          // which the extractor version already insists on.
+          logInfo(() => 'Adding gross profit and impairments');
+          await migrator.addColumn(fiscalYears, fiscalYears.grossProfit);
+          await migrator.addColumn(fiscalYears, fiscalYears.impairment);
         }
         if (from < 17) {
           // Added, not populated: the figures arrive with the next ingest,

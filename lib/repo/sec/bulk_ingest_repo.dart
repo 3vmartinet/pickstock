@@ -745,7 +745,10 @@ class BulkIngestRepo {
       // `await for`, not `yield*`: a delegated stream's errors bypass this
       // function's catch clauses entirely, so the download would be kept when
       // it should be discarded.
-      await for (final progress in _download(partial.archiveFile, isCancelled)) {
+      await for (final progress in _download(
+        partial.archiveFile,
+        isCancelled,
+      )) {
         yield progress;
       }
       // The archive stream returns rather than throwing when it is stopped,
@@ -1189,6 +1192,8 @@ class BulkIngestRepo {
               operatingLeases: Value(year.operatingLeases),
               dividendsPaid: Value(year.dividendsPaid),
               buybacks: Value(year.buybacks),
+              grossProfit: Value(year.grossProfit),
+              impairment: Value(year.impairment),
             ),
       ], mode: InsertMode.insertOrReplace);
       batch.insertAll(_database.fiscalQuarters, [

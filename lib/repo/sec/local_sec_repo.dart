@@ -83,6 +83,8 @@ class LocalSecRepo implements SecRepo {
             operatingLeases: row.operatingLeases,
             dividendsPaid: row.dividendsPaid,
             buybacks: row.buybacks,
+            grossProfit: row.grossProfit,
+            impairment: row.impairment,
             // The year before's, for the same reason revenue needs one: the
             // book's direction is the part that says anything.
             priorBacklog: rows
