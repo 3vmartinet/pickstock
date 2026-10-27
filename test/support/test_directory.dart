@@ -392,6 +392,7 @@ Future<AppDatabase> registerTestDependencies({
   QuoteRepo? quoteRepo,
   SettingsRepo? settingsRepo,
   MarketRatesRepo? marketRatesRepo,
+  bool autoDownloadUpdates = false,
 }) async {
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
@@ -486,6 +487,12 @@ Future<AppDatabase> registerTestDependencies({
 
   // Read before anything builds, exactly as `main` does.
   await GetIt.I.get<SettingsRepo>().load();
+  // Off unless a test asks, against the app's own default: most tests of an
+  // update are about the offer and the press, which an automatic download
+  // would take out of their hands before they could look.
+  if (!autoDownloadUpdates) {
+    await GetIt.I.get<SettingsRepo>().setAutoDownloadUpdates(false);
+  }
 
   if (withIngest) await directory.load();
   // Opens the database and runs `beforeOpen`, so the seeded list exists before

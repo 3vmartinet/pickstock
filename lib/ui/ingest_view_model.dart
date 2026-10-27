@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:pickstock/data/snapshot/ingest_stage.dart';
 import 'package:get_it/get_it.dart';
@@ -6,11 +8,13 @@ import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/dependencies_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 
 AppDatabase get _database => GetIt.I.get<AppDatabase>();
 BulkIngestRepo get _bulkIngestRepo => GetIt.I.get<BulkIngestRepo>();
 TickerDirectoryRepo get _tickerDirectoryRepo =>
     GetIt.I.get<TickerDirectoryRepo>();
+SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 
 /// Whether the app has the data it needs to show anything at all.
 sealed class IngestState {
@@ -317,6 +321,17 @@ class IngestViewModel extends ChangeNotifier {
     }
   }
 
+  /// Starts the download of an update on offer, if the settings say to.
+  ///
+  /// Only from [UpdatePhase.offered]: a staged download is already here, one
+  /// under way is already coming, and a failed one is not retried behind the
+  /// reader's back — the button that says it failed is the way to try again.
+  void downloadUpdateIfWanted() {
+    if (_updatePhase != UpdatePhase.offered) return;
+    if (!_settingsRepo.autoDownloadUpdates) return;
+    unawaited(downloadUpdate());
+  }
+
   /// Stops a background download.
   ///
   /// A cancel rather than a pause: an archive is only useful whole, and there
@@ -400,6 +415,7 @@ class IngestViewModel extends ChangeNotifier {
     // newest there is. Not always: a download staged days ago loads data SEC
     // has since rebuilt, and that offer stands rather than being papered over.
     _updatePhase = isUpdateAvailable ? UpdatePhase.offered : UpdatePhase.none;
+    downloadUpdateIfWanted();
   }
 
   /// Asks SEC whether a newer archive exists, and picks up a download an
@@ -422,11 +438,15 @@ class IngestViewModel extends ChangeNotifier {
     // A download that survived the app being closed picks up where it left
     // off, at the step it was waiting on.
     final staged = await _bulkIngestRepo.readStaged();
-    if (staged == null) return;
-    if (_isRedundant(staged)) return _bulkIngestRepo.discardStaged();
+    if (staged != null && !_isRedundant(staged)) {
+      _staged = staged;
+      return _setUpdatePhase(UpdatePhase.staged);
+    }
+    if (staged != null) await _bulkIngestRepo.discardStaged();
 
-    _staged = staged;
-    _setUpdatePhase(UpdatePhase.staged);
+    // Only once the disk has been looked at: started before, it would fetch
+    // again the download an earlier session already left waiting.
+    downloadUpdateIfWanted();
   }
 
   /// Whether a staged download would tell the database nothing it does not

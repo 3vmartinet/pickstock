@@ -1582,6 +1582,84 @@ abstract class AppLocalizations {
   /// **'Expectations'**
   String get tabExpectations;
 
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PickStock Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close. Every change here is already saved.'**
+  String get settingsClose;
+
+  /// No description provided for @settingsSecDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC data'**
+  String get settingsSecDataTitle;
+
+  /// No description provided for @settingsSecDataDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The filings every report is built from, downloaded from SEC EDGAR as one archive and kept on this machine.'**
+  String get settingsSecDataDescription;
+
+  /// No description provided for @settingsAutoDownloadLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Download updates automatically'**
+  String get settingsAutoDownloadLabel;
+
+  /// No description provided for @settingsAutoDownloadDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it still waits for you, because the app is unavailable while it loads.'**
+  String get settingsAutoDownloadDescription;
+
+  /// No description provided for @settingsStatusCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to date: the loaded archive was published on {date}.'**
+  String settingsStatusCurrent(String date);
+
+  /// No description provided for @settingsStatusOffered.
+  ///
+  /// In en, this message translates to:
+  /// **'SEC published a newer archive on {date}. It has not been downloaded.'**
+  String settingsStatusOffered(String date);
+
+  /// No description provided for @settingsStatusDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the update in the background.'**
+  String get settingsStatusDownloading;
+
+  /// No description provided for @settingsStatusDownloadingPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the update in the background: {percent}%.'**
+  String settingsStatusDownloadingPercent(int percent);
+
+  /// No description provided for @settingsStatusCancelling.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping the download.'**
+  String get settingsStatusCancelling;
+
+  /// No description provided for @settingsStatusStaged.
+  ///
+  /// In en, this message translates to:
+  /// **'The update is downloaded and waiting to be loaded from the app bar.'**
+  String get settingsStatusStaged;
+
+  /// No description provided for @settingsStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The last download did not finish. It can be retried from the app bar.'**
+  String get settingsStatusFailed;
+
   /// No description provided for @tabFramework.
   ///
   /// In en, this message translates to:

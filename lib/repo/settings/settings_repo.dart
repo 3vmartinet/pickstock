@@ -14,6 +14,7 @@ const String _debtFreeKey = 'browseDebtFree';
 const String _industriesKey = 'browseIndustries';
 const String _positiveCashFlowKey = 'browsePositiveCashFlow';
 const String _masterPaneKey = 'masterPaneWidth';
+const String _autoDownloadKey = 'autoDownloadUpdates';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -60,6 +61,17 @@ abstract interface class SettingsRepo {
   /// launch is the kind of small tax that adds up.
   double? get masterPaneWidth;
   Future<void> setMasterPaneWidth(double width);
+
+  /// Whether a newer SEC archive is downloaded as soon as it is offered,
+  /// rather than waiting for a press.
+  ///
+  /// On unless turned off: the download runs behind a working app and touches
+  /// nothing, so fetching it unasked costs only bandwidth, while leaving it
+  /// to a press means the 1.4 GB starts only once somebody remembers. Loading
+  /// it is another matter — that shuts the app for minutes — and stays a
+  /// press either way.
+  bool get autoDownloadUpdates;
+  Future<void> setAutoDownloadUpdates(bool value);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -135,6 +147,14 @@ class LocalSettingsRepo implements SettingsRepo {
   Future<void> setMasterPaneWidth(double width) =>
       _write(_masterPaneKey, '$width');
 
+  /// Stored only when turned off, so the default is the absence of a row.
+  @override
+  bool get autoDownloadUpdates => _values[_autoDownloadKey] != 'false';
+
+  @override
+  Future<void> setAutoDownloadUpdates(bool value) =>
+      value ? _erase(_autoDownloadKey) : _write(_autoDownloadKey, 'false');
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -168,6 +188,7 @@ class MemorySettingsRepo implements SettingsRepo {
   bool _debtFreeOnly = false;
   bool _positiveCashFlowOnly = false;
   double? _masterPaneWidth;
+  bool _autoDownloadUpdates = true;
 
   @override
   Future<void> load() async {}
@@ -221,4 +242,11 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setMasterPaneWidth(double width) async =>
       _masterPaneWidth = width;
+
+  @override
+  bool get autoDownloadUpdates => _autoDownloadUpdates;
+
+  @override
+  Future<void> setAutoDownloadUpdates(bool value) async =>
+      _autoDownloadUpdates = value;
 }

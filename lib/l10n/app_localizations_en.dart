@@ -1079,6 +1079,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabExpectations => 'Expectations';
 
   @override
+  String get settingsTitle => 'PickStock Settings';
+
+  @override
+  String get settingsClose => 'Close. Every change here is already saved.';
+
+  @override
+  String get settingsSecDataTitle => 'SEC data';
+
+  @override
+  String get settingsSecDataDescription =>
+      'The filings every report is built from, downloaded from SEC EDGAR as one archive and kept on this machine.';
+
+  @override
+  String get settingsAutoDownloadLabel => 'Download updates automatically';
+
+  @override
+  String get settingsAutoDownloadDescription =>
+      'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it still waits for you, because the app is unavailable while it loads.';
+
+  @override
+  String settingsStatusCurrent(String date) {
+    return 'Up to date: the loaded archive was published on $date.';
+  }
+
+  @override
+  String settingsStatusOffered(String date) {
+    return 'SEC published a newer archive on $date. It has not been downloaded.';
+  }
+
+  @override
+  String get settingsStatusDownloading =>
+      'Downloading the update in the background.';
+
+  @override
+  String settingsStatusDownloadingPercent(int percent) {
+    return 'Downloading the update in the background: $percent%.';
+  }
+
+  @override
+  String get settingsStatusCancelling => 'Stopping the download.';
+
+  @override
+  String get settingsStatusStaged =>
+      'The update is downloaded and waiting to be loaded from the app bar.';
+
+  @override
+  String get settingsStatusFailed =>
+      'The last download did not finish. It can be retried from the app bar.';
+
+  @override
   String get tabFramework => 'Framework';
 
   @override

@@ -96,7 +96,9 @@ request per launch — SEC serves the archive with a `Last-Modified` header, so 
 date of the loaded archive is stored with the ingest and compared against the
 published one. An **Update available** button appears only when SEC has actually
 rebuilt it; the archive changes every few days at most, and a permanently
-visible refresh invites a pointless 1.4 GB download.
+visible refresh invites a pointless 1.4 GB download. With *Download updates
+automatically* on (the default — see [Settings](#settings)) that download
+starts by itself and the button goes straight to offering the load.
 
 The download is a **blocking full-screen step** — there is no ticker directory
 to search and no figures to report without it, and a refresh clears the tables
@@ -390,6 +392,32 @@ flutter test --dart-define-from-file=env.json test/live_framework_test.dart
 Puts all seven to the local model for Crocs and prints each verdict, proving
 every answer parses, every kept link is one the search returned, and the risk
 answer no longer quotes the write-down's 3.7% as a collapse.
+
+### Settings
+
+**PickStock → Settings…** (⌘,) opens them, as Apple's Human Interface
+Guidelines ask: in the app menu rather than as a button in the window, titled
+*PickStock Settings* because there is a single pane, and with every change
+applied as it is made — no OK, no Apply, only a close button. The item is the
+template's own *Preferences…*, renamed and connected: it shipped wired to
+nothing. The menu stays native (`MainMenu.xib`) and reaches Flutter over the
+`pickstock/app_menu` channel; rebuilding it with `PlatformMenuBar` would have
+replaced the system's Edit menu with nothing. The template's `APP_NAME`
+placeholders (*About APP_NAME*, *Quit APP_NAME*) now say PickStock.
+
+Flutter draws the app in one window, so the settings open as a dialog over it
+rather than a window of their own — the nearest equivalent, leaving whatever
+was on screen where it was. Inside, the layout is shadcn's settings form: a
+section with a legend and a line on what it governs, then one bordered row per
+setting, words on the left and the switch on the right, with the whole row
+pressable.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Download updates automatically | On | When the launch check finds SEC has rebuilt the archive, the 1.4 GB download starts in the background with no press. Loading it still waits for one, because loading shuts the app for minutes. A download an earlier session left staged is not fetched again, and a failed one is not retried behind your back. Turning it on with an update already offered starts that download at once. |
+
+Stored like the others, as a row in `settings` — only when turned off, so the
+default is the absence of one.
 
 ### What the app remembers
 

@@ -275,6 +275,10 @@ class ThemeRepo {
   static const double headlineFigureHeight = 1.1;
   static const FontWeight headlineFigureWeight = FontWeight.w700;
 
+  /// The settings dialog: about the width of a macOS settings window with a
+  /// single pane, which sizes itself to its content rather than the screen.
+  static const double settingsDialogWidth = 520;
+
   /// The framework tab's scorecard: one numbered step per question.
   static const double frameworkStepSize = 32;
   static const double frameworkStepRing = 2;

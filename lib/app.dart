@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -8,6 +10,9 @@ import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/report/jobs_view_model.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
+import 'package:pickstock/ui/settings/app_menu.dart';
+import 'package:pickstock/ui/settings/settings_view_model.dart';
+import 'package:pickstock/ui/settings/widgets/settings_dialog.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -23,6 +28,7 @@ class PickStockApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppViewModel()),
         ChangeNotifierProvider(create: (_) => IngestViewModel()),
+        ChangeNotifierProvider(create: (_) => SettingsViewModel()),
         // Above the router: browsing the directory and coming back must not
         // discard the report already on screen.
         ChangeNotifierProvider(create: (_) => SnapshotViewModel()),
@@ -48,8 +54,51 @@ class PickStockApp extends StatelessWidget {
   }
 }
 
-class _PickStockAppView extends StatelessWidget {
+class _PickStockAppView extends StatefulWidget {
   const _PickStockAppView();
+
+  @override
+  State<_PickStockAppView> createState() => _PickStockAppViewState();
+}
+
+class _PickStockAppViewState extends State<_PickStockAppView> {
+  /// The navigator every route sits in, held so the app menu can open the
+  /// settings over whichever screen is showing: the menu speaks to the app,
+  /// not to a screen, and has no context of its own.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey();
+
+  /// Whether the settings are already open, so a second ⌘, does not stack a
+  /// second copy on the first.
+  bool _isSettingsOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    appMenuChannel.setMethodCallHandler((call) async {
+      // Not awaited: the dialog's future ends when it is closed, and the
+      // menu's call would be left unanswered for as long as it is open.
+      if (call.method == openSettingsMethod) unawaited(_openSettings());
+    });
+  }
+
+  @override
+  void dispose() {
+    appMenuChannel.setMethodCallHandler(null);
+    super.dispose();
+  }
+
+  Future<void> _openSettings() async {
+    // The overlay's context rather than the navigator's: a dialog needs an
+    // overlay above it, and the navigator's own context sits above its own.
+    final context = _navigatorKey.currentState?.overlay?.context;
+    if (context == null || _isSettingsOpen) return;
+    _isSettingsOpen = true;
+    try {
+      await showSettings(context);
+    } finally {
+      _isSettingsOpen = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +111,7 @@ class _PickStockAppView extends StatelessWidget {
       theme: _themeRepo.lightTheme,
       darkTheme: _themeRepo.darkTheme,
       themeMode: themeMode,
+      navigatorKey: _navigatorKey,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       initialRoute: AppRoute.home.path,
