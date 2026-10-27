@@ -477,6 +477,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ollama is running but has not pulled the model this build asks for.';
 
   @override
+  String get researchFailedSearchRefused =>
+      'The web search refused every request — it is most likely rate limited — so this was not read up on. Try again in a few minutes.';
+
+  @override
   String get eventsFailedOther => 'The search did not finish. Try again.';
 
   @override
@@ -1073,6 +1077,320 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabExpectations => 'Expectations';
+
+  @override
+  String get tabFramework => 'Framework';
+
+  @override
+  String get frameworkTitle => 'Seven questions';
+
+  @override
+  String get frameworkIntro =>
+      'A filter that rules a company out fast. Each question is answered from the filings and the web; a single No and you move on, and only seven Yeses earn a place on a watchlist.';
+
+  @override
+  String get frameworkRun => 'Run the seven questions';
+
+  @override
+  String get frameworkRunHint =>
+      'The local model works through all seven in order, from the filings on screen and what it finds on the web — several minutes in all. The job list in the app bar tracks it and brings you back here.';
+
+  @override
+  String get frameworkRunAgain => 'Run all again';
+
+  @override
+  String get frameworkRunAgainHint =>
+      'Ask all seven again. The answers on file stay readable until the new ones land.';
+
+  @override
+  String frameworkProgress(int done, int total) {
+    return '$done of $total answered';
+  }
+
+  @override
+  String frameworkAnswering(String question) {
+    return 'Answering $question';
+  }
+
+  @override
+  String get frameworkWaiting => 'Waiting its turn behind another question';
+
+  @override
+  String get frameworkUnavailable =>
+      'The answers need the local model and a web search key, neither of which is configured. What the filings say is shown under each question all the same.';
+
+  @override
+  String get frameworkOutcomeNotStarted => 'Not screened yet';
+
+  @override
+  String get frameworkOutcomeNotStartedDetail =>
+      'Seven questions, about a minute each. The figures from the filings below are already in; the answers are not.';
+
+  @override
+  String get frameworkOutcomeIncomplete => 'Not settled yet';
+
+  @override
+  String frameworkOutcomeIncompleteDetail(int yes, int unclear, int open) {
+    return '$yes Yes, $unclear unclear and $open still open — no No so far. Only seven Yeses earn a place on a watchlist.';
+  }
+
+  @override
+  String get frameworkOutcomeMoveOn => 'Move on';
+
+  @override
+  String frameworkOutcomeMoveOnDetail(String questions) {
+    return 'Fails on $questions. One No is enough — no exceptions, and no \"this time it\'s different\".';
+  }
+
+  @override
+  String get frameworkOutcomeWatchlist => 'Watchlist candidate';
+
+  @override
+  String get frameworkOutcomeWatchlistDetail =>
+      'Seven out of seven. It has earned a place on a watchlist.';
+
+  @override
+  String get listAnd => 'and';
+
+  @override
+  String get frameworkVerdictYes => 'Yes';
+
+  @override
+  String get frameworkVerdictNo => 'No';
+
+  @override
+  String get frameworkVerdictUnclear => 'Unclear';
+
+  @override
+  String get frameworkNotAsked => 'Not asked yet';
+
+  @override
+  String frameworkJumpHint(int number, String question) {
+    return 'Question $number: $question';
+  }
+
+  @override
+  String get frameworkLookFor => 'Look for';
+
+  @override
+  String get frameworkFromFilings => 'From the filings';
+
+  @override
+  String get frameworkEvidence => 'Evidence';
+
+  @override
+  String get frameworkFilingsMark => 'Filings';
+
+  @override
+  String get frameworkFilingsMarkHint =>
+      'Read from the company\'s own SEC filings rather than from the web.';
+
+  @override
+  String get frameworkUnsourcedMark => 'Model\'s reading';
+
+  @override
+  String get frameworkUnsourcedMarkHint =>
+      'No page was cited for this, and it quotes no figure from the filings: it is the model\'s own reading. Weigh it accordingly.';
+
+  @override
+  String get frameworkAskOne => 'Ask';
+
+  @override
+  String get frameworkAskOneHint =>
+      'Put just this question to the local model.';
+
+  @override
+  String frameworkFailed(String reason) {
+    return 'Not answered: $reason';
+  }
+
+  @override
+  String get frameworkGrowthTitle => 'Is the business growing?';
+
+  @override
+  String get frameworkGrowthLabel => 'Growth';
+
+  @override
+  String get frameworkGrowthLookFor =>
+      'Revenue over the last three to five years, and whether the latest quarters continue the trend. Flat or declining is a No.';
+
+  @override
+  String get frameworkMoatTitle => 'Can they defend their position?';
+
+  @override
+  String get frameworkMoatLabel => 'Moat';
+
+  @override
+  String get frameworkMoatLookFor =>
+      'Network effects, brand power, switching costs. Could a competitor with unlimited capital take its customers within two years?';
+
+  @override
+  String get frameworkManagementTitle => 'Is management competent?';
+
+  @override
+  String get frameworkManagementLabel => 'Management';
+
+  @override
+  String get frameworkManagementLookFor =>
+      'Capital allocation, insider buying, and whether it delivers on its promises. A CEO who promises the moon and never delivers is a No.';
+
+  @override
+  String get frameworkMarginsTitle => 'Are margins improving or declining?';
+
+  @override
+  String get frameworkMarginsLabel => 'Margins';
+
+  @override
+  String get frameworkMarginsLookFor =>
+      'Gross and operating margin over three or more years. Compressing margins mean more competition or a weakening model.';
+
+  @override
+  String get frameworkCashTitle => 'What\'s the cash situation?';
+
+  @override
+  String get frameworkCashLabel => 'Cash';
+
+  @override
+  String get frameworkCashLookFor =>
+      'Operating cash flow, and whether the profit turns into cash. It tells you whether the business is real or accounting.';
+
+  @override
+  String get frameworkRiskTitle => 'What\'s the risk?';
+
+  @override
+  String get frameworkRiskLabel => 'Risk';
+
+  @override
+  String get frameworkRiskLookFor =>
+      'Three things that could kill the investment: regulation, competition, the economy, debt. If you cannot name three, you do not understand it well enough.';
+
+  @override
+  String get frameworkTimingTitle => 'Is the timing right?';
+
+  @override
+  String get frameworkTimingLabel => 'Timing';
+
+  @override
+  String get frameworkTimingLookFor =>
+      'Even great companies are terrible investments at the wrong price: recent pullbacks, upcoming catalysts, sector rotation.';
+
+  @override
+  String get evidenceRevenue => 'Revenue';
+
+  @override
+  String get evidenceRevenueGrowthLatest => 'Latest year';
+
+  @override
+  String evidenceRevenueGrowthYears(int years) {
+    return 'A year over $years years';
+  }
+
+  @override
+  String get evidenceGrossMargin => 'Gross margin';
+
+  @override
+  String get evidenceOperatingMargin => 'Operating margin';
+
+  @override
+  String evidenceOperatingMarginChange(int years) {
+    return 'Operating margin over $years years';
+  }
+
+  @override
+  String get evidenceImpairment => 'Written down this year';
+
+  @override
+  String get evidenceOperatingMarginBeforeImpairment =>
+      'Operating margin before the write-down';
+
+  @override
+  String get evidenceGrossMarginMissing =>
+      'Gross profit is not tagged in this company\'s filings; the model reads it from the web.';
+
+  @override
+  String get evidenceReturnOnEquity => 'Return on equity';
+
+  @override
+  String evidenceShareCountChange(int years) {
+    return 'Share count over $years years';
+  }
+
+  @override
+  String get evidenceShareCount => 'Share count';
+
+  @override
+  String get evidenceCapitalReturned => 'Cash returned to owners';
+
+  @override
+  String get evidenceStockPay => 'Paid in shares';
+
+  @override
+  String get evidenceFreeCashFlow => 'Free cash flow';
+
+  @override
+  String get evidenceCashConversion => 'Operating cash flow to profit';
+
+  @override
+  String get evidenceNetDebt => 'Net debt';
+
+  @override
+  String get evidenceNetCash => 'Net cash';
+
+  @override
+  String get evidenceDebtPayback => 'Years of free cash flow to repay';
+
+  @override
+  String get evidenceInterestCover => 'Interest cover';
+
+  @override
+  String get evidencePrice => 'Price today';
+
+  @override
+  String get evidenceFairRange => 'Fair range from the filings';
+
+  @override
+  String get evidenceToRangeLow => 'To the bottom of the range';
+
+  @override
+  String get evidenceNoPrice =>
+      'No price yet. The model looks one up; enter one on the valuation tab to judge it against the filings.';
+
+  @override
+  String get evidenceNone =>
+      'Nothing in the filings settles this one: it is a question of reading.';
+
+  @override
+  String evidenceYearsValue(String years) {
+    return '$years yrs';
+  }
+
+  @override
+  String evidenceTimesValue(String times) {
+    return '$times×';
+  }
+
+  @override
+  String evidencePointsValue(String points) {
+    return '$points pts';
+  }
+
+  @override
+  String evidenceChartHint(int year, String value) {
+    return 'FY$year: $value';
+  }
+
+  @override
+  String get researchFrameworkAction => 'Run the seven questions';
+
+  @override
+  String researchFrameworkOneAction(String question) {
+    return 'Ask again: $question';
+  }
+
+  @override
+  String researchStatusStep(int done, int total) {
+    return 'Answering $done of $total…';
+  }
 
   @override
   String get sectionValuation => 'Fair value';

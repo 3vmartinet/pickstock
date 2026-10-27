@@ -23,6 +23,8 @@ import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 import 'package:pickstock/data/research/company_event.dart';
+import 'package:pickstock/data/research/framework_question.dart';
+import 'package:pickstock/repo/research/framework_prompts.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
@@ -276,6 +278,7 @@ class FakeOllamaRepo extends OllamaRepo {
     String question, {
     String? context,
     bool Function()? isCancelled,
+    bool mustSearch = false,
   }) async {
     questions.add(question);
     await finishAsk?.future;
@@ -285,6 +288,44 @@ class FakeOllamaRepo extends OllamaRepo {
     final thrown = failure;
     if (thrown != null) throw ResearchException(thrown);
     return answer;
+  }
+
+  /// What each framework question comes back as; a question not in here
+  /// is answered yes, with a headline naming it.
+  Map<FrameworkQuestion, FrameworkAnswer> frameworkAnswers = {};
+
+  /// The pages every framework answer is said to have been read from.
+  List<SearchResult> frameworkSources = const [];
+
+  /// Every framework question asked, in order, with the research prompt it
+  /// was put as.
+  final List<(FrameworkQuestion, String)> screened = [];
+
+  /// Held open by a test that wants to look at the framework mid-run. Each
+  /// question waits on it, so a test can complete it to let the rest go.
+  Completer<void>? finishScreen;
+
+  @override
+  Future<FrameworkReading?> screen(
+    FrameworkPrompts prompts,
+    FrameworkQuestion question, {
+    bool Function()? isCancelled,
+  }) async {
+    screened.add((question, prompts.promptFor(question).research));
+    await finishScreen?.future;
+    if (isCancelled?.call() ?? false) return null;
+    final thrown = failure;
+    if (thrown != null) throw ResearchException(thrown);
+    return FrameworkReading(
+      answer:
+          frameworkAnswers[question] ??
+          FrameworkAnswer(
+            verdict: FrameworkVerdict.yes,
+            headline: 'Yes to ${question.name}',
+            explanation: 'Because the figures say so.',
+          ),
+      sources: frameworkSources,
+    );
   }
 
   @override
@@ -472,6 +513,7 @@ const Map<ReportTab, String> _tabLabels = {
   ReportTab.overview: 'Overview',
   ReportTab.valuation: 'Valuation',
   ReportTab.expectations: 'Expectations',
+  ReportTab.framework: 'Framework',
 };
 
 /// Types a share price by hand.

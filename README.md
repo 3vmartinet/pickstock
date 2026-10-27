@@ -10,8 +10,8 @@ and need no network. A free Finnhub key adds live share prices for the valuation
 
 ## What it shows
 
-The report has three tabs — **Overview**, **Valuation** and **Expectations** —
-under a fixed company header. In one column it ran to 3,445 pixels once a price arrived: nearly four
+The report has four tabs — **Overview**, **Valuation**, **Expectations** and
+**Framework** — under a fixed company header. In one column it ran to 3,445 pixels once a price arrived: nearly four
 screens on a laptop, with the figures table below all of it, and the whole page
 growing by 2,220 pixels the moment a quote landed.
 
@@ -38,6 +38,7 @@ edge of a narrow window — unreachable, with nothing to say there was more.
 | Valuation | Valuation | Whether the price is above or below the range the filings support, with the multiples, the cash stream and the growth premium behind it, plus P/E, EV/FCF, FCF yield, PEG and P/S. |
 | What the price is asking | Expectations | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
 | How this was worked out | Valuation | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
+| Seven questions | Framework | A screening framework put to the local model: growth, moat, management, margins, cash, risk and timing, each answered Yes, No or Unclear with a headline, an explanation and cited evidence, beside the filings' own figures for it. One No means move on; seven Yeses offer the watchlist. |
 | All tickers | — | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
 | Undervalued scans | — | A background run that prices every filtered company and reports those trading below the bottom of their fair range, most upside first. |
 | Watchlists | — | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
@@ -292,6 +293,103 @@ nothing is listening.
 **Ranking the whole directory by valuation is not offered.** At 60 calls a
 minute, pricing 10,391 companies takes about three hours, so it would have to be
 an overnight batch rather than a sort you can click.
+
+### The seven-question framework
+
+A filter meant to rule a company out fast, rather than to find winners: seven
+questions, asked in order, where a single **No** means move on and only seven
+**Yes**es earn a place on a watchlist.
+
+| # | Question | From the filings, beside the answer |
+| --- | --- | --- |
+| 1 | Is the business growing? | Revenue by year, latest-year change, 3- and 5-year annual rates |
+| 2 | Can they defend their position? | Gross and operating margin, return on equity |
+| 3 | Is management competent? | Share count change, cash returned to owners, stock pay, return on equity |
+| 4 | Are margins improving or declining? | Gross and operating margin by year, the year's write-down and the margin before it, operating margin's 3-year move |
+| 5 | What's the cash situation? | Free cash flow by year, operating cash flow against profit, net debt |
+| 6 | What's the risk? | The year's write-down and the margin before it, net debt, years of free cash flow to repay it, interest cover |
+| 7 | Is the timing right? | Price today against the fair range the valuation tab works out |
+
+**One task, seven steps.** A single press queues one row in the jobs list, which
+reports how far through it is (`Answering 3 of 7…`). The questions run in order
+and each answer lands on the tab as it arrives; a question can be asked again
+on its own from its card. A missing server, model or key fails the rest at
+once rather than waiting out seven timeouts; any other failure skips to the
+next question. As with the other questions, a finished row is the way back:
+opening it shows the company on the Framework tab with the scorecard marked.
+
+**Reading questions must read.** Every question but cash is answered from the
+web, and the 12B model given the filings would sometimes answer from those
+alone. A reply that read nothing is sent back once with an instruction to
+search. If every search it tries is **refused** — Ollama's hosted search rate
+limits, and a day of live test runs was enough to hit it — the question fails
+with that reason and the rest of the run stops, rather than seven answers
+written from the brief that read exactly like researched ones.
+
+**Where a point came from** is shown on each: the page it cites, *Filings* only
+when it quotes a figure actually in the brief (allowing for rounding and
+billions), and *Model's reading* otherwise. The model is told to cite page 0
+for the filings and uses it for anything it read nowhere — Crocs' risk answer
+credited "geopolitical and trade tensions" to filings that say nothing of the
+kind.
+
+**Three verdicts, not two.** The model may answer **Unclear** — a management
+record it cannot find is not evidence of bad management, and forcing a No would
+read exactly like a finding. Unclear still keeps a company off the watchlist.
+
+**Two passes per question**, for the reason the news takes two: the first lets
+the model search and read with the filings as its system message; the second
+hands back the filings, the verdict rule and the pages read, numbered, and asks
+for `{"verdict","headline","explanation","points":[{"text","source"}]}`. Pages
+are cited by number rather than by URL, because a 12B model asked to copy a
+link will now and then improve it; a number out of range is dropped, as is any
+URL the search never returned. Answers are filed as JSON in `research_notes`
+under `framework.<question>`, so they survive a restart like the insights do.
+
+Every prompt quotes the company's own figures — six years of revenue, gross
+and operating profit, cash flow, debt, buybacks and share count — so the model
+argues from the filings and searches for what they cannot say. Against
+`gemma4:12b-mlx` each question takes 20 to 70 seconds and one to three
+searches.
+
+**Gross profit** is read for question 4: `GrossProfit` where tagged, otherwise
+revenue less `CostOfRevenue` / `CostOfGoodsAndServicesSold` / `CostOfGoodsSold`,
+and dropped where it would exceed revenue. It is the less dependable margin —
+Alphabet and Ford do not tag it — so it is shown beside the operating margin,
+never instead of it; where neither concept is tagged the model is told to find
+it on the web. Adding it bumped the extractor version, so the first launch after
+upgrading re-runs the ingest.
+
+**Write-downs are read from the filings** — `AssetImpairmentCharges` or
+`GoodwillAndIntangibleAssetImpairment` as a total, `GoodwillImpairmentLoss` and
+the intangible impairment concepts as parts, taking the larger of the two and
+never their sum, since Crocs tags all three. Each question is asked on its own,
+and before this they disagreed about the same year: Crocs' FY2025 operating
+margin is 3.7% as filed and 22.0% before the $738.1M it wrote off HEYDUDE, and
+the margins question called it a one-off on what it found on the web while the
+risk question called it a collapse. Now the brief states the write-down and
+the margin before it as a fact all seven share, and the cash, risk and timing
+rules say a charge already booked is history: risk is asked what could cause
+the next one instead.
+
+Saying so was not enough for a 12B model: told the 3.7% was a write-down, it
+went on calling it a collapse — on risk, then on timing once risk was told. So
+in a year with a write-down the brief quotes only the margin before it, with
+the operating income as filed in money but no margin after the charge to
+anchor on. With that, all seven Crocs answers agree on 22.0%.
+
+The distilling pass is asked twice before a question is given up on: now and
+then the model replies with something other than the JSON asked for, usually by
+copying a quoted word into a string unescaped, and seconds to ask again beat
+throwing away half a minute of reading.
+
+```sh
+flutter test --dart-define-from-file=env.json test/live_framework_test.dart
+```
+
+Puts all seven to the local model for Crocs and prints each verdict, proving
+every answer parses, every kept link is one the search returned, and the risk
+answer no longer quotes the write-down's 3.7% as a collapse.
 
 ### What the app remembers
 

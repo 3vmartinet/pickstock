@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 
@@ -70,8 +71,10 @@ class ResearchQueue extends ChangeNotifier {
     required String companyName,
     required CompanyInsight? insight,
     required ResearchWork work,
+    List<FrameworkQuestion> frameworkQuestions = const [],
   }) {
-    final kind = insight?.name ?? eventsNoteKind;
+    final kind =
+        frameworkKind(frameworkQuestions) ?? insight?.name ?? eventsNoteKind;
     final existing = taskFor(cik: cik, kind: kind);
     if (existing != null) {
       if (existing.isActive) return;
@@ -86,6 +89,7 @@ class ResearchQueue extends ChangeNotifier {
           ticker: ticker,
           companyName: companyName,
           insight: insight,
+          frameworkQuestions: frameworkQuestions,
         ),
         work: work,
       ),
@@ -93,6 +97,33 @@ class ResearchQueue extends ChangeNotifier {
     notifyListeners();
     unawaited(_work());
   }
+
+  /// Records that the task asking [cik]'s [kind] has answered [done] of its
+  /// steps.
+  ///
+  /// By what was asked rather than by id: the work reporting it was written
+  /// before the queue gave it one.
+  void setStepsDone({
+    required String cik,
+    required String kind,
+    required int done,
+  }) {
+    final task = taskFor(cik: cik, kind: kind);
+    if (task == null || task.stepsDone == done) return;
+    final index = _indexOf(task.id);
+    _queued[index] = _queued[index].withTask(task.copyWith(stepsDone: done));
+    notifyListeners();
+  }
+
+  /// The framework tasks still owed for [cik], a full run and any single
+  /// questions alike, in the order they were asked.
+  List<ResearchTask> activeFrameworkTasksFor(String cik) => [
+    for (final entry in _queued)
+      if (entry.task.cik == cik &&
+          entry.task.isFramework &&
+          entry.task.isActive)
+        entry.task,
+  ];
 
   /// Takes a question out of the list, whether it has been asked yet or not.
   ///
@@ -175,7 +206,9 @@ class ResearchQueue extends ChangeNotifier {
   void _setState(int id, ResearchTaskState state) {
     final index = _indexOf(id);
     if (index < 0) return;
-    _queued[index] = _queued[index].withState(state);
+    _queued[index] = _queued[index].withTask(
+      _queued[index].task.copyWith(state: state),
+    );
     notifyListeners();
   }
 }
@@ -192,9 +225,6 @@ class _Queued {
   /// waiting on work it no longer wants.
   final Completer<void> abandoned;
 
-  _Queued withState(ResearchTaskState state) => _Queued(
-    task: task.copyWith(state: state),
-    work: work,
-    abandoned: abandoned,
-  );
+  _Queued withTask(ResearchTask task) =>
+      _Queued(task: task, work: work, abandoned: abandoned);
 }

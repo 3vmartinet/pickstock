@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:pickstock/data/research/company_event.dart';
+import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
+import 'package:pickstock/repo/research/framework_prompts.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 
 /// The local server, which is where the model runs. Overridable at build time
@@ -104,6 +107,10 @@ enum ResearchFailure {
   /// The model cannot call tools, so it cannot search.
   modelCannotSearch,
 
+  /// The web search refused every request — rate limited, most often — so
+  /// a question that has to be read up on was not.
+  searchRefused,
+
   /// Reached, and unhappy.
   failed;
 
@@ -117,6 +124,7 @@ enum ResearchFailure {
     ResearchFailure.serverUnreachable => strings.eventsFailedNoServer,
     ResearchFailure.modelMissing ||
     ResearchFailure.modelCannotSearch => strings.eventsFailedNoModel,
+    ResearchFailure.searchRefused => strings.researchFailedSearchRefused,
     ResearchFailure.failed => strings.eventsFailedOther,
   };
 }
@@ -187,10 +195,15 @@ class OllamaRepo {
   /// the machine still working through it — nor should the next question in
   /// the line wait behind one nobody wants. What comes back then is empty,
   /// which is what a caller that no longer wants an answer does with one.
+  /// [mustSearch] sends a reply that read nothing back once, with an
+  /// instruction to search: given figures in its brief, a 12B model will
+  /// sometimes answer a question about competitors or the share price from
+  /// those alone, and say so with the confidence of having looked.
   Future<ResearchAnswer> ask(
     String question, {
     String? context,
     bool Function()? isCancelled,
+    bool mustSearch = false,
   }) async {
     if (!search.isConfigured) {
       throw const ResearchException(ResearchFailure.searchNotConfigured);
@@ -201,6 +214,8 @@ class OllamaRepo {
       {_roleKey: _userRole, _contentKey: question},
     ];
     final sources = <SearchResult>[];
+    final refusals = <SearchFailure>[];
+    var hasBeenTold = false;
 
     for (var round = 0; round <= _maximumToolRounds; round++) {
       if (isCancelled?.call() ?? false) return const ResearchAnswer(text: '');
@@ -209,6 +224,33 @@ class OllamaRepo {
         withTools: round < _maximumToolRounds,
       );
       final calls = reply[_toolCallsKey] as List<dynamic>? ?? const [];
+
+      // Searched and refused every time: what follows was written from the
+      // brief alone, and would read exactly like an answer that was not. For
+      // a question that has to be read up on, that is a failure to say so.
+      if (calls.isEmpty &&
+          mustSearch &&
+          sources.isEmpty &&
+          refusals.isNotEmpty) {
+        throw ResearchException(
+          ResearchFailure.searchRefused,
+          cause: refusals.last,
+        );
+      }
+
+      // Once, and only while tools are still on offer: a model that will not
+      // search when told is answered with what it wrote, not asked forever.
+      if (calls.isEmpty &&
+          mustSearch &&
+          sources.isEmpty &&
+          !hasBeenTold &&
+          round < _maximumToolRounds - 1) {
+        hasBeenTold = true;
+        messages
+          ..add(reply.cast<String, Object?>())
+          ..add({_roleKey: _userRole, _contentKey: _searchFirst});
+        continue;
+      }
 
       if (calls.isEmpty) {
         return ResearchAnswer(
@@ -222,7 +264,7 @@ class OllamaRepo {
       messages.add(reply.cast<String, Object?>());
       for (final raw in calls) {
         final call = raw as Map<String, dynamic>;
-        messages.add(await _answerCall(call, sources));
+        messages.add(await _answerCall(call, sources, refusals));
       }
     }
 
@@ -290,6 +332,137 @@ class OllamaRepo {
     return _eventsFrom(distilled[_contentKey] as String? ?? '', pages);
   }
 
+  /// One of the framework's questions, answered with a verdict.
+  ///
+  /// Two passes, for the reason [eventsFor] takes two: the first searches and
+  /// reads, the second turns what was read into the verdict, a headline and
+  /// the evidence, as JSON. The second is handed the filings again, so the
+  /// verdict is struck against the company's own figures rather than only
+  /// against what the search happened to turn up.
+  ///
+  /// `null` when the question was withdrawn while it was being read.
+  Future<FrameworkReading?> screen(
+    FrameworkPrompts prompts,
+    FrameworkQuestion question, {
+    bool Function()? isCancelled,
+  }) async {
+    final prompt = prompts.promptFor(question);
+    final research = await ask(
+      prompt.research,
+      context: prompts.brief,
+      isCancelled: isCancelled,
+      mustSearch: prompt.needsReading,
+    );
+    if (isCancelled?.call() ?? false) return null;
+
+    // Ordered and without repeats, because the model cites them by number.
+    final pages = [
+      ...{for (final source in research.sources) source.url},
+    ];
+    // Asked twice before giving up: the 12B model now and then replies with
+    // something that is not the JSON asked for, and the same question put
+    // again comes back right. Seconds to ask again, against the half minute
+    // of reading that would otherwise be thrown away with it.
+    for (var attempt = 0; attempt < _distilAttempts; attempt++) {
+      if (isCancelled?.call() ?? false) return null;
+      final distilled = await _chat([
+        {
+          _roleKey: _systemRole,
+          _contentKey:
+              'You turn research into JSON. Reply with JSON and nothing else.',
+        },
+        {
+          _roleKey: _userRole,
+          _contentKey: prompts.distil(prompt, research.text, pages),
+        },
+      ], withTools: false);
+
+      final answer = frameworkAnswerFrom(
+        distilled[_contentKey] as String? ?? '',
+        pages,
+        filings: prompts.figures,
+      );
+      if (answer != null) {
+        return FrameworkReading(answer: answer, sources: research.sources);
+      }
+    }
+    throw const ResearchException(ResearchFailure.failed);
+  }
+
+  /// Reads a framework answer out of whatever the model replied with, or `null`
+  /// if there is none to read.
+  ///
+  /// Tolerant the way [eventsFor]'s reader is — the JSON is taken
+  /// from the first brace to the last, since it arrives fenced as often as not —
+  /// and tolerant of the shapes a point comes back in: the object asked for, a
+  /// bare string, or an object with a `url` instead of a page number. A page
+  /// number that is not on the list, or a URL the search never returned, leaves
+  /// the point standing without a link: the point may well be true, but a link
+  /// that was invented opens nothing.
+  ///
+  /// A point without a page is only credited to [filings] if it quotes one of
+  /// their figures. The model is told to cite page 0 for a point from the
+  /// filings, and uses it for anything it did not read anywhere: Crocs' risk
+  /// answer credited "geopolitical and trade tensions" to the filings, which
+  /// say nothing of the kind. Such a point is kept and marked as the model's
+  /// own reading, which is what it is.
+  FrameworkAnswer? frameworkAnswerFrom(
+    String reply,
+    List<String> pages, {
+    String filings = '',
+  }) {
+    final start = reply.indexOf('{');
+    final end = reply.lastIndexOf('}');
+    if (start < 0 || end <= start) {
+      logWarning(() => 'No JSON in the framework reply');
+      return null;
+    }
+
+    final Map<String, dynamic> payload;
+    try {
+      payload =
+          jsonDecode(reply.substring(start, end + 1)) as Map<String, dynamic>;
+    } on Object catch (error) {
+      logWarning(() => 'Could not read the framework reply: $error');
+      return null;
+    }
+
+    final headline = (payload[_headlineKey] as String? ?? '').trim();
+    if (headline.isEmpty) return null;
+
+    String? linkFor(Object? source, Object? url) {
+      if (source is num) {
+        final index = source.toInt() - 1;
+        return index >= 0 && index < pages.length ? pages[index] : null;
+      }
+      if (url is String && pages.contains(url.trim())) return url.trim();
+      return null;
+    }
+
+    final onFile = _figuresIn(filings);
+    FrameworkPoint pointOf(String text, String? url) => FrameworkPoint(
+      text: text,
+      url: url,
+      isFromFilings: url == null && _quotesAny(text, onFile),
+    );
+
+    final rawPoints = payload[_pointsKey];
+    return FrameworkAnswer(
+      verdict: FrameworkVerdict.parse(payload[_verdictKey] as String?),
+      headline: headline,
+      explanation: (payload[_explanationKey] as String? ?? '').trim(),
+      points: [
+        if (rawPoints is List)
+          for (final raw in rawPoints)
+            if (raw is String && raw.trim().isNotEmpty)
+              pointOf(raw.trim(), null)
+            else if (raw case {_textKey: final String text}
+                when text.trim().isNotEmpty)
+              pointOf(text.trim(), linkFor(raw[_sourceKey], raw[_urlArgument])),
+      ],
+    );
+  }
+
   /// Reads the events out of whatever the model replied with.
   ///
   /// Tolerant by necessity: the reply arrives wrapped in a code fence as often
@@ -341,6 +514,7 @@ class OllamaRepo {
   Future<Map<String, Object?>> _answerCall(
     Map<String, dynamic> call,
     List<SearchResult> sources,
+    List<SearchFailure> refusals,
   ) async {
     final function = call[_functionKey] as Map<String, dynamic>? ?? const {};
     final name = function[_nameKey] as String? ?? '';
@@ -351,14 +525,12 @@ class OllamaRepo {
     try {
       final found = switch (name) {
         searchToolName => await search.search(
-          arguments[_queryArgument] as String? ?? '',
+          _text(arguments[_queryArgument]),
           maxResults:
               (arguments[_maxResultsArgument] as num?)?.toInt() ??
               defaultSearchResults,
         ),
-        fetchToolName => [
-          await search.fetch(arguments[_urlArgument] as String? ?? ''),
-        ],
+        fetchToolName => [await search.fetch(_text(arguments[_urlArgument]))],
         _ => throw const ResearchException(ResearchFailure.failed),
       };
       // The reader gets the page whole; the model gets as much of it as it
@@ -377,6 +549,7 @@ class OllamaRepo {
       // something it can work around, and an answer with a gap in it beats no
       // answer at all.
       logWarning(() => 'Tool $name failed: $error');
+      refusals.add(error.failure);
       content = jsonEncode({_errorArgument: error.failure.name});
     }
 
@@ -422,6 +595,76 @@ class OllamaRepo {
     return payload[_messageKey] as Map<String, dynamic>? ?? const {};
   }
 }
+
+/// A tool argument as the text it should have been.
+///
+/// The model is told each argument is a string and mostly sends one, but now
+/// and then sends a list of queries instead — seen from the 12B model on the
+/// framework's moat question — and a cast that throws there ends the whole
+/// answer over one search. A list is searched as one query.
+String _text(Object? argument) => switch (argument) {
+  null => '',
+  final String text => text,
+  final List<dynamic> parts => parts.join(' '),
+  _ => argument.toString(),
+};
+
+/// How many times a framework answer is asked to be put as JSON.
+const int _distilAttempts = 2;
+
+/// Said to a model that answered a reading question without reading.
+const String _searchFirst =
+    'You answered without searching. Call web_search now — at least once — '
+    'and answer again from what you read, citing it. The figures you were '
+    'given cannot answer this on their own.';
+
+/// A number in prose, with what it is counted in.
+final RegExp _figurePattern = RegExp(
+  r'(\d[\d,]*(?:\.\d+)?)\s*(%|billion|bn|million|m\b)?',
+  caseSensitive: false,
+);
+
+/// Every figure in [text], in the brief's unit: millions, or percent.
+///
+/// Years and small whole numbers are left out — "FY2025" and "three risks"
+/// are in every answer and would credit anything to the filings.
+List<double> _figuresIn(String text) => [
+  for (final match in _figurePattern.allMatches(text))
+    if (double.tryParse(match.group(1)!.replaceAll(',', '')) case final value?)
+      if (_isFigure(match.group(1)!, value, match.group(2)))
+        switch (match.group(2)?.toLowerCase()) {
+          'billion' || 'bn' => value * 1000,
+          _ => value,
+        },
+];
+
+bool _isFigure(String written, double value, String? unit) {
+  if (unit != null || written.contains('.')) return true;
+  return value >= 10 && (value < 1900 || value > 2100);
+}
+
+/// Whether [text] quotes any of [onFile], allowing for rounding: "$1.61
+/// billion" is the brief's 1613.8, said the way a person says it.
+bool _quotesAny(String text, List<double> onFile) => _figuresIn(text).any(
+  (figure) => onFile.any(
+    (known) => (figure - known).abs() <= math.max(0.051, known.abs() * 0.006),
+  ),
+);
+
+/// A framework question's answer, and the pages read to reach it.
+class FrameworkReading {
+  const FrameworkReading({required this.answer, required this.sources});
+
+  final FrameworkAnswer answer;
+  final List<SearchResult> sources;
+}
+
+const String _verdictKey = 'verdict';
+const String _headlineKey = 'headline';
+const String _explanationKey = 'explanation';
+const String _pointsKey = 'points';
+const String _textKey = 'text';
+const String _sourceKey = 'source';
 
 /// [text] cut to what the model is given, on a word boundary so it does not
 /// end mid-token.

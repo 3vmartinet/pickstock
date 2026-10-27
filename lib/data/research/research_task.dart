@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 
 /// Where a queued question has got to.
@@ -29,6 +30,8 @@ class ResearchTask extends Equatable {
     required this.ticker,
     required this.companyName,
     required this.insight,
+    this.frameworkQuestions = const [],
+    this.stepsDone = 0,
     this.state = ResearchTaskState.pending,
   });
 
@@ -41,21 +44,46 @@ class ResearchTask extends Equatable {
   /// not one of the three and sits above the tabs rather than on one.
   final CompanyInsight? insight;
 
+  /// The framework's questions this task works through, in order, or empty
+  /// for anything that is not the framework.
+  ///
+  /// All seven for a full run, one for a single question asked again. One task
+  /// rather than seven because the framework is one decision: seven rows for
+  /// it would bury every other question in the list.
+  final List<FrameworkQuestion> frameworkQuestions;
+
+  /// How many of [frameworkQuestions] have been answered, so the row can say
+  /// how far through it is. A framework run is several minutes, and a row
+  /// saying only "reading" for all of them says nothing.
+  final int stepsDone;
+
   final ResearchTaskState state;
+
+  bool get isFramework => frameworkQuestions.isNotEmpty;
+
+  /// The question being answered right now, while the framework is running.
+  FrameworkQuestion? get currentFrameworkQuestion =>
+      isRunning && stepsDone < frameworkQuestions.length
+      ? frameworkQuestions[stepsDone]
+      : null;
 
   /// How the answer is filed, which is also what the report highlights when
   /// the reader arrives to look at it.
-  String get kind => insight?.name ?? eventsNoteKind;
+  String get kind =>
+      frameworkKind(frameworkQuestions) ?? insight?.name ?? eventsNoteKind;
 
   /// Which tab a finished question opens onto.
   ///
   /// Each of the three exists because of something its own tab cannot settle,
   /// so the answer is only worth reading beside the arithmetic it qualifies.
-  ReportTab get tab => switch (insight) {
-    null || CompanyInsight.business => ReportTab.overview,
-    CompanyInsight.inputs => ReportTab.valuation,
-    CompanyInsight.expectations => ReportTab.expectations,
-  };
+  /// The framework has a tab of its own.
+  ReportTab get tab => isFramework
+      ? ReportTab.framework
+      : switch (insight) {
+          null || CompanyInsight.business => ReportTab.overview,
+          CompanyInsight.inputs => ReportTab.valuation,
+          CompanyInsight.expectations => ReportTab.expectations,
+        };
 
   bool get isPending => state == ResearchTaskState.pending;
 
@@ -65,15 +93,35 @@ class ResearchTask extends Equatable {
   /// cancellable rather than openable.
   bool get isActive => isPending || isRunning;
 
-  ResearchTask copyWith({ResearchTaskState? state}) => ResearchTask(
-    id: id,
-    cik: cik,
-    ticker: ticker,
-    companyName: companyName,
-    insight: insight,
-    state: state ?? this.state,
-  );
+  ResearchTask copyWith({ResearchTaskState? state, int? stepsDone}) =>
+      ResearchTask(
+        id: id,
+        cik: cik,
+        ticker: ticker,
+        companyName: companyName,
+        insight: insight,
+        frameworkQuestions: frameworkQuestions,
+        stepsDone: stepsDone ?? this.stepsDone,
+        state: state ?? this.state,
+      );
 
   @override
-  List<Object?> get props => [id, cik, ticker, companyName, insight, state];
+  List<Object?> get props => [
+    id,
+    cik,
+    ticker,
+    companyName,
+    insight,
+    frameworkQuestions,
+    stepsDone,
+    state,
+  ];
 }
+
+/// How a framework task is filed: the framework's own kind for a full run,
+/// the one question's for a single one, and `null` for anything else.
+String? frameworkKind(List<FrameworkQuestion> questions) => switch (questions) {
+  [] => null,
+  [final only] => only.noteKind,
+  _ => frameworkNoteKind,
+};

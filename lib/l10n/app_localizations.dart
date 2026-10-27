@@ -754,6 +754,12 @@ abstract class AppLocalizations {
   /// **'Ollama is running but has not pulled the model this build asks for.'**
   String get eventsFailedNoModel;
 
+  /// No description provided for @researchFailedSearchRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'The web search refused every request — it is most likely rate limited — so this was not read up on. Try again in a few minutes.'**
+  String get researchFailedSearchRefused;
+
   /// No description provided for @eventsFailedOther.
   ///
   /// In en, this message translates to:
@@ -1575,6 +1581,534 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expectations'**
   String get tabExpectations;
+
+  /// No description provided for @tabFramework.
+  ///
+  /// In en, this message translates to:
+  /// **'Framework'**
+  String get tabFramework;
+
+  /// No description provided for @frameworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Seven questions'**
+  String get frameworkTitle;
+
+  /// No description provided for @frameworkIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'A filter that rules a company out fast. Each question is answered from the filings and the web; a single No and you move on, and only seven Yeses earn a place on a watchlist.'**
+  String get frameworkIntro;
+
+  /// No description provided for @frameworkRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Run the seven questions'**
+  String get frameworkRun;
+
+  /// No description provided for @frameworkRunHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The local model works through all seven in order, from the filings on screen and what it finds on the web — several minutes in all. The job list in the app bar tracks it and brings you back here.'**
+  String get frameworkRunHint;
+
+  /// No description provided for @frameworkRunAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Run all again'**
+  String get frameworkRunAgain;
+
+  /// No description provided for @frameworkRunAgainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask all seven again. The answers on file stay readable until the new ones land.'**
+  String get frameworkRunAgainHint;
+
+  /// No description provided for @frameworkProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} answered'**
+  String frameworkProgress(int done, int total);
+
+  /// No description provided for @frameworkAnswering.
+  ///
+  /// In en, this message translates to:
+  /// **'Answering {question}'**
+  String frameworkAnswering(String question);
+
+  /// No description provided for @frameworkWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting its turn behind another question'**
+  String get frameworkWaiting;
+
+  /// No description provided for @frameworkUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The answers need the local model and a web search key, neither of which is configured. What the filings say is shown under each question all the same.'**
+  String get frameworkUnavailable;
+
+  /// No description provided for @frameworkOutcomeNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not screened yet'**
+  String get frameworkOutcomeNotStarted;
+
+  /// No description provided for @frameworkOutcomeNotStartedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Seven questions, about a minute each. The figures from the filings below are already in; the answers are not.'**
+  String get frameworkOutcomeNotStartedDetail;
+
+  /// No description provided for @frameworkOutcomeIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Not settled yet'**
+  String get frameworkOutcomeIncomplete;
+
+  /// No description provided for @frameworkOutcomeIncompleteDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'{yes} Yes, {unclear} unclear and {open} still open — no No so far. Only seven Yeses earn a place on a watchlist.'**
+  String frameworkOutcomeIncompleteDetail(int yes, int unclear, int open);
+
+  /// No description provided for @frameworkOutcomeMoveOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Move on'**
+  String get frameworkOutcomeMoveOn;
+
+  /// No description provided for @frameworkOutcomeMoveOnDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Fails on {questions}. One No is enough — no exceptions, and no \"this time it\'s different\".'**
+  String frameworkOutcomeMoveOnDetail(String questions);
+
+  /// No description provided for @frameworkOutcomeWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Watchlist candidate'**
+  String get frameworkOutcomeWatchlist;
+
+  /// No description provided for @frameworkOutcomeWatchlistDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Seven out of seven. It has earned a place on a watchlist.'**
+  String get frameworkOutcomeWatchlistDetail;
+
+  /// No description provided for @listAnd.
+  ///
+  /// In en, this message translates to:
+  /// **'and'**
+  String get listAnd;
+
+  /// No description provided for @frameworkVerdictYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get frameworkVerdictYes;
+
+  /// No description provided for @frameworkVerdictNo.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get frameworkVerdictNo;
+
+  /// No description provided for @frameworkVerdictUnclear.
+  ///
+  /// In en, this message translates to:
+  /// **'Unclear'**
+  String get frameworkVerdictUnclear;
+
+  /// No description provided for @frameworkNotAsked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not asked yet'**
+  String get frameworkNotAsked;
+
+  /// No description provided for @frameworkJumpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Question {number}: {question}'**
+  String frameworkJumpHint(int number, String question);
+
+  /// No description provided for @frameworkLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Look for'**
+  String get frameworkLookFor;
+
+  /// No description provided for @frameworkFromFilings.
+  ///
+  /// In en, this message translates to:
+  /// **'From the filings'**
+  String get frameworkFromFilings;
+
+  /// No description provided for @frameworkEvidence.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence'**
+  String get frameworkEvidence;
+
+  /// No description provided for @frameworkFilingsMark.
+  ///
+  /// In en, this message translates to:
+  /// **'Filings'**
+  String get frameworkFilingsMark;
+
+  /// No description provided for @frameworkFilingsMarkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Read from the company\'s own SEC filings rather than from the web.'**
+  String get frameworkFilingsMarkHint;
+
+  /// No description provided for @frameworkUnsourcedMark.
+  ///
+  /// In en, this message translates to:
+  /// **'Model\'s reading'**
+  String get frameworkUnsourcedMark;
+
+  /// No description provided for @frameworkUnsourcedMarkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No page was cited for this, and it quotes no figure from the filings: it is the model\'s own reading. Weigh it accordingly.'**
+  String get frameworkUnsourcedMarkHint;
+
+  /// No description provided for @frameworkAskOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get frameworkAskOne;
+
+  /// No description provided for @frameworkAskOneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Put just this question to the local model.'**
+  String get frameworkAskOneHint;
+
+  /// No description provided for @frameworkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not answered: {reason}'**
+  String frameworkFailed(String reason);
+
+  /// No description provided for @frameworkGrowthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Is the business growing?'**
+  String get frameworkGrowthTitle;
+
+  /// No description provided for @frameworkGrowthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth'**
+  String get frameworkGrowthLabel;
+
+  /// No description provided for @frameworkGrowthLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue over the last three to five years, and whether the latest quarters continue the trend. Flat or declining is a No.'**
+  String get frameworkGrowthLookFor;
+
+  /// No description provided for @frameworkMoatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can they defend their position?'**
+  String get frameworkMoatTitle;
+
+  /// No description provided for @frameworkMoatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Moat'**
+  String get frameworkMoatLabel;
+
+  /// No description provided for @frameworkMoatLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Network effects, brand power, switching costs. Could a competitor with unlimited capital take its customers within two years?'**
+  String get frameworkMoatLookFor;
+
+  /// No description provided for @frameworkManagementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Is management competent?'**
+  String get frameworkManagementTitle;
+
+  /// No description provided for @frameworkManagementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Management'**
+  String get frameworkManagementLabel;
+
+  /// No description provided for @frameworkManagementLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Capital allocation, insider buying, and whether it delivers on its promises. A CEO who promises the moon and never delivers is a No.'**
+  String get frameworkManagementLookFor;
+
+  /// No description provided for @frameworkMarginsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Are margins improving or declining?'**
+  String get frameworkMarginsTitle;
+
+  /// No description provided for @frameworkMarginsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Margins'**
+  String get frameworkMarginsLabel;
+
+  /// No description provided for @frameworkMarginsLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross and operating margin over three or more years. Compressing margins mean more competition or a weakening model.'**
+  String get frameworkMarginsLookFor;
+
+  /// No description provided for @frameworkCashTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s the cash situation?'**
+  String get frameworkCashTitle;
+
+  /// No description provided for @frameworkCashLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get frameworkCashLabel;
+
+  /// No description provided for @frameworkCashLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating cash flow, and whether the profit turns into cash. It tells you whether the business is real or accounting.'**
+  String get frameworkCashLookFor;
+
+  /// No description provided for @frameworkRiskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s the risk?'**
+  String get frameworkRiskTitle;
+
+  /// No description provided for @frameworkRiskLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk'**
+  String get frameworkRiskLabel;
+
+  /// No description provided for @frameworkRiskLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Three things that could kill the investment: regulation, competition, the economy, debt. If you cannot name three, you do not understand it well enough.'**
+  String get frameworkRiskLookFor;
+
+  /// No description provided for @frameworkTimingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Is the timing right?'**
+  String get frameworkTimingTitle;
+
+  /// No description provided for @frameworkTimingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing'**
+  String get frameworkTimingLabel;
+
+  /// No description provided for @frameworkTimingLookFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Even great companies are terrible investments at the wrong price: recent pullbacks, upcoming catalysts, sector rotation.'**
+  String get frameworkTimingLookFor;
+
+  /// No description provided for @evidenceRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue'**
+  String get evidenceRevenue;
+
+  /// No description provided for @evidenceRevenueGrowthLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest year'**
+  String get evidenceRevenueGrowthLatest;
+
+  /// No description provided for @evidenceRevenueGrowthYears.
+  ///
+  /// In en, this message translates to:
+  /// **'A year over {years} years'**
+  String evidenceRevenueGrowthYears(int years);
+
+  /// No description provided for @evidenceGrossMargin.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross margin'**
+  String get evidenceGrossMargin;
+
+  /// No description provided for @evidenceOperatingMargin.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating margin'**
+  String get evidenceOperatingMargin;
+
+  /// No description provided for @evidenceOperatingMarginChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating margin over {years} years'**
+  String evidenceOperatingMarginChange(int years);
+
+  /// No description provided for @evidenceImpairment.
+  ///
+  /// In en, this message translates to:
+  /// **'Written down this year'**
+  String get evidenceImpairment;
+
+  /// No description provided for @evidenceOperatingMarginBeforeImpairment.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating margin before the write-down'**
+  String get evidenceOperatingMarginBeforeImpairment;
+
+  /// No description provided for @evidenceGrossMarginMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Gross profit is not tagged in this company\'s filings; the model reads it from the web.'**
+  String get evidenceGrossMarginMissing;
+
+  /// No description provided for @evidenceReturnOnEquity.
+  ///
+  /// In en, this message translates to:
+  /// **'Return on equity'**
+  String get evidenceReturnOnEquity;
+
+  /// No description provided for @evidenceShareCountChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Share count over {years} years'**
+  String evidenceShareCountChange(int years);
+
+  /// No description provided for @evidenceShareCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Share count'**
+  String get evidenceShareCount;
+
+  /// No description provided for @evidenceCapitalReturned.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash returned to owners'**
+  String get evidenceCapitalReturned;
+
+  /// No description provided for @evidenceStockPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid in shares'**
+  String get evidenceStockPay;
+
+  /// No description provided for @evidenceFreeCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Free cash flow'**
+  String get evidenceFreeCashFlow;
+
+  /// No description provided for @evidenceCashConversion.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating cash flow to profit'**
+  String get evidenceCashConversion;
+
+  /// No description provided for @evidenceNetDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Net debt'**
+  String get evidenceNetDebt;
+
+  /// No description provided for @evidenceNetCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Net cash'**
+  String get evidenceNetCash;
+
+  /// No description provided for @evidenceDebtPayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Years of free cash flow to repay'**
+  String get evidenceDebtPayback;
+
+  /// No description provided for @evidenceInterestCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Interest cover'**
+  String get evidenceInterestCover;
+
+  /// No description provided for @evidencePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price today'**
+  String get evidencePrice;
+
+  /// No description provided for @evidenceFairRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair range from the filings'**
+  String get evidenceFairRange;
+
+  /// No description provided for @evidenceToRangeLow.
+  ///
+  /// In en, this message translates to:
+  /// **'To the bottom of the range'**
+  String get evidenceToRangeLow;
+
+  /// No description provided for @evidenceNoPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'No price yet. The model looks one up; enter one on the valuation tab to judge it against the filings.'**
+  String get evidenceNoPrice;
+
+  /// No description provided for @evidenceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in the filings settles this one: it is a question of reading.'**
+  String get evidenceNone;
+
+  /// No description provided for @evidenceYearsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{years} yrs'**
+  String evidenceYearsValue(String years);
+
+  /// No description provided for @evidenceTimesValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{times}×'**
+  String evidenceTimesValue(String times);
+
+  /// No description provided for @evidencePointsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} pts'**
+  String evidencePointsValue(String points);
+
+  /// No description provided for @evidenceChartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'FY{year}: {value}'**
+  String evidenceChartHint(int year, String value);
+
+  /// No description provided for @researchFrameworkAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Run the seven questions'**
+  String get researchFrameworkAction;
+
+  /// No description provided for @researchFrameworkOneAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask again: {question}'**
+  String researchFrameworkOneAction(String question);
+
+  /// No description provided for @researchStatusStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Answering {done} of {total}…'**
+  String researchStatusStep(int done, int total);
 
   /// No description provided for @sectionValuation.
   ///

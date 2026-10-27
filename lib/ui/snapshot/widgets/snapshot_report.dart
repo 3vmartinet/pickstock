@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
@@ -16,6 +17,7 @@ import 'package:pickstock/ui/snapshot/widgets/company_insight_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/order_book_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
+import 'package:pickstock/ui/snapshot/widgets/framework/framework_section.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_order_toggle.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
@@ -96,7 +98,7 @@ class ReportTabBody extends StatelessWidget {
 
 /// The tab bar, under the company and above everything it applies to.
 ///
-/// `Tabs` with `expand`, so the two share whatever width there is. The
+/// `Tabs` with `expand`, so the four share whatever width there is. The
 /// underlined `TabList` sizes each tab to its own content instead, which ran
 /// past the right edge of a narrow window — unreachable, with nothing to say
 /// there was more. Filling the width also tells this control apart from the
@@ -139,6 +141,7 @@ class ReportTabs extends StatelessWidget {
                   ),
                   if (tab == ReportTab.valuation)
                     _VerdictMark(verdict: verdict),
+                  if (tab == ReportTab.framework) const _FrameworkMark(),
                 ],
               ),
             ),
@@ -180,6 +183,32 @@ class _VerdictMark extends StatelessWidget {
   }
 }
 
+/// The framework's outcome, after its tab's label.
+///
+/// Only once it is decided either way — seven yeses or a no — for the reason
+/// the valuation's mark waits for a price: a tab saying "not settled" beside
+/// three others quietly getting on with it is noise.
+class _FrameworkMark extends StatelessWidget {
+  const _FrameworkMark();
+
+  @override
+  Widget build(BuildContext context) {
+    final outcome = context.select<SnapshotViewModel, FrameworkOutcome>(
+      (viewModel) => viewModel.frameworkOutcome,
+    );
+    final isGood = switch (outcome) {
+      FrameworkOutcome.watchlist => true,
+      FrameworkOutcome.moveOn => false,
+      _ => null,
+    };
+    if (isGood == null) return const SizedBox.shrink();
+    return Icon(
+      isGood ? LucideIcons.circleCheck : LucideIcons.circleX,
+      color: _themeRepo.forOutcome(context.theme, isGood: isGood),
+    ).iconXSmall();
+  }
+}
+
 /// Whichever tab is open.
 class _TabBody extends StatelessWidget {
   const _TabBody();
@@ -208,6 +237,7 @@ class _TabBody extends StatelessWidget {
       // and was read by nobody.
       ReportTab.valuation => const <Widget>[_ValuationSection()],
       ReportTab.expectations => const <Widget>[_ExpectationsSection()],
+      ReportTab.framework => const <Widget>[FrameworkSection()],
     };
 
     // Keyed on the tab so switching replays the entrance instead of morphing

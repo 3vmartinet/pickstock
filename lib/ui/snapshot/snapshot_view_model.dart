@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
@@ -8,6 +9,7 @@ import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/period_figures.dart';
 import 'package:pickstock/data/research/company_event.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/quote/quote.dart';
@@ -15,8 +17,10 @@ import 'package:pickstock/data/valuation/growth_expectation.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/research/framework_prompts.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
+import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/data/valuation/discount_rate.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
@@ -389,6 +393,195 @@ class SnapshotViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  final Map<FrameworkQuestion, FrameworkAnswer> _frameworkAnswers = {};
+  final Map<FrameworkQuestion, List<SearchResult>> _frameworkSources = {};
+  final Map<FrameworkQuestion, DateTime> _frameworkGeneratedAt = {};
+  final Map<FrameworkQuestion, ResearchFailure> _frameworkFailures = {};
+
+  /// The answer to [question] on file for the company on screen, if any.
+  FrameworkAnswer? frameworkAnswer(FrameworkQuestion question) =>
+      _frameworkAnswers[question];
+
+  /// The pages read to reach it.
+  List<SearchResult> frameworkSources(FrameworkQuestion question) =>
+      _frameworkSources[question] ?? const [];
+
+  DateTime? frameworkGeneratedAt(FrameworkQuestion question) =>
+      _frameworkGeneratedAt[question];
+
+  ResearchFailure? frameworkFailure(FrameworkQuestion question) =>
+      _frameworkFailures[question];
+
+  /// Where [question] has got to, the queue's word first.
+  ///
+  /// Asked of every framework task still owed for this company, a full run and
+  /// a single question alike: a question is queued if one of them has yet to
+  /// reach it, and being answered if one is on it now. An answer already on
+  /// file stays readable while it is asked again — the card says both.
+  InsightState frameworkState(FrameworkQuestion question) {
+    final cik = snapshot?.company.cik;
+    if (cik != null) {
+      for (final task in _queue.activeFrameworkTasksFor(cik)) {
+        final position = task.frameworkQuestions.indexOf(question);
+        if (position < task.stepsDone) continue;
+        return task.currentFrameworkQuestion == question
+            ? InsightState.loading
+            : InsightState.queued;
+      }
+    }
+    if (_frameworkFailures.containsKey(question)) return InsightState.failed;
+    if (_frameworkAnswers.containsKey(question)) return InsightState.ready;
+    return InsightState.idle;
+  }
+
+  /// The run of all seven still owed for this company, for its progress.
+  ResearchTask? get frameworkRun {
+    final cik = snapshot?.company.cik;
+    if (cik == null) return null;
+    return _queue
+        .activeFrameworkTasksFor(cik)
+        .where((task) => task.frameworkQuestions.length > 1)
+        .firstOrNull;
+  }
+
+  /// Whether any of the seven is waiting or being answered.
+  bool get isFrameworkBusy => FrameworkQuestion.values.any((question) {
+    final state = frameworkState(question);
+    return state == InsightState.queued || state == InsightState.loading;
+  });
+
+  /// The framework's rule, applied to whatever has been answered.
+  FrameworkOutcome get frameworkOutcome => FrameworkOutcome.from([
+    for (final question in FrameworkQuestion.values)
+      ?_frameworkAnswers[question]?.verdict,
+  ]);
+
+  /// The questions answered no, in the framework's order: what the reader is
+  /// told to move on because of.
+  List<FrameworkQuestion> get frameworkNoes => [
+    for (final question in FrameworkQuestion.values)
+      if (_frameworkAnswers[question]?.verdict == FrameworkVerdict.no) question,
+  ];
+
+  /// How many of the seven came back as [verdict].
+  int frameworkCount(FrameworkVerdict verdict) => _frameworkAnswers.values
+      .where((answer) => answer.verdict == verdict)
+      .length;
+
+  /// When the oldest answer on file was read: a scorecard is only as current
+  /// as the stalest thing on it.
+  DateTime? get frameworkOldestAnswerAt => _frameworkGeneratedAt.values.isEmpty
+      ? null
+      : _frameworkGeneratedAt.values.reduce((a, b) => a.isBefore(b) ? a : b);
+
+  /// Puts the framework to the local model: all seven questions, or [only]
+  /// one of them again.
+  ///
+  /// One task in the queue either way, working through its questions in the
+  /// framework's order. Built here and held, like an insight's question, so
+  /// the prompts quote the figures on screen now rather than wherever the
+  /// reader has got to by the time the queue reaches them.
+  ///
+  /// Refused while any of the questions asked is already waiting or being
+  /// answered: a second copy would spend the machine to say the same thing.
+  void runFramework({FrameworkQuestion? only}) {
+    final current = snapshot;
+    if (current == null) return;
+    final questions = only == null ? FrameworkQuestion.values : [only];
+    final isBusy = questions.any((question) {
+      final state = frameworkState(question);
+      return state == InsightState.queued || state == InsightState.loading;
+    });
+    if (isBusy) return;
+
+    final prompts = FrameworkPrompts(snapshot: current, valuation: valuation);
+    final company = current.company;
+    final kind = frameworkKind(questions)!;
+    questions.forEach(_frameworkFailures.remove);
+
+    _queue.enqueue(
+      cik: company.cik,
+      ticker: company.ticker,
+      companyName: company.name,
+      insight: null,
+      frameworkQuestions: questions,
+      work: (isCancelled) =>
+          _screen(company, prompts, questions, kind, isCancelled),
+    );
+  }
+
+  /// Works through [questions] one after another, filing each answer as it
+  /// lands so the tab fills in while the rest are still being read.
+  ///
+  /// A question that fails does not stop the others — one page the model
+  /// could not read says nothing about the next question. A missing server,
+  /// model or key does: every question after it would fail the same way, and
+  /// each would take its own timeout to find out.
+  Future<void> _screen(
+    Company company,
+    FrameworkPrompts prompts,
+    List<FrameworkQuestion> questions,
+    String kind,
+    bool Function() isCancelled,
+  ) async {
+    Object? failure;
+    for (var step = 0; step < questions.length; step++) {
+      if (isCancelled()) return;
+      final question = questions[step];
+      try {
+        final reading = await _researchRepo.screen(
+          prompts,
+          question,
+          isCancelled: isCancelled,
+        );
+        if (reading == null || isCancelled()) return;
+        await _noteRepo.saveAnswer(
+          cik: company.cik,
+          kind: question.noteKind,
+          text: jsonEncode(reading.answer.toJson()),
+          sources: reading.sources,
+        );
+        if (_isOnScreen(company)) {
+          _frameworkAnswers[question] = reading.answer;
+          _frameworkSources[question] = reading.sources;
+          _frameworkGeneratedAt[question] = DateTime.now();
+          _frameworkFailures.remove(question);
+        }
+      } on ResearchException catch (error) {
+        logWarning(() => 'Framework ${question.name} failed: $error');
+        failure = error;
+        final remaining = error.failure == ResearchFailure.failed
+            ? [question]
+            : questions.sublist(step);
+        if (_isOnScreen(company)) {
+          for (final missed in remaining) {
+            _frameworkFailures[missed] = error.failure;
+          }
+        }
+        if (remaining.length > 1) {
+          // Marked done so the card says why rather than "queued" for ever.
+          _queue.setStepsDone(
+            cik: company.cik,
+            kind: kind,
+            done: questions.length,
+          );
+          rethrow;
+        }
+      } on Object catch (error) {
+        logSevere(() => 'Framework ${question.name} failed: $error');
+        failure = error;
+        if (_isOnScreen(company)) {
+          _frameworkFailures[question] = ResearchFailure.failed;
+        }
+      }
+      _queue.setStepsDone(cik: company.cik, kind: kind, done: step + 1);
+      notifyListeners();
+    }
+    // Told to the queue, so the row says something did not finish rather than
+    // claiming a full set of answers.
+    if (failure != null) throw failure;
+  }
+
   /// What the app already knows, handed over so the model comments on the
   /// company in front of the reader rather than on whatever shares its name.
   String _brief() {
@@ -500,9 +693,30 @@ class SnapshotViewModel extends ChangeNotifier {
         _insightGeneratedAt[insight] = note.generatedAt;
         _insightStates[insight] = InsightState.ready;
       }
+
+      for (final question in FrameworkQuestion.values) {
+        final note = await _noteRepo.noteFor(cik, question.noteKind);
+        if (generation != _requestGeneration) return;
+        final body = note?.text;
+        if (note == null || body == null) continue;
+        final answer = FrameworkAnswer.fromJson(_decoded(body));
+        if (answer == null) continue;
+        _frameworkAnswers[question] = answer;
+        _frameworkSources[question] = note.sources;
+        _frameworkGeneratedAt[question] = note.generatedAt;
+      }
       notifyListeners();
     } on Object catch (error) {
       logWarning(() => 'Could not read the notes for $cik: $error');
+    }
+  }
+
+  /// [body] as JSON, or `null` where it is not.
+  static Object? _decoded(String body) {
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      return null;
     }
   }
 
@@ -828,6 +1042,10 @@ class SnapshotViewModel extends ChangeNotifier {
       _insightAnswers.clear();
       _insightFailures.clear();
       _insightGeneratedAt.clear();
+      _frameworkAnswers.clear();
+      _frameworkSources.clear();
+      _frameworkGeneratedAt.clear();
+      _frameworkFailures.clear();
       _setState(SnapshotLoaded(snapshot));
       // Whatever a model has already said about this company, straight back on
       // screen: it cost a minute each to get and nothing about it has gone

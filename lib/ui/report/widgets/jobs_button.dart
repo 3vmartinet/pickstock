@@ -509,11 +509,24 @@ class _ResearchRow extends StatelessWidget {
 
   /// What was asked, in the words the card asked it with.
   static String _asked(ResearchTask task, AppLocalizations strings) =>
-      task.insight?.getAction(strings) ?? strings.researchNewsAction;
+      switch (task.frameworkQuestions) {
+        [] => task.insight?.getAction(strings) ?? strings.researchNewsAction,
+        [final only] => strings.researchFrameworkOneAction(
+          only.getLabel(strings),
+        ),
+        _ => strings.researchFrameworkAction,
+      };
 
   static String _status(ResearchTask task, AppLocalizations strings) =>
       switch (task.state) {
         ResearchTaskState.pending => strings.researchStatusQueued,
+        // A run of seven says how far through it is: several minutes of
+        // "searching and reading" with nothing moving looks stuck.
+        ResearchTaskState.running when task.frameworkQuestions.length > 1 =>
+          strings.researchStatusStep(
+            task.stepsDone + 1,
+            task.frameworkQuestions.length,
+          ),
         ResearchTaskState.running => strings.researchStatusRunning,
         ResearchTaskState.done => strings.researchStatusReady,
         ResearchTaskState.failed => strings.researchStatusFailed,

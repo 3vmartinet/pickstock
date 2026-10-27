@@ -275,6 +275,37 @@ class ThemeRepo {
   static const double headlineFigureHeight = 1.1;
   static const FontWeight headlineFigureWeight = FontWeight.w700;
 
+  /// The framework tab's scorecard: one numbered step per question.
+  static const double frameworkStepSize = 32;
+  static const double frameworkStepRing = 2;
+
+  /// The step's number, set heavier than the label under it.
+  static const FontWeight frameworkStepWeight = FontWeight.w700;
+
+  /// How much of the verdict colour tints a verdict pill or step.
+  static const double frameworkTint = 0.12;
+
+  /// The question number set beside each card's title, large and muted, so
+  /// seven cards in a column can be told apart by shape before they are read.
+  static const double frameworkNumberSize = 28;
+
+  /// Wide enough for the answer and the filings beside it; below this the
+  /// filings go under the answer.
+  static const double frameworkSideBySideMinWidth = 760;
+  static const int frameworkAnswerFlex = 3;
+  static const int frameworkEvidenceFlex = 2;
+
+  /// The small charts beside an answer. Short, because they are evidence for
+  /// a sentence, not the subject of the card.
+  static const double evidenceChartHeight = 88;
+  static const double evidenceBarRadius = 4;
+  static const double evidenceBarGap = 2;
+  static const double evidenceLineWidth = 2;
+  static const double evidenceMarkerSize = 8;
+  static const double evidenceMarkerRing = 2;
+  static const double evidenceLegendSwatch = 8;
+  static const double evidenceStatMinWidth = 120;
+
   ThemeData get lightTheme =>
       const ThemeData(colorScheme: ColorSchemes.lightSlate, radius: _radius);
 
@@ -325,6 +356,21 @@ class ThemeRepo {
   Color caution(ThemeData theme) => theme.brightness == Brightness.dark
       ? Colors.orange.shade400
       : Colors.orange.shade600;
+
+  /// The first series on an evidence chart, and the only one on most.
+  ///
+  /// Not the scheme's own chart colours: slate's dark pair puts its second
+  /// colour outside the lightness band a line needs against the background.
+  /// This pair was checked for colour-blind separation and contrast against
+  /// each mode's surface, and each keeps its meaning across the two modes.
+  Color chartPrimary(ThemeData theme) => theme.brightness == Brightness.dark
+      ? const Color(0xFF4F7FE0)
+      : const Color(0xFF2662D9);
+
+  /// The second series, where a chart has one.
+  Color chartSecondary(ThemeData theme) => theme.brightness == Brightness.dark
+      ? const Color(0xFFD9733F)
+      : const Color(0xFFC8572A);
 
   /// Colour for a figure the filings do not report.
   Color unknown(ThemeData theme) => theme.colorScheme.mutedForeground;
