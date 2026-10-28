@@ -79,8 +79,12 @@ enum UpdatePhase {
   /// Downloaded and waiting for the go-ahead to touch the database.
   staged,
 
-  /// The download did not finish. Nothing was written, so what is already
-  /// loaded is untouched.
+  /// Loading what was downloaded, behind a working app: into copies of the
+  /// tables, which take the live ones' place in one step when it finishes.
+  loading,
+
+  /// The download or the load did not finish. Neither writes to what is
+  /// already loaded until it has finished, so the figures are as they were.
   failed,
 }
 
@@ -232,6 +236,7 @@ class IngestViewModel extends ChangeNotifier {
   bool get _isBusy =>
       isRunning ||
       _updatePhase == UpdatePhase.downloading ||
+      _updatePhase == UpdatePhase.loading ||
       // A cancelled download is still running until it unwinds, and a second
       // one started on top would fight it for the same staging directory.
       _updatePhase == UpdatePhase.cancelling;
@@ -357,37 +362,50 @@ class IngestViewModel extends ChangeNotifier {
     _setUpdatePhase(isUpdateAvailable ? UpdatePhase.offered : UpdatePhase.none);
   }
 
-  /// Loads what [downloadUpdate] fetched, with the app blocked behind the
-  /// usual progress screen.
+  /// Loads what [downloadUpdate] fetched, with the app still in use.
   ///
-  /// Blocking is not a choice: the tables are cleared before they are
-  /// repopulated, so for the few minutes this takes there is nothing to show.
+  /// It used to shut the app for the four minutes it takes, because it began
+  /// by clearing the tables. It no longer touches them until the end: the
+  /// load fills copies, and the copies replace the live tables in a single
+  /// transaction once every company is in. Until then the reader is looking
+  /// at the figures they had; after it, at the new ones, all at once.
   Future<void> applyUpdate() async {
     final staged = _staged;
     if (staged == null || _isBusy) return;
     _beginRun();
-    // A placeholder until the first real report: reading the archive's index
-    // takes a moment, and the ring shows the database glyph until it arrives.
-    _setState(
-      const IngestActive(IngestLoading(companiesLoaded: 0, totalCompanies: 0)),
-    );
+    _updatePercent = null;
+    _setUpdatePhase(UpdatePhase.loading);
 
     try {
       await for (final progress in _bulkIngestRepo.load(staged)) {
         _trackProgress(progress);
-        _setState(IngestActive(progress));
+        _reportUpdatePercent(progress);
       }
       await _finishRun();
-      _setState(const IngestReady());
+      _dataRevision++;
+      notifyListeners();
     } on Object catch (error) {
       logSevere(() => 'Update load failed: $error');
-      // The archive may have been discarded with the failure, so the staged
-      // hand-off is no longer good; recovery is a full ingest from the gate.
-      _staged = null;
-      _updatePhase = UpdatePhase.failed;
-      _setState(const IngestFailed());
+      // Nothing to recover: the live tables were never written to. What is
+      // left to decide is whether the download survived the failure — it is
+      // kept unless the archive itself was the problem — and so whether
+      // trying again means loading again or downloading again.
+      _staged = await _bulkIngestRepo.readStaged();
+      _updatePercent = null;
+      _setUpdatePhase(UpdatePhase.failed);
     }
   }
+
+  /// Tries the step that failed again: the load, where the download it was
+  /// reading is still on disk, and the download otherwise.
+  Future<void> retryUpdate() =>
+      _staged == null ? downloadUpdate() : applyUpdate();
+
+  int _dataRevision = 0;
+
+  /// Bumped each time an update replaces the figures under a running app, so
+  /// whatever is showing figures read before it can read them again.
+  int get dataRevision => _dataRevision;
 
   /// How long [run] spent loading, or `null` for one recorded before that was
   /// measured.
@@ -468,7 +486,8 @@ class IngestViewModel extends ChangeNotifier {
   /// chunk, which is hundreds a second.
   void _reportUpdatePercent(IngestProgress progress) {
     final percent = switch (progress) {
-      IngestDownloading(:final fraction) =>
+      IngestDownloading(:final fraction) ||
+      IngestLoading(:final fraction) =>
         fraction == null ? null : (fraction * _percent).round(),
       // The other stages are too short, or too small, to be worth a figure.
       _ => null,

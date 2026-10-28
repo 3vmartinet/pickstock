@@ -1075,6 +1075,28 @@ class SnapshotViewModel extends ChangeNotifier {
     }
   }
 
+  /// Reads the open company's figures again, after an update has replaced
+  /// them under it.
+  ///
+  /// Quietly, unlike [search]: no loading state, nothing cleared. The reader
+  /// is in the middle of the report, and what a model said about the company
+  /// and the price they typed are still theirs — only the figures moved. If
+  /// they open another company while this is reading, theirs wins.
+  Future<void> reloadFigures() async {
+    final ticker = snapshot?.company.ticker;
+    if (ticker == null) return;
+    final generation = _requestGeneration;
+    try {
+      final fresh = await _secRepo.fetchSnapshot(ticker);
+      if (generation != _requestGeneration) return;
+      _setState(SnapshotLoaded(fresh));
+    } on SecException catch (error) {
+      // Gone from the new archive, most likely. What was on screen is still
+      // true of the archive it came from, so it stays.
+      logWarning(() => 'Could not reread $ticker after an update: $error');
+    }
+  }
+
   /// Re-runs the search that failed, from the error state's retry button.
   Future<void> retry() async {
     final current = _state;

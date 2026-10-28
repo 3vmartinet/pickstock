@@ -216,6 +216,9 @@ class _UpdateStatus extends StatelessWidget {
       UpdatePhase.downloading => strings.settingsStatusDownloading,
       UpdatePhase.cancelling => strings.settingsStatusCancelling,
       UpdatePhase.staged => strings.settingsStatusStaged,
+      UpdatePhase.loading when percent != null =>
+        strings.settingsStatusLoadingPercent(percent),
+      UpdatePhase.loading => strings.settingsStatusLoading,
       UpdatePhase.failed => strings.settingsStatusFailed,
     };
     if (status == null) return const SizedBox.shrink();

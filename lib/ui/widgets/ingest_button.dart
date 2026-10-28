@@ -3,7 +3,6 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
-import 'package:pickstock/ui/widgets/app_dialog.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:pickstock/ui/widgets/edge_progress.dart';
@@ -39,6 +38,7 @@ class IngestButton extends StatelessWidget {
       UpdatePhase.downloading => const _Downloading(),
       UpdatePhase.cancelling => const _Cancelling(),
       UpdatePhase.staged => const _Staged(),
+      UpdatePhase.loading => const _Loading(),
       UpdatePhase.failed => const _Failed(),
     };
   }
@@ -272,63 +272,51 @@ class _Staged extends StatelessWidget {
         hint: context.strings.updateReadyHint,
         leading: const Icon(LucideIcons.databaseZap),
         label: context.strings.updateReady,
-        onPressed: () => _confirmRefresh(context),
+        // Straight to it: nothing is shut while it runs, so there is no cost
+        // left to warn about — the confirmation that used to stand here was
+        // asking leave to lock the app for four minutes.
+        onPressed: context.read<IngestViewModel>().applyUpdate,
       ),
     );
   }
 }
 
-/// Asks before shutting the app for several minutes.
+/// The downloaded archive is being loaded into copies of the tables while the
+/// app goes on being used.
 ///
-/// The press is a decision with a cost, and the cost is knowable: the last
-/// load was timed, and the archive and the machine are much the same each
-/// time, so the dialog can say roughly how long rather than "a while".
-Future<void> _confirmRefresh(BuildContext context) async {
-  final viewModel = context.read<IngestViewModel>();
-  final taken = viewModel.lastLoadDuration;
+/// The download's own shape — the same arrows, the bar along the foot — so a
+/// refresh reads as one job in two steps, not two unrelated ones. No cancel
+/// beside it: there is nothing to undo, since nothing the reader sees changes
+/// until it finishes.
+class _Loading extends StatelessWidget {
+  const _Loading();
 
-  final confirmed = await showAppDialog<bool>(
-    context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(context.strings.updateConfirmTitle),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        spacing: ThemeRepo.spaceSmall,
-        children: [
-          Text(context.strings.updateConfirmBody),
-          Text(
-            taken == null
-                ? context.strings.updateConfirmUntimed
-                : context.strings.updateConfirmLast(_wholeMinutes(taken)),
-          ).muted().small(),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<IngestViewModel>();
+    final percent = viewModel.updatePercent;
+    final hint = context.strings.updateLoadingHint;
+
+    return EdgeProgress(
+      fraction: viewModel.updateFraction,
+      colour: context.theme.colorScheme.primaryForeground,
+      child: _ActionButton(
+        hint: percent == null
+            ? hint
+            : '$hint ${context.strings.updateLoadedPercent(percent)}',
+        leading: const Icon(LucideIcons.refreshCw)
+            .animate(onPlay: (controller) => controller.repeat())
+            .rotate(duration: ThemeRepo.updateSpinDuration),
+        label: context.strings.updateLoading,
+        onPressed: null,
       ),
-      actions: [
-        OutlineButton(
-          onPressed: () => closeAppDialog(dialogContext, false),
-          child: Text(context.strings.updateConfirmCancel),
-        ),
-        PrimaryButton(
-          onPressed: () => closeAppDialog(dialogContext, true),
-          child: Text(context.strings.updateConfirmStart),
-        ),
-      ],
-    ),
-  );
-
-  if (confirmed ?? false) await viewModel.applyUpdate();
+    );
+  }
 }
 
-/// [taken] in whole minutes, and never none of them: "about 0 minutes" says
-/// nothing, and no load has ever been that quick.
-int _wholeMinutes(Duration taken) {
-  final minutes = (taken.inSeconds / Duration.secondsPerMinute).round();
-  return minutes < 1 ? 1 : minutes;
-}
-
-/// The background download did not finish. Nothing was written, so this is an
-/// offer to try again rather than a problem to recover from.
+/// The download or the load did not finish. Neither touches the figures
+/// until it has, so this is an offer to try again rather than a problem to
+/// recover from.
 class _Failed extends StatelessWidget {
   const _Failed();
 
@@ -338,7 +326,7 @@ class _Failed extends StatelessWidget {
       hint: context.strings.updateFailedHint,
       leading: const Icon(LucideIcons.triangleAlert),
       label: context.strings.updateFailed,
-      onPressed: context.read<IngestViewModel>().downloadUpdate,
+      onPressed: context.read<IngestViewModel>().retryUpdate,
     );
   }
 }

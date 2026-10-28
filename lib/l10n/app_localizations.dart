@@ -325,7 +325,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateDownloadingHint.
   ///
   /// In en, this message translates to:
-  /// **'SEC\'s archive is downloading in the background. Carry on using the app — refreshing the database is a separate step, and you will be asked before it starts.'**
+  /// **'SEC\'s archive is downloading in the background. Carry on using the app — loading it into the database is a separate step, which waits for you to start it.'**
   String get updateDownloadingHint;
 
   /// No description provided for @updateDownloadedPercent.
@@ -364,46 +364,28 @@ abstract class AppLocalizations {
   /// **'Finish update'**
   String get updateReady;
 
-  /// No description provided for @updateConfirmTitle.
+  /// No description provided for @updateLoading.
   ///
   /// In en, this message translates to:
-  /// **'Refresh the database now?'**
-  String get updateConfirmTitle;
+  /// **'Updating data…'**
+  String get updateLoading;
 
-  /// No description provided for @updateConfirmBody.
+  /// No description provided for @updateLoadingHint.
   ///
   /// In en, this message translates to:
-  /// **'Every figure is replaced from the archive that has been downloaded, so PickStock cannot be used until it finishes. Leave the app open while it runs.'**
-  String get updateConfirmBody;
+  /// **'The new archive is loading in the background. Carry on using the app: your figures stay as they are until every company is in, then switch over at once.'**
+  String get updateLoadingHint;
 
-  /// No description provided for @updateConfirmLast.
+  /// No description provided for @updateLoadedPercent.
   ///
   /// In en, this message translates to:
-  /// **'Last time this took {minutes, plural, =1{about a minute} other{about {minutes} minutes}}.'**
-  String updateConfirmLast(int minutes);
-
-  /// No description provided for @updateConfirmUntimed.
-  ///
-  /// In en, this message translates to:
-  /// **'It usually takes a few minutes. Nothing has been timed on this machine yet, so that is a guess rather than a measurement.'**
-  String get updateConfirmUntimed;
-
-  /// No description provided for @updateConfirmStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Refresh now'**
-  String get updateConfirmStart;
-
-  /// No description provided for @updateConfirmCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Not now'**
-  String get updateConfirmCancel;
+  /// **'{percent}% loaded.'**
+  String updateLoadedPercent(int percent);
 
   /// No description provided for @updateReadyHint.
   ///
   /// In en, this message translates to:
-  /// **'The download is complete. Refreshing the database takes a few minutes and the app cannot be used while it runs, so nothing starts until you say so.'**
+  /// **'The download is complete. Press to load it: it takes a few minutes in the background, and the app stays usable throughout.'**
   String get updateReadyHint;
 
   /// No description provided for @updateFailed.
@@ -415,7 +397,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateFailedHint.
   ///
   /// In en, this message translates to:
-  /// **'The download did not finish and nothing was changed — your figures are as they were. Press to try again.'**
+  /// **'The update did not finish and nothing was changed — your figures are as they were. Press to try again.'**
   String get updateFailedHint;
 
   /// No description provided for @ingestWarnLeave.
@@ -1621,7 +1603,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoDownloadDescription.
   ///
   /// In en, this message translates to:
-  /// **'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it still waits for you, because the app is unavailable while it loads.'**
+  /// **'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it into the app still waits for yours.'**
   String get settingsAutoDownloadDescription;
 
   /// No description provided for @settingsStatusCurrent.
@@ -1657,8 +1639,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsStatusStaged.
   ///
   /// In en, this message translates to:
-  /// **'The update is downloaded and waiting to be loaded from the app bar.'**
+  /// **'The update is downloaded and waiting to be loaded from the app bar. The app stays usable while it loads.'**
   String get settingsStatusStaged;
+
+  /// No description provided for @settingsStatusLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the update in the background.'**
+  String get settingsStatusLoading;
+
+  /// No description provided for @settingsStatusLoadingPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the update in the background: {percent}%.'**
+  String settingsStatusLoadingPercent(int percent);
 
   /// No description provided for @settingsStatusFailed.
   ///

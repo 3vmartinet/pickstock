@@ -172,7 +172,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateDownloadingHint =>
-      'SEC\'s archive is downloading in the background. Carry on using the app — refreshing the database is a separate step, and you will be asked before it starts.';
+      'SEC\'s archive is downloading in the background. Carry on using the app — loading it into the database is a separate step, which waits for you to start it.';
 
   @override
   String updateDownloadedPercent(int percent) {
@@ -197,43 +197,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateReady => 'Finish update';
 
   @override
-  String get updateConfirmTitle => 'Refresh the database now?';
+  String get updateLoading => 'Updating data…';
 
   @override
-  String get updateConfirmBody =>
-      'Every figure is replaced from the archive that has been downloaded, so PickStock cannot be used until it finishes. Leave the app open while it runs.';
+  String get updateLoadingHint =>
+      'The new archive is loading in the background. Carry on using the app: your figures stay as they are until every company is in, then switch over at once.';
 
   @override
-  String updateConfirmLast(int minutes) {
-    String _temp0 = intl.Intl.pluralLogic(
-      minutes,
-      locale: localeName,
-      other: 'about $minutes minutes',
-      one: 'about a minute',
-    );
-    return 'Last time this took $_temp0.';
+  String updateLoadedPercent(int percent) {
+    return '$percent% loaded.';
   }
 
   @override
-  String get updateConfirmUntimed =>
-      'It usually takes a few minutes. Nothing has been timed on this machine yet, so that is a guess rather than a measurement.';
-
-  @override
-  String get updateConfirmStart => 'Refresh now';
-
-  @override
-  String get updateConfirmCancel => 'Not now';
-
-  @override
   String get updateReadyHint =>
-      'The download is complete. Refreshing the database takes a few minutes and the app cannot be used while it runs, so nothing starts until you say so.';
+      'The download is complete. Press to load it: it takes a few minutes in the background, and the app stays usable throughout.';
 
   @override
   String get updateFailed => 'Update failed';
 
   @override
   String get updateFailedHint =>
-      'The download did not finish and nothing was changed — your figures are as they were. Press to try again.';
+      'The update did not finish and nothing was changed — your figures are as they were. Press to try again.';
 
   @override
   String get ingestWarnLeave => 'This takes a few minutes. Leave the app open.';
@@ -1101,7 +1085,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadDescription =>
-      'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it still waits for you, because the app is unavailable while it loads.';
+      'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it into the app still waits for yours.';
 
   @override
   String settingsStatusCurrent(String date) {
@@ -1127,7 +1111,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsStatusStaged =>
-      'The update is downloaded and waiting to be loaded from the app bar.';
+      'The update is downloaded and waiting to be loaded from the app bar. The app stays usable while it loads.';
+
+  @override
+  String get settingsStatusLoading => 'Loading the update in the background.';
+
+  @override
+  String settingsStatusLoadingPercent(int percent) {
+    return 'Loading the update in the background: $percent%.';
+  }
 
   @override
   String get settingsStatusFailed =>

@@ -124,50 +124,25 @@ void main() {
     );
   });
 
-  testWidgets('asks before it shuts the app, and says for how long', (
+  testWidgets('loads on the press, without asking leave to shut the app', (
     tester,
   ) async {
     final ingest = FakeBulkIngestRepo()
       ..staged = fakeStagedIngest(testNewerArchiveDate);
-    database = await registerTestDependencies(
-      bulkIngestRepo: ingest,
-      // What the last database step took, rounded to seven minutes.
-      lastLoadDuration: const Duration(minutes: 6, seconds: 50),
-    );
-    await openApp(tester);
-
-    await tester.tap(find.text('Finish update'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Refresh the database now?'), findsOneWidget);
-    // Measured, not guessed: the last run was timed, and the archive and the
-    // machine are much the same again.
-    expect(find.text('Last time this took about 7 minutes.'), findsOneWidget);
-
-    // And backing out leaves the app exactly as it was.
-    await tester.tap(find.text('Not now'));
-    await tester.pumpAndSettle();
-    expect(find.text('PickStock'), findsOneWidget);
-    expect(find.text('Finish update'), findsOneWidget);
-    expect(find.text('Preparing your data'), findsNothing);
-  });
-
-  testWidgets('owns up to guessing when nothing has been timed', (
-    tester,
-  ) async {
-    final ingest = FakeBulkIngestRepo()
-      ..staged = fakeStagedIngest(testNewerArchiveDate);
-    // An install from before the load was timed has nothing to quote.
     database = await registerTestDependencies(bulkIngestRepo: ingest);
     await openApp(tester);
 
     await tester.tap(find.text('Finish update'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
-    expect(
-      find.textContaining('Nothing has been timed on this machine yet'),
-      findsOneWidget,
-    );
+    // It no longer shuts anything, so there is no cost left to warn about.
+    expect(find.text('Refresh the database now?'), findsNothing);
+    expect(find.text('Updating data…'), findsOneWidget);
+    expect(ingest.loads, 1);
+
+    ingest.finishLoad.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('clears out a staged download the database has already had', (
@@ -200,10 +175,7 @@ void main() {
     database = await registerTestDependencies(bulkIngestRepo: ingest);
     await openApp(tester);
 
-    // The database step asks before it shuts the app for minutes.
     await tester.tap(find.text('Finish update'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Refresh now'));
     await tester.pump();
 
     ingest.finishLoad.complete();

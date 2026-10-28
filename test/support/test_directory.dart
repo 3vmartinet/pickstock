@@ -209,10 +209,18 @@ class FakeBulkIngestRepo extends BulkIngestRepo {
     }
   }
 
+  /// How many loads were started, so a test can see a retry happen.
+  int loads = 0;
+
+  /// Thrown by a load once it is let go, standing in for one that failed.
+  Object? loadError;
+
   @override
   Stream<IngestProgress> load(StagedIngest staged) async* {
+    loads++;
     yield const IngestLoading(companiesLoaded: 0, totalCompanies: 2);
     await finishLoad.future;
+    if (loadError case final error?) throw error;
     // What the real load leaves behind, and what tells the app the archive it
     // holds is now the newest one.
     await GetIt.I.get<AppDatabase>().recordIngest(

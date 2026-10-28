@@ -13,15 +13,12 @@ const Size _desktopSize = Size(1440, 1000);
 /// a test must not leave pending.
 const Duration _animationStart = Duration(milliseconds: 50);
 
-/// Presses "Finish update" and says yes to the confirmation behind it.
-///
-/// The database step shuts the app for minutes, so it asks first.
-Future<void> confirmFinishUpdate(WidgetTester tester) async {
+/// Presses "Finish update", which starts the load straight away: it no
+/// longer shuts the app, so there is nothing to confirm.
+Future<void> finishUpdate(WidgetTester tester) async {
   await tester.tap(find.text('Finish update'));
-  await tester.pumpAndSettle();
-  expect(find.text('Refresh the database now?'), findsOneWidget);
-  await tester.tap(find.text('Refresh now'));
   await tester.pump();
+  await tester.pump(_animationStart);
 }
 
 void main() {
@@ -175,7 +172,7 @@ void main() {
     expect(find.text('Stopping update…'), findsNothing);
   });
 
-  testWidgets('waits to be told before it touches the database', (
+  testWidgets('waits to be told, then loads behind a working app', (
     tester,
   ) async {
     final ingest = FakeBulkIngestRepo();
@@ -188,24 +185,25 @@ void main() {
     ingest.finishDownload.complete();
     await tester.pump();
 
-    // Everything is downloaded and the app is still usable: the step that
-    // clears the tables is a decision, not a consequence.
+    // Everything is downloaded and the app is still usable: loading it is
+    // still a decision, not a consequence.
     expect(find.text('Finish update'), findsOneWidget);
     expect(find.text('PickStock'), findsOneWidget);
+    expect(ingest.loads, 0);
 
-    await confirmFinishUpdate(tester);
-    // Enough for flutter_animate's start timers; the panel's pulse repeats
-    // forever, so settling is not an option.
-    await tester.pump(const Duration(milliseconds: 500));
+    await finishUpdate(tester);
 
-    // Now the app has to go: the tables are cleared before they are
-    // repopulated, so there is nothing behind the panel to use.
-    expect(find.text('PickStock'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
-    expect(find.text('Preparing your data'), findsOneWidget);
+    // And the app stays: the load fills copies of the tables and swaps them
+    // in at the end, so there is never a moment with nothing to show.
+    expect(ingest.loads, 1);
+    expect(find.text('Updating data…'), findsOneWidget);
+    expect(find.text('PickStock'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Preparing your data'), findsNothing);
+    expect(find.text('Refresh the database now?'), findsNothing);
   });
 
-  testWidgets('lets the app back in, with nothing left on offer', (
+  testWidgets('switches over when it finishes, with nothing left on offer', (
     tester,
   ) async {
     final ingest = FakeBulkIngestRepo();
@@ -217,18 +215,45 @@ void main() {
     await tester.pump(_animationStart);
     ingest.finishDownload.complete();
     await tester.pump();
-    await confirmFinishUpdate(tester);
-    await tester.pump(_animationStart);
+    await finishUpdate(tester);
 
     ingest.finishLoad.complete();
-    // The directory is re-read and the ingest row looked up before the gate
-    // opens, so the app comes back a few turns of the loop later. Settling is
-    // an option again here: the panel with the repeating pulse has gone.
+    // The directory is re-read and the ingest row looked up once the swap is
+    // in, a few turns of the loop later; the spinning arrows stop with it.
     await tester.pumpAndSettle();
 
     expect(find.text('PickStock'), findsOneWidget);
     // The archive just loaded is the newest one, so the button goes away.
+    expect(find.text('Updating data…'), findsNothing);
     expect(find.text('Update available'), findsNothing);
     expect(find.text('Finish update'), findsNothing);
+  });
+
+  testWidgets('a load that fails leaves the figures and offers another go', (
+    tester,
+  ) async {
+    final ingest = FakeBulkIngestRepo()
+      ..staged = fakeStagedIngest(testNewerArchiveDate)
+      ..loadError = StateError('the disk filled up');
+    database = await registerTestDependencies(bulkIngestRepo: ingest);
+    await pumpApp(tester);
+
+    await finishUpdate(tester);
+    ingest.finishLoad.complete();
+    await tester.pumpAndSettle();
+
+    // Nothing to recover from: the app never left, and what it shows is what
+    // it showed before the press.
+    expect(find.text('PickStock'), findsOneWidget);
+    expect(find.text('Preparing your data'), findsNothing);
+    expect(find.text('Update failed'), findsOneWidget);
+
+    // The download is still on disk, so trying again loads again rather than
+    // fetching 1.4 GB a second time.
+    ingest.loadError = null;
+    await tester.tap(find.text('Update failed'));
+    await tester.pumpAndSettle();
+    expect(ingest.loads, 2);
+    expect(find.text('Update failed'), findsNothing);
   });
 }

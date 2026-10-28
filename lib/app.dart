@@ -71,9 +71,17 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
   /// second copy on the first.
   bool _isSettingsOpen = false;
 
+  /// The update the screens below were last brought up to date with.
+  int _dataRevision = 0;
+
+  late final IngestViewModel _ingest = context.read<IngestViewModel>();
+
   @override
   void initState() {
     super.initState();
+    // Here rather than in a screen: an update lands whichever screen is up,
+    // and the list and the report both outlive the screens that show them.
+    _ingest.addListener(_onIngestChanged);
     appMenuChannel.setMethodCallHandler((call) async {
       // Not awaited: the dialog's future ends when it is closed, and the
       // menu's call would be left unanswered for as long as it is open.
@@ -84,7 +92,22 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
   @override
   void dispose() {
     appMenuChannel.setMethodCallHandler(null);
+    _ingest.removeListener(_onIngestChanged);
     super.dispose();
+  }
+
+  /// Brings what is on screen up to the figures an update has just swapped
+  /// in.
+  ///
+  /// The blocking load used to do this by accident — shutting the app tore
+  /// every screen down and built it again. Loaded in the background, the
+  /// screens stay up, so the list and the open report are told instead.
+  void _onIngestChanged() {
+    final revision = _ingest.dataRevision;
+    if (revision == _dataRevision) return;
+    _dataRevision = revision;
+    context.read<BrowseViewModel>().ensureCurrent();
+    unawaited(context.read<SnapshotViewModel>().reloadFigures());
   }
 
   Future<void> _openSettings() async {

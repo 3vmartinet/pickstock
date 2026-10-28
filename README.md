@@ -100,9 +100,38 @@ visible refresh invites a pointless 1.4 GB download. With *Download updates
 automatically* on (the default — see [Settings](#settings)) that download
 starts by itself and the button goes straight to offering the load.
 
-The download is a **blocking full-screen step** — there is no ticker directory
-to search and no figures to report without it, and a refresh clears the tables
-before repopulating them, so the gate blocks then too.
+The first download is a **blocking full-screen step** — there is no ticker
+directory to search and no figures to report without it.
+
+**A refresh never blocks.** Both of its steps run behind a working app: the
+download touches no table, and the load fills *copies* of the four tables it
+replaces — `tickers_next`, `companies_next`, `fiscal_years_next`,
+`fiscal_quarters_next` — which take the live tables' place in one transaction
+when every company is in. Until then the app reads the figures it had; after
+it, the new ones, all at once; never a mixture and never nothing. The load
+used to shut the app because it began by clearing the tables, which it never
+needed to: of its four minutes, writing the rows takes under a second and the
+rest is parsing 19 GB of JSON on background isolates. Measured on a full
+database, filling the copies and swapping them in took 388 ms.
+
+Why copies inside the same file, rather than a second database swapped in
+whole, or rows updated in place:
+
+| | A/B database files | **Shadow tables** (chosen) | In-place updates |
+| --- | --- | --- | --- |
+| Mid-load reads | Old data | Old data, consistent | A mix of two archives |
+| Switch-over | Reopen the connection | One transaction | None — it drifts for minutes |
+| Failure | Old file intact | Copies dropped, data intact | Half-updated, no rollback |
+| Lists, notes, prices, settings | Share the file: split or copy | Untouched | Untouched |
+
+The copies are made from the live tables' own definitions, so a migration's new
+column is in them without anyone remembering; their foreign keys point at
+`companies_next`, or a company new in the archive would be refused, and the
+rename points them back. A load that fails drops its copies and leaves the
+download staged, so *Update failed* loads again rather than fetching 1.4 GB a
+second time; copies left by a load the app was closed during are dropped at the
+next start. When the swap lands, the list and the open report re-read their
+figures quietly, keeping what a model said and the price that was typed.
 
 The panel shows a large progress ring with the percentage counting up, the four
 stages as a live timeline (ticked when done, pulsing when running, dimmed until
@@ -425,7 +454,7 @@ pressable.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Download updates automatically | On | When the launch check finds SEC has rebuilt the archive, the 1.4 GB download starts in the background with no press. Loading it still waits for one, because loading shuts the app for minutes. A download an earlier session left staged is not fetched again, and a failed one is not retried behind your back. Turning it on with an update already offered starts that download at once. |
+| Download updates automatically | On | When the launch check finds SEC has rebuilt the archive, the 1.4 GB download starts in the background with no press. Loading it still waits for one — it runs in the background too, but replaces every figure, so it is yours to start. A download an earlier session left staged is not fetched again, and a failed one is not retried behind your back. Turning it on with an update already offered starts that download at once. |
 
 Stored like the others, as a row in `settings` — only when turned off, so the
 default is the absence of one.
