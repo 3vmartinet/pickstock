@@ -35,6 +35,9 @@ part 'app_database.g.dart';
 /// collapsed.
 const int extractorVersion = 12;
 
+/// What an ingested table's copy is called while a load fills it.
+const String _shadowSuffix = '_next';
+
 /// The starred list is seeded rather than special-cased, so it needs a name
 /// before the localisations exist. Renaming it is allowed; it is a list.
 const String defaultWatchlistName = 'Favourites';
@@ -523,6 +526,9 @@ class AppDatabase extends _$AppDatabase {
       // list would leave its entries behind for ever.
       await customStatement('PRAGMA foreign_keys = ON');
       if (details.wasCreated) await _seedDefaultWatchlist();
+      // A load the app was closed in the middle of: its half-filled copies
+      // are no use to anyone, and the archive it was reading is still staged.
+      await dropShadowTables();
     },
   );
 
@@ -985,6 +991,137 @@ class AppDatabase extends _$AppDatabase {
   /// Forgets the price entered for [cik].
   Future<void> clearPrice(String cik) {
     return (delete(sharePrices)..where((row) => row.cik.equals(cik))).go();
+  }
+
+  /// The tables an ingest replaces, parents before children: the order they
+  /// are filled and renamed in. Everything else in the database — lists,
+  /// notes, prices, settings — belongs to the reader and is never touched.
+  List<TableInfo<Table, Object?>> get ingestedTables => [
+    tickers,
+    companies,
+    fiscalYears,
+    fiscalQuarters,
+  ];
+
+  /// What a shadow copy of [table] is called while a load fills it.
+  static String shadowNameOf(TableInfo<Table, Object?> table) =>
+      '${table.actualTableName}$_shadowSuffix';
+
+  /// Creates an empty copy of every ingested table for a load to fill while
+  /// the live ones go on being read.
+  ///
+  /// Copied from the live tables' own definitions, so a column a migration
+  /// added is in the copy without anyone remembering to add it there. The
+  /// foreign keys are pointed at the copies too: a company new in this archive
+  /// is not in the live `companies`, and checked against it, its years would
+  /// be refused.
+  ///
+  /// The tables carry no indexes beyond their primary keys, which come with
+  /// the definition. One added later would have to be made here as well —
+  /// a test fails if one appears.
+  Future<void> createShadowTables() async {
+    await dropShadowTables();
+    final names = [for (final table in ingestedTables) table.actualTableName];
+    final references = RegExp(
+      'REFERENCES "?(${names.join('|')})"?(\\s*\\()',
+    );
+    for (final table in ingestedTables) {
+      final name = table.actualTableName;
+      final definition = await customSelect(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?",
+        variables: [Variable(name)],
+      ).getSingle();
+      final shadow = definition
+          .read<String>('sql')
+          .replaceFirst(
+            RegExp('^CREATE TABLE (IF NOT EXISTS )?"?$name"?'),
+            'CREATE TABLE "${shadowNameOf(table)}"',
+          )
+          .replaceAllMapped(
+            references,
+            (match) => 'REFERENCES "${match[1]}$_shadowSuffix"${match[2]}',
+          );
+      await customStatement(shadow);
+    }
+  }
+
+  /// Queues [rows] for [table]'s shadow copy, as `insertAll` would for the
+  /// table itself.
+  ///
+  /// By hand because drift's generated inserts name the live table and have
+  /// no way to be pointed at another. Each row's values go through drift's
+  /// own conversion, so a date is stored exactly as an insert into the live
+  /// table would have stored it.
+  void insertIntoShadow<T extends Table, D>(
+    Batch batch,
+    TableInfo<T, D> table,
+    Iterable<Insertable<D>> rows,
+  ) {
+    final context = GenerationContext.fromDb(this);
+    final into = shadowNameOf(table);
+    for (final row in rows) {
+      final columns = row.toColumns(true);
+      final names = columns.keys.toList();
+      batch.customStatement(
+        'INSERT OR REPLACE INTO "$into" '
+        '(${names.map((name) => '"$name"').join(', ')}) '
+        'VALUES (${List.filled(names.length, '?').join(', ')})',
+        [
+          for (final name in names)
+            switch (columns[name]) {
+              final Variable<Object> variable => variable.mapToSimpleValue(
+                context,
+              ),
+              final other => throw ArgumentError(
+                'Cannot copy $other into $into',
+              ),
+            },
+        ],
+      );
+    }
+  }
+
+  /// Puts the filled shadow copies in place of the live tables and records
+  /// the ingest, in one transaction.
+  ///
+  /// Readers see the old figures or the new, never a mixture and never none:
+  /// SQLite commits the whole swap or none of it. It is a handful of drops
+  /// and renames — 80 ms against a full database — so the app's own queries
+  /// queue behind it for no time anyone would notice. Renaming
+  /// `companies_next` rewrites the children's references to it, so the
+  /// foreign keys end up pointing where they always did.
+  Future<void> swapInShadowTables({
+    required int companyCount,
+    DateTime? archiveLastModified,
+    Duration? loadDuration,
+  }) async {
+    await transaction(() async {
+      for (final table in ingestedTables.reversed) {
+        await customStatement('DROP TABLE "${table.actualTableName}"');
+      }
+      for (final table in ingestedTables) {
+        await customStatement(
+          'ALTER TABLE "${shadowNameOf(table)}" '
+          'RENAME TO "${table.actualTableName}"',
+        );
+      }
+      await recordIngest(
+        companyCount,
+        archiveLastModified: archiveLastModified,
+        loadDuration: loadDuration,
+      );
+    });
+    // Behind drift's back, so it has to be told: anything watching these
+    // tables would otherwise go on showing the rows that were just dropped.
+    markTablesUpdated(ingestedTables);
+  }
+
+  /// Drops whatever shadow copies exist: a load that failed, or one the app
+  /// was closed during.
+  Future<void> dropShadowTables() async {
+    for (final table in ingestedTables.reversed) {
+      await customStatement('DROP TABLE IF EXISTS "${shadowNameOf(table)}"');
+    }
   }
 
   Future<void> clearFinancials() async {

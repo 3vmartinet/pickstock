@@ -1057,80 +1057,97 @@ class BulkIngestRepo {
       await staged.sectorsFile.readAsString(),
     );
 
-    await _database.clearFinancials();
-    await _database.batch(
-      (batch) => batch.insertAll(_database.tickers, directory),
-    );
-
-    // Entry names come from the archive's central directory, so the work can
-    // be counted — and non-filer entries skipped — before anything is
-    // decompressed.
-    final filerEntries = _filerEntryIndices(archiveFile);
-    if (filerEntries.isEmpty) {
-      // A truncated or corrupt download decodes to an empty archive rather
-      // than throwing, so without this the ingest would be recorded as a
-      // success and the app would open onto an empty database.
-      throw const FormatException('The archive contained no filer payloads');
-    }
-
-    final total = filerEntries.length;
-    yield IngestLoading(companiesLoaded: 0, totalCompanies: total);
-
-    // Timed from here, where the work that keeps the app shut actually starts,
-    // so the next refresh can say how long that will be.
-    final startedAt = DateTime.now();
-
-    final slices = <List<int>>[
-      for (var start = 0; start < total; start += _sliceSize)
-        filerEntries.sublist(start, math.min(start + _sliceSize, total)),
-    ];
-    // Never more workers than there is work: an archive of two filers in a
-    // test spawns one reader, not four.
-    final workers = math.min(parseWorkers ?? parseWorkerCount(), slices.length);
-
-    // `loaded` counts entries worked through, which is what the bar measures;
-    // `stored` counts filers that actually yielded figures, which is what the
-    // database holds and what the user is told at the end.
-    var loaded = 0;
-    var stored = 0;
-    // Split out because it decides where any further work belongs: if writing
-    // is most of the load then parsing wider will not help again.
-    var writing = Duration.zero;
-
-    // Off the isolate drawing the app: 19 GB of JSON takes minutes to decode,
-    // and doing it here would freeze the progress bar reporting it.
-    final pool = await _ParsePool.open(archiveFile.path, workers);
+    // Into copies, not the live tables: the app goes on reading those for the
+    // four minutes this takes, and they are swapped for the copies in one
+    // transaction at the end. Clearing them first was what made the load
+    // shut the app — for nothing, since writing all of it takes under a
+    // second; the minutes are parsing, which never needed the tables at all.
+    await _database.createShadowTables();
+    var isSwapped = false;
     try {
-      await for (final slice in pool.parse(slices)) {
-        final writeStarted = DateTime.now();
-        await _insert(slice.companies, sicByCik);
-        writing += DateTime.now().difference(writeStarted);
+      await _database.batch(
+        (batch) =>
+            _database.insertIntoShadow(batch, _database.tickers, directory),
+      );
 
-        loaded += slice.entryCount;
-        stored += slice.companies.length;
-        yield IngestLoading(companiesLoaded: loaded, totalCompanies: total);
+      // Entry names come from the archive's central directory, so the work can
+      // be counted — and non-filer entries skipped — before anything is
+      // decompressed.
+      final filerEntries = _filerEntryIndices(archiveFile);
+      if (filerEntries.isEmpty) {
+        // A truncated or corrupt download decodes to an empty archive rather
+        // than throwing, so without this the ingest would be recorded as a
+        // success and the app would open onto an empty database.
+        throw const FormatException('The archive contained no filer payloads');
       }
+
+      final total = filerEntries.length;
+      yield IngestLoading(companiesLoaded: 0, totalCompanies: total);
+
+      // Timed from here, where the work that keeps the app shut actually starts,
+      // so the next refresh can say how long that will be.
+      final startedAt = DateTime.now();
+
+      final slices = <List<int>>[
+        for (var start = 0; start < total; start += _sliceSize)
+          filerEntries.sublist(start, math.min(start + _sliceSize, total)),
+      ];
+      // Never more workers than there is work: an archive of two filers in a
+      // test spawns one reader, not four.
+      final workers = math.min(
+        parseWorkers ?? parseWorkerCount(),
+        slices.length,
+      );
+
+      // `loaded` counts entries worked through, which is what the bar measures;
+      // `stored` counts filers that actually yielded figures, which is what the
+      // database holds and what the user is told at the end.
+      var loaded = 0;
+      var stored = 0;
+      // Split out because it decides where any further work belongs: if writing
+      // is most of the load then parsing wider will not help again.
+      var writing = Duration.zero;
+
+      // Off the isolate drawing the app: 19 GB of JSON takes minutes to decode,
+      // and doing it here would freeze the progress bar reporting it.
+      final pool = await _ParsePool.open(archiveFile.path, workers);
+      try {
+        await for (final slice in pool.parse(slices)) {
+          final writeStarted = DateTime.now();
+          await _insert(slice.companies, sicByCik);
+          writing += DateTime.now().difference(writeStarted);
+
+          loaded += slice.entryCount;
+          stored += slice.companies.length;
+          yield IngestLoading(companiesLoaded: loaded, totalCompanies: total);
+        }
+      } finally {
+        await pool.close();
+      }
+
+      if (stored == 0) {
+        throw const FormatException('No filer in the archive could be parsed');
+      }
+
+      final took = DateTime.now().difference(startedAt);
+      await _database.swapInShadowTables(
+        companyCount: stored,
+        archiveLastModified: staged.archiveLastModified,
+        loadDuration: took,
+      );
+      isSwapped = true;
+      logInfo(
+        () =>
+            'Ingested $stored companies from $total entries in ${took.inSeconds}s '
+            'across $workers workers, ${writing.inSeconds}s of it writing '
+            '${slices.length} batches',
+      );
+      yield IngestDone(companyCount: stored);
     } finally {
-      await pool.close();
+      // Failed, or abandoned: the live tables were never touched, and the
+      // half-filled copies go.
+      if (!isSwapped) await _database.dropShadowTables();
     }
-
-    if (stored == 0) {
-      throw const FormatException('No filer in the archive could be parsed');
-    }
-
-    final took = DateTime.now().difference(startedAt);
-    await _database.recordIngest(
-      stored,
-      archiveLastModified: staged.archiveLastModified,
-      loadDuration: took,
-    );
-    logInfo(
-      () =>
-          'Ingested $stored companies from $total entries in ${took.inSeconds}s '
-          'across $workers workers, ${writing.inSeconds}s of it writing '
-          '${slices.length} batches',
-    );
-    yield IngestDone(companyCount: stored);
   }
 
   /// Indices of the `CIK…json` entries, read from entry names alone.
@@ -1158,7 +1175,7 @@ class BulkIngestRepo {
   ) async {
     if (parsed.isEmpty) return;
     await _database.batch((batch) {
-      batch.insertAll(_database.companies, [
+      _database.insertIntoShadow(batch, _database.companies, [
         for (final company in parsed)
           CompaniesCompanion.insert(
             cik: company.cik,
@@ -1167,8 +1184,8 @@ class BulkIngestRepo {
             sharesOutstanding: Value(company.sharesOutstanding),
             sharesLastFiled: Value(company.sharesLastFiled),
           ),
-      ], mode: InsertMode.insertOrReplace);
-      batch.insertAll(_database.fiscalYears, [
+      ]);
+      _database.insertIntoShadow(batch, _database.fiscalYears, [
         for (final company in parsed)
           for (final year in company.years)
             FiscalYearsCompanion.insert(
@@ -1195,8 +1212,8 @@ class BulkIngestRepo {
               grossProfit: Value(year.grossProfit),
               impairment: Value(year.impairment),
             ),
-      ], mode: InsertMode.insertOrReplace);
-      batch.insertAll(_database.fiscalQuarters, [
+      ]);
+      _database.insertIntoShadow(batch, _database.fiscalQuarters, [
         for (final company in parsed)
           for (final quarter in company.quarters)
             FiscalQuartersCompanion.insert(
@@ -1210,7 +1227,7 @@ class BulkIngestRepo {
               totalDebt: Value(quarter.totalDebt),
               cash: Value(quarter.cash),
             ),
-      ], mode: InsertMode.insertOrReplace);
+      ]);
     });
   }
 }
