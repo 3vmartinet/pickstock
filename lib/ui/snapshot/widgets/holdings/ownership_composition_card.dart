@@ -32,8 +32,19 @@ class OwnershipCompositionCard extends StatelessWidget {
             icon: LucideIcons.chartPie,
             title: context.strings.sectionOwnershipComposition,
           ),
-          _CompositionDonut(holdings: holdings),
-          _CompositionLegend(holdings: holdings),
+          SizedBox(
+            height: 180,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _CompositionDonut(holdings: holdings),
+                const SizedBox(width: ThemeRepo.spaceLarge),
+                Expanded(
+                  child: _CompositionLegend(holdings: holdings),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -64,8 +75,8 @@ class _CompositionDonut extends StatelessWidget {
 
     return Center(
       child: SizedBox(
-        width: 140,
-        height: 140,
+        width: 150,
+        height: 150,
         child: CustomPaint(
           painter: _DonutPainter(segments: [
             _DonutSegment(
@@ -76,14 +87,29 @@ class _CompositionDonut extends StatelessWidget {
             _DonutSegment(color: floatColor, fraction: floatWeight / 100.0),
           ]),
           child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_formatRepo.percent(totalInstitutional))
-                    .semiBold()
-                    .small(),
-                Text(context.strings.holdingsTotalTitle).muted().xSmall(),
-              ],
+            child: SizedBox(
+              width: 90,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_formatRepo.percent(totalInstitutional))
+                      .semiBold()
+                      .base(),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      context.strings.holdingsTotalTitle,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        height: 1.15,
+                      ),
+                    ).muted(),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -101,7 +127,7 @@ class _DonutPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2;
-    const strokeWidth = 22.0;
+    const strokeWidth = 18.0;
     final rect =
         Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
 
@@ -141,9 +167,10 @@ class _CompositionLegend extends StatelessWidget {
     final insiderColor = _themeRepo.caution(context.theme);
     final floatColor = context.theme.colorScheme.muted;
 
-    return Wrap(
-      spacing: ThemeRepo.spaceMedium,
-      runSpacing: ThemeRepo.spaceSmall,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      spacing: ThemeRepo.spaceSmall,
       children: [
         _LegendItem(
           color: passiveColor,
@@ -188,7 +215,7 @@ class _LegendItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      spacing: ThemeRepo.spaceXSmall,
+      spacing: ThemeRepo.spaceSmall,
       children: [
         Container(
           width: ThemeRepo.watchlistDotSize,
