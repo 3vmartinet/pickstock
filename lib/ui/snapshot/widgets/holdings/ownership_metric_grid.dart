@@ -4,6 +4,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
+import 'package:pickstock/ui/snapshot/widgets/holdings/holder_sparkline.dart';
 import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:pickstock/ui/widgets/responsive_grid.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -39,6 +40,12 @@ class _TotalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pctList = holdings.quarterlyTrends
+        .map((t) => t.institutionalOwnershipPercent)
+        .toList();
+    final isUp = pctList.length >= 2 && pctList.last >= pctList.first;
+    final trendColor = _themeRepo.forOutcome(context.theme, isGood: isUp);
+
     return Card(
       padding: context.cardPadding,
       child: Column(
@@ -58,7 +65,23 @@ class _TotalCard extends StatelessWidget {
               ),
             ],
           ),
-          Text(_formatRepo.percent(holdings.institutionalOwnershipPercent)).h3(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(_formatRepo.percent(holdings.institutionalOwnershipPercent)).h3(),
+              if (pctList.length >= 2)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: HolderSparkline(
+                    values: pctList,
+                    colour: trendColor,
+                    width: 54,
+                    height: 20,
+                  ),
+                ),
+            ],
+          ),
           Text(context.strings.holdingsFilersCount(holdings.totalInstitutionsCount))
               .muted()
               .xSmall(),

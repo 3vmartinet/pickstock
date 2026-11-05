@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/institutional_shareholding.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
@@ -30,7 +32,7 @@ class OwnershipCompositionCard extends StatelessWidget {
             icon: LucideIcons.chartPie,
             title: context.strings.sectionOwnershipComposition,
           ),
-          _CompositionBar(holdings: holdings),
+          _CompositionDonut(holdings: holdings),
           _CompositionLegend(holdings: holdings),
         ],
       ),
@@ -38,53 +40,93 @@ class OwnershipCompositionCard extends StatelessWidget {
   }
 }
 
-class _CompositionBar extends StatelessWidget {
-  const _CompositionBar({required this.holdings});
+class _CompositionDonut extends StatelessWidget {
+  const _CompositionDonut({required this.holdings});
 
   final InstitutionalShareholding holdings;
 
   @override
   Widget build(BuildContext context) {
     final passiveColor = context.theme.colorScheme.primary;
-    final activeColor = context.theme.colorScheme.primary.withValues(alpha: 0.55);
+    final activeColor =
+        context.theme.colorScheme.primary.withValues(alpha: 0.55);
     final insiderColor = _themeRepo.caution(context.theme);
     final floatColor = context.theme.colorScheme.muted;
 
     final passiveWeight = holdings.passiveIndexPercent.clamp(0.0, 100.0);
     final activeWeight = holdings.activeFundsPercent.clamp(0.0, 100.0);
     final insiderWeight = holdings.insiderPercent.clamp(0.0, 100.0);
-    final floatWeight = (100.0 - (passiveWeight + activeWeight + insiderWeight))
-        .clamp(0.0, 100.0);
+    final floatWeight =
+        (100.0 - (passiveWeight + activeWeight + insiderWeight))
+            .clamp(0.0, 100.0);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final totalWidth = constraints.maxWidth;
-        final passiveWidth = (passiveWeight / 100.0) * totalWidth;
-        final activeWidth = (activeWeight / 100.0) * totalWidth;
-        final insiderWidth = (insiderWeight / 100.0) * totalWidth;
-        final floatWidth = (floatWeight / 100.0) * totalWidth;
+    final totalInstitutional = (passiveWeight + activeWeight).clamp(0.0, 100.0);
 
-        return ClipRRect(
-          borderRadius: context.theme.borderRadiusMd,
-          child: SizedBox(
-            height: ThemeRepo.gaugeHeight,
-            child: Row(
+    return Center(
+      child: SizedBox(
+        width: 140,
+        height: 140,
+        child: CustomPaint(
+          painter: _DonutPainter(segments: [
+            _DonutSegment(
+                color: passiveColor, fraction: passiveWeight / 100.0),
+            _DonutSegment(color: activeColor, fraction: activeWeight / 100.0),
+            _DonutSegment(
+                color: insiderColor, fraction: insiderWeight / 100.0),
+            _DonutSegment(color: floatColor, fraction: floatWeight / 100.0),
+          ]),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (passiveWidth > 0)
-                  Container(width: passiveWidth, color: passiveColor),
-                if (activeWidth > 0)
-                  Container(width: activeWidth, color: activeColor),
-                if (insiderWidth > 0)
-                  Container(width: insiderWidth, color: insiderColor),
-                if (floatWidth > 0)
-                  Container(width: floatWidth, color: floatColor),
+                Text(_formatRepo.percent(totalInstitutional))
+                    .semiBold()
+                    .small(),
+                Text(context.strings.holdingsTotalTitle).muted().xSmall(),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
+}
+
+class _DonutPainter extends CustomPainter {
+  _DonutPainter({required this.segments});
+
+  final List<_DonutSegment> segments;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2;
+    const strokeWidth = 22.0;
+    final rect =
+        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+
+    var startAngle = -math.pi / 2; // Start from top
+    for (final segment in segments) {
+      if (segment.fraction <= 0) continue;
+      final sweepAngle = segment.fraction * 2 * math.pi;
+      final paint = Paint()
+        ..color = segment.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DonutPainter old) => old.segments != segments;
+}
+
+class _DonutSegment {
+  const _DonutSegment({required this.color, required this.fraction});
+  final Color color;
+  final double fraction;
 }
 
 class _CompositionLegend extends StatelessWidget {

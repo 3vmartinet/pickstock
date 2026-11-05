@@ -2106,6 +2106,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionHoldings => 'Institutional ownership';
 
   @override
+  String get sectionOwnershipTrend => 'Institutional ownership over time';
+
+  @override
+  String get hintOwnershipTrend =>
+      'The historical progression of total reported shares held by Form 13F institutional investment managers across quarterly reporting cycles.';
+
+  @override
+  String ownershipTrendChange(String change, int quarters) {
+    return '$change over $quarters quarters';
+  }
+
+  @override
   String get sectionOwnershipComposition => 'Ownership structure';
 
   @override

@@ -769,6 +769,15 @@
   "hintPriceToSales": "Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.",
 
   "sectionHoldings": "Institutional ownership",
+  "sectionOwnershipTrend": "Institutional ownership over time",
+  "hintOwnershipTrend": "The historical progression of total reported shares held by Form 13F institutional investment managers across quarterly reporting cycles.",
+  "ownershipTrendChange": "{change} over {quarters} quarters",
+  "@ownershipTrendChange": {
+    "placeholders": {
+      "change": { "type": "String" },
+      "quarters": { "type": "int" }
+    }
+  },
   "sectionOwnershipComposition": "Ownership structure",
   "sectionTopHoldings": "Top institutional holders",
   "holdingsFilersCount": "{count, plural, =1{1 institutional filer in EDGAR} other{{count} institutional filers in EDGAR}}",

@@ -83,6 +83,158 @@ const Map<String, double> _defaultShares = {
   'F': 3920000000,
 };
 
+const List<String> _historicalQuarters = [
+  'Q3 2023',
+  'Q4 2023',
+  'Q1 2024',
+  'Q2 2024',
+  'Q3 2024',
+];
+
+final List<DateTime> _historicalQuarterDates = [
+  DateTime(2023, 9, 30),
+  DateTime(2023, 12, 31),
+  DateTime(2024, 3, 31),
+  DateTime(2024, 6, 30),
+  DateTime(2024, 9, 30),
+];
+
+List<HolderQuarterHistory> _makeHolderHistory({
+  required double totalShares,
+  required List<double> shareCounts,
+}) {
+  assert(shareCounts.length == _historicalQuarters.length);
+  final result = <HolderQuarterHistory>[];
+  for (var i = 0; i < shareCounts.length; i++) {
+    final count = shareCounts[i];
+    final prev = i > 0 ? shareCounts[i - 1] : null;
+    final changeShares = prev != null ? count - prev : null;
+    final changePercent = prev != null && prev > 0 ? ((count - prev) / prev) * 100 : null;
+    result.add(
+      HolderQuarterHistory(
+        calendarQuarter: _historicalQuarters[i],
+        asOfDate: _historicalQuarterDates[i],
+        sharesHeld: count,
+        percentOfClass: (count / totalShares) * 100,
+        changeSharesQoQ: changeShares,
+        changePercentQoQ: changePercent,
+      ),
+    );
+  }
+  return result;
+}
+
+List<HolderQuarterHistory> _calibratedHolderHistory(
+  double currentShares,
+  double changeSharesQoQ,
+  double totalShares,
+) {
+  final step = changeSharesQoQ != 0 ? changeSharesQoQ : currentShares * 0.012;
+  final counts = [
+    math.max(currentShares - step * 4.0, currentShares * 0.1),
+    math.max(currentShares - step * 3.0, currentShares * 0.1),
+    math.max(currentShares - step * 2.0, currentShares * 0.1),
+    math.max(currentShares - step * 1.0, currentShares * 0.1),
+    currentShares,
+  ];
+  return _makeHolderHistory(totalShares: totalShares, shareCounts: counts);
+}
+
+InstitutionalHolder _withCalibratedHistory(
+  InstitutionalHolder holder,
+  double totalShares, [
+  List<double>? customShareCounts,
+]) {
+  final history = customShareCounts != null
+      ? _makeHolderHistory(
+          totalShares: totalShares,
+          shareCounts: customShareCounts,
+        )
+      : _calibratedHolderHistory(
+          holder.sharesHeld,
+          holder.changeSharesQoQ ?? (holder.sharesHeld * 0.01),
+          totalShares,
+        );
+  return InstitutionalHolder(
+    name: holder.name,
+    managerCik: holder.managerCik,
+    managerType: holder.managerType,
+    sharesHeld: holder.sharesHeld,
+    percentOfClass: holder.percentOfClass,
+    marketValue: holder.marketValue,
+    changeSharesQoQ: holder.changeSharesQoQ,
+    changePercentQoQ: holder.changePercentQoQ,
+    isNewPosition: holder.isNewPosition,
+    portfolioPercent: holder.portfolioPercent,
+    formType: holder.formType,
+    filingDate: holder.filingDate,
+    accessionNumber: holder.accessionNumber,
+    history: history,
+  );
+}
+
+List<InstitutionalHolder> _attachHistories(
+  List<InstitutionalHolder> holders,
+  double totalShares, [
+  Map<String, List<double>>? customHistories,
+]) {
+  return holders.map((h) {
+    final custom = customHistories?[h.name];
+    return _withCalibratedHistory(h, totalShares, custom);
+  }).toList();
+}
+
+List<InstitutionalQuarterlyTrend> _calibratedQuarterlyTrends({
+  required double totalShares,
+  required double currentTotalHeld,
+  required double netChangeQoQ,
+  required int buyers,
+  required int sellers,
+}) {
+  final step = netChangeQoQ != 0 ? netChangeQoQ : currentTotalHeld * 0.005;
+  final counts = [
+    math.max(currentTotalHeld - step * 4.0, currentTotalHeld * 0.5),
+    math.max(currentTotalHeld - step * 3.0, currentTotalHeld * 0.5),
+    math.max(currentTotalHeld - step * 2.0, currentTotalHeld * 0.5),
+    math.max(currentTotalHeld - step * 1.0, currentTotalHeld * 0.5),
+    currentTotalHeld,
+  ];
+  final buyersList = [
+    (buyers * 0.94).round(),
+    (buyers * 0.97).round(),
+    (buyers * 1.01).round(),
+    (buyers * 0.99).round(),
+    buyers,
+  ];
+  final sellersList = [
+    (sellers * 1.06).round(),
+    (sellers * 1.02).round(),
+    (sellers * 0.98).round(),
+    (sellers * 1.01).round(),
+    sellers,
+  ];
+  final result = <InstitutionalQuarterlyTrend>[];
+  for (var i = 0; i < counts.length; i++) {
+    final count = counts[i];
+    final prev = i > 0 ? counts[i - 1] : null;
+    final changeShares = prev != null ? count - prev : (count * 0.003);
+    final changePercent = prev != null && prev > 0 ? ((count - prev) / prev) * 100 : 0.3;
+    result.add(
+      InstitutionalQuarterlyTrend(
+        calendarQuarter: _historicalQuarters[i],
+        asOfDate: _historicalQuarterDates[i],
+        totalSharesHeld: count,
+        institutionalOwnershipPercent: (count / totalShares) * 100,
+        netSharesChange: changeShares,
+        netSharesPercentChange: changePercent,
+        buyersCount: buyersList[i],
+        sellersCount: sellersList[i],
+      ),
+    );
+  }
+  return result;
+}
+
 InstitutionalShareholding _appleShareholding(
   Company company,
   double price,
@@ -238,6 +390,14 @@ InstitutionalShareholding _appleShareholding(
   final totalHeld = holders.fold<double>(0, (sum, h) => sum + h.sharesHeld);
   final top10Concentration = (totalHeld / totalShares) * 100;
 
+  final appleCustomHistories = {
+    'Berkshire Hathaway Inc': [915560000.0, 905560000.0, 789370000.0, 400000000.0, 300000000.0],
+    'The Vanguard Group, Inc.': [1280000000.0, 1295000000.0, 1305000000.0, 1314310000.0, 1328520000.0],
+    'BlackRock, Inc.': [1040000000.0, 1055000000.0, 1062000000.0, 1069990000.0, 1078940000.0],
+    'FMR LLC (Fidelity)': [332000000.0, 328000000.0, 325000000.0, 323660000.0, 318450000.0],
+    'Price (T. Rowe) Associates Inc': [230000000.0, 221000000.0, 212000000.0, 207090000.0, 198640000.0],
+  };
+
   return InstitutionalShareholding(
     cik: company.cik,
     calendarQuarter: asOf,
@@ -257,7 +417,14 @@ InstitutionalShareholding _appleShareholding(
     newPositionsCount: 215,
     soldOutPositionsCount: 180,
     activistStakes: const [],
-    topHolders: holders,
+    topHolders: _attachHistories(holders, totalShares, appleCustomHistories),
+    quarterlyTrends: _calibratedQuarterlyTrends(
+      totalShares: totalShares,
+      currentTotalHeld: 9110000000,
+      netChangeQoQ: 28450000,
+      buyers: 2410,
+      sellers: 2180,
+    ),
   );
 }
 
@@ -424,7 +591,14 @@ InstitutionalShareholding _microsoftShareholding(
     newPositionsCount: 245,
     soldOutPositionsCount: 165,
     activistStakes: const [],
-    topHolders: holders,
+    topHolders: _attachHistories(holders, totalShares),
+    quarterlyTrends: _calibratedQuarterlyTrends(
+      totalShares: totalShares,
+      currentTotalHeld: 5351000000,
+      netChangeQoQ: 34100000,
+      buyers: 2680,
+      sellers: 2110,
+    ),
   );
 }
 
@@ -591,7 +765,14 @@ InstitutionalShareholding _nvidiaShareholding(
     newPositionsCount: 312,
     soldOutPositionsCount: 142,
     activistStakes: const [],
-    topHolders: holders,
+    topHolders: _attachHistories(holders, totalShares),
+    quarterlyTrends: _calibratedQuarterlyTrends(
+      totalShares: totalShares,
+      currentTotalHeld: 16170000000,
+      netChangeQoQ: 98400000,
+      buyers: 2840,
+      sellers: 1950,
+    ),
   );
 }
 
@@ -732,7 +913,14 @@ InstitutionalShareholding _cocaColaShareholding(
     newPositionsCount: 142,
     soldOutPositionsCount: 118,
     activistStakes: const [],
-    topHolders: holders,
+    topHolders: _attachHistories(holders, totalShares),
+    quarterlyTrends: _calibratedQuarterlyTrends(
+      totalShares: totalShares,
+      currentTotalHeld: 3038800000,
+      netChangeQoQ: 8450000,
+      buyers: 1620,
+      sellers: 1540,
+    ),
   );
 }
 
@@ -834,7 +1022,14 @@ InstitutionalShareholding _fordShareholding(
     newPositionsCount: 65,
     soldOutPositionsCount: 110,
     activistStakes: const [],
-    topHolders: holders,
+    topHolders: _attachHistories(holders, totalShares),
+    quarterlyTrends: _calibratedQuarterlyTrends(
+      totalShares: totalShares,
+      currentTotalHeld: 2273600000,
+      netChangeQoQ: -12450000,
+      buyers: 780,
+      sellers: 1120,
+    ),
   );
 }
 
@@ -973,12 +1168,13 @@ InstitutionalShareholding _calibratedShareholding(
   final totalHeld = holders.fold<double>(0, (sum, h) => sum + h.sharesHeld);
   final top10Concentration = (totalHeld / totalShares) * 100;
   final totalInstPercent = math.min(68.5, 100.0);
+  final totalSharesHeld = totalShares * (totalInstPercent / 100);
 
   return InstitutionalShareholding(
     cik: company.cik,
     calendarQuarter: asOf,
     asOfDate: asOfDate,
-    totalSharesHeld: totalShares * (totalInstPercent / 100),
+    totalSharesHeld: totalSharesHeld,
     institutionalOwnershipPercent: totalInstPercent,
     totalInstitutionsCount: 1420,
     top10ConcentrationPercent: top10Concentration,
@@ -993,7 +1189,14 @@ InstitutionalShareholding _calibratedShareholding(
     newPositionsCount: 85,
     soldOutPositionsCount: 42,
     activistStakes: const [],
-    topHolders: holders,
+    topHolders: _attachHistories(holders, totalShares),
+    quarterlyTrends: _calibratedQuarterlyTrends(
+      totalShares: totalShares,
+      currentTotalHeld: totalSharesHeld,
+      netChangeQoQ: totalShares * 0.008,
+      buyers: 680,
+      sellers: 520,
+    ),
   );
 }
 

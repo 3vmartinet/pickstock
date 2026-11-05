@@ -1,5 +1,4 @@
-import 'dart:ui';
-
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
@@ -8,6 +7,7 @@ import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/institutional_repo.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/holders_table.dart';
+import 'package:pickstock/ui/snapshot/widgets/holdings/institutional_ownership_chart.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/ownership_composition_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/ownership_metric_grid.dart';
 
@@ -79,28 +79,40 @@ void main() {
     // Top holders table
     expect(find.byType(HoldingsTable), findsOneWidget);
     expect(find.text('Top institutional holders'), findsOneWidget);
-    expect(find.text('The Vanguard Group, Inc.'), findsOneWidget);
-    expect(find.text('BlackRock, Inc.'), findsOneWidget);
-    expect(find.text('Berkshire Hathaway Inc'), findsOneWidget);
+    expect(find.text('The Vanguard Group, Inc.'), findsWidgets);
+    expect(find.text('BlackRock, Inc.'), findsWidgets);
+    expect(find.text('Berkshire Hathaway Inc'), findsWidgets);
   });
 
   testWidgets('sorts holders by stake or flow', (tester) async {
     await openApple(tester);
     await openReportTab(tester, ReportTab.holdings);
 
-    await tester.drag(
-      find.byType(OwnershipMetricGrid),
-      const Offset(0, -400),
-      warnIfMissed: false,
+    final sortBtn = find.text('Sort: Stake');
+    await tester.scrollUntilVisible(
+      sortBtn,
+      200,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
 
-    final sortBtn = find.text('Sort: Stake');
     expect(sortBtn, findsOneWidget);
     await tester.tap(sortBtn);
     await tester.pumpAndSettle();
 
     expect(find.text('Sort: Flow'), findsOneWidget);
+  });
+
+  testWidgets('displays institutional ownership trend graph over time', (
+    tester,
+  ) async {
+    await openApple(tester);
+    await openReportTab(tester, ReportTab.holdings);
+
+    // Trend graph card is present
+    expect(find.byType(InstitutionalOwnershipChart), findsOneWidget);
+    expect(find.text('Institutional ownership over time'), findsOneWidget);
+    expect(find.text('Q3 2024'), findsWidgets);
   });
 }
 

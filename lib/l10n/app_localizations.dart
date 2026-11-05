@@ -3216,6 +3216,24 @@ abstract class AppLocalizations {
   /// **'Institutional ownership'**
   String get sectionHoldings;
 
+  /// No description provided for @sectionOwnershipTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Institutional ownership over time'**
+  String get sectionOwnershipTrend;
+
+  /// No description provided for @hintOwnershipTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'The historical progression of total reported shares held by Form 13F institutional investment managers across quarterly reporting cycles.'**
+  String get hintOwnershipTrend;
+
+  /// No description provided for @ownershipTrendChange.
+  ///
+  /// In en, this message translates to:
+  /// **'{change} over {quarters} quarters'**
+  String ownershipTrendChange(String change, int quarters);
+
   /// No description provided for @sectionOwnershipComposition.
   ///
   /// In en, this message translates to:

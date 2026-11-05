@@ -4,6 +4,7 @@ import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/activism_alert.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/holders_table.dart';
+import 'package:pickstock/ui/snapshot/widgets/holdings/institutional_ownership_chart.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/ownership_composition_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/holdings/ownership_metric_grid.dart';
 import 'package:provider/provider.dart';
@@ -61,7 +62,32 @@ class HoldingsSection extends StatelessWidget {
         spacing: ThemeRepo.spaceLarge,
         children: [
           OwnershipMetricGrid(holdings: holdings),
-          OwnershipCompositionCard(holdings: holdings),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 680) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: ThemeRepo.spaceLarge,
+                  children: [
+                    Expanded(
+                      child: InstitutionalOwnershipChart(holdings: holdings),
+                    ),
+                    Expanded(
+                      child: OwnershipCompositionCard(holdings: holdings),
+                    ),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: ThemeRepo.spaceLarge,
+                children: [
+                  InstitutionalOwnershipChart(holdings: holdings),
+                  OwnershipCompositionCard(holdings: holdings),
+                ],
+              );
+            },
+          ),
           ActivismAlert(holdings: holdings),
           HoldingsTable(holdings: holdings),
         ],
