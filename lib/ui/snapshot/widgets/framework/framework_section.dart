@@ -35,6 +35,54 @@ class _FrameworkSectionState extends State<FrameworkSection> {
     for (final question in FrameworkQuestion.values) question: GlobalKey(),
   };
 
+  final ScrollController _listScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _listScrollController.addListener(_updateVisibleQuestion);
+    _verticalScrollController.addListener(_updateVisibleQuestion);
+  }
+
+  @override
+  void dispose() {
+    _listScrollController.removeListener(_updateVisibleQuestion);
+    _listScrollController.dispose();
+    _verticalScrollController.removeListener(_updateVisibleQuestion);
+    _verticalScrollController.dispose();
+    super.dispose();
+  }
+
+  void _updateVisibleQuestion() {
+    if (!mounted) return;
+    final viewModel = context.read<SnapshotViewModel>();
+    final layout = viewModel.frameworkLayout;
+    final shouldTrack =
+        (layout == FrameworkLayout.list && viewModel.isFrameworkListSticky) ||
+        (layout == FrameworkLayout.verticalPanel &&
+         !viewModel.isFrameworkVerticalCollapsed);
+    if (!shouldTrack) return;
+
+    FrameworkQuestion? best;
+    double bestDistance = double.infinity;
+
+    for (final entry in _cardKeys.entries) {
+      final renderObj = entry.value.currentContext?.findRenderObject();
+      if (renderObj is! RenderBox || !renderObj.attached) continue;
+      final topInViewport = renderObj.localToGlobal(Offset.zero).dy;
+      final distance = topInViewport.abs();
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = entry.key;
+      }
+    }
+
+    if (best != null && best != viewModel.focusedFrameworkQuestion) {
+      viewModel.selectFocusedFrameworkQuestion(best);
+    }
+  }
+
   void _jumpTo(FrameworkQuestion question) {
     final target = _cardKeys[question]?.currentContext;
     if (target == null) return;
@@ -62,14 +110,45 @@ class _FrameworkSectionState extends State<FrameworkSection> {
   }
 
   Widget _buildListLayout(BuildContext context) {
+    final viewModel = context.watch<SnapshotViewModel>();
+    final isSticky = viewModel.isFrameworkListSticky;
+
+    if (!isSticky) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: ThemeRepo.spaceMedium,
+        children: [
+          FrameworkScorecard(onJump: _jumpTo),
+          for (final question in FrameworkQuestion.values)
+            FrameworkQuestionCard(key: _cardKeys[question], question: question),
+          Text(context.strings.insightCaveat).muted().xSmall().italic(),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: ThemeRepo.spaceMedium,
       children: [
-        FrameworkScorecard(onJump: _jumpTo),
-        for (final question in FrameworkQuestion.values)
-          FrameworkQuestionCard(key: _cardKeys[question], question: question),
-        Text(context.strings.insightCaveat).muted().xSmall().italic(),
+        FrameworkScorecard(
+          onJump: _jumpTo,
+          activeQuestion: viewModel.focusedFrameworkQuestion,
+        ),
+        const SizedBox(height: ThemeRepo.spaceMedium),
+        Expanded(
+          child: SingleChildScrollView(
+            controller: _listScrollController,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: ThemeRepo.spaceMedium,
+              children: [
+                for (final question in FrameworkQuestion.values)
+                  FrameworkQuestionCard(key: _cardKeys[question], question: question),
+                Text(context.strings.insightCaveat).muted().xSmall().italic(),
+                const ReportFootnotes(),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -158,6 +237,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
               scorecard,
               Expanded(
                 child: SingleChildScrollView(
+                  controller: _verticalScrollController,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     spacing: ThemeRepo.spaceMedium,

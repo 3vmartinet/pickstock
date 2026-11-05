@@ -1378,6 +1378,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show only the answer for the selected question';
 
   @override
+  String get frameworkPinHeader => 'Pin header';
+
+  @override
+  String get frameworkPinHeaderHint =>
+      'Keep the seven questions scorecard pinned to the top while scrolling answers';
+
+  @override
+  String get frameworkUnpinHeader => 'Unpin header';
+
+  @override
+  String get frameworkUnpinHeaderHint =>
+      'Allow the seven questions scorecard to scroll with answers';
+
+  @override
   String get evidenceRevenue => 'Revenue';
 
   @override

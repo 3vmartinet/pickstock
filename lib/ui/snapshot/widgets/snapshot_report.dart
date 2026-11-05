@@ -51,13 +51,22 @@ class SnapshotReport extends StatelessWidget {
     final frameworkLayout = context.select<SnapshotViewModel, FrameworkLayout>(
       (viewModel) => viewModel.frameworkLayout,
     );
+    final isFrameworkListSticky = context.select<SnapshotViewModel, bool>(
+      (viewModel) => viewModel.isFrameworkListSticky,
+    );
     final isVerticalFramework =
         tab == ReportTab.framework &&
         frameworkLayout == FrameworkLayout.verticalPanel;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (isVerticalFramework && constraints.maxWidth >= 840) {
+        final isFrameworkOwnsScroll =
+            (isVerticalFramework && constraints.maxWidth >= 840) ||
+            (tab == ReportTab.framework &&
+             frameworkLayout == FrameworkLayout.list &&
+             isFrameworkListSticky);
+
+        if (isFrameworkOwnsScroll) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

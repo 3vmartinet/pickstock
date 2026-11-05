@@ -1209,6 +1209,18 @@ class SnapshotViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether the seven questions scorecard is pinned to the top in list layout.
+  bool get isFrameworkListSticky => _settingsRepo.frameworkListSticky;
+
+  Future<void> setFrameworkListSticky(bool value) async {
+    if (value == isFrameworkListSticky) return;
+    await _settingsRepo.setFrameworkListSticky(value);
+    notifyListeners();
+  }
+
+  Future<void> toggleFrameworkListSticky() =>
+      setFrameworkListSticky(!isFrameworkListSticky);
+
   void _rememberTicker(String ticker) {
     _recentTickers
       ..remove(ticker)

@@ -19,6 +19,7 @@ const String _autoDownloadKey = 'autoDownloadUpdates';
 const String _autoApplyKey = 'autoApplyUpdates';
 const String _frameworkLayoutKey = 'frameworkLayout';
 const String _frameworkVerticalCollapsedKey = 'frameworkVerticalCollapsed';
+const String _frameworkListStickyKey = 'frameworkListSticky';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -90,6 +91,10 @@ abstract interface class SettingsRepo {
   /// (collapsed mode) or the full list of answers (expanded mode).
   bool get frameworkVerticalCollapsed;
   Future<void> setFrameworkVerticalCollapsed(bool value);
+
+  /// Whether the seven-questions scorecard is pinned to the top in the list layout.
+  bool get frameworkListSticky;
+  Future<void> setFrameworkListSticky(bool value);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -202,6 +207,15 @@ class LocalSettingsRepo implements SettingsRepo {
           ? _write(_frameworkVerticalCollapsedKey, 'true')
           : _erase(_frameworkVerticalCollapsedKey);
 
+  @override
+  bool get frameworkListSticky => _values[_frameworkListStickyKey] != 'false';
+
+  @override
+  Future<void> setFrameworkListSticky(bool value) =>
+      value
+          ? _erase(_frameworkListStickyKey)
+          : _write(_frameworkListStickyKey, 'false');
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -239,6 +253,7 @@ class MemorySettingsRepo implements SettingsRepo {
   bool _autoApplyUpdates = false;
   FrameworkLayout _frameworkLayout = FrameworkLayout.list;
   bool _frameworkVerticalCollapsed = false;
+  bool _frameworkListSticky = true;
 
   @override
   Future<void> load() async {}
@@ -320,4 +335,11 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setFrameworkVerticalCollapsed(bool value) async =>
       _frameworkVerticalCollapsed = value;
+
+  @override
+  bool get frameworkListSticky => _frameworkListSticky;
+
+  @override
+  Future<void> setFrameworkListSticky(bool value) async =>
+      _frameworkListSticky = value;
 }

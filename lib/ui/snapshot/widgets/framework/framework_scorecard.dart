@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
@@ -234,6 +235,27 @@ class _Actions extends StatelessWidget {
               ),
             ),
           ],
+        if (viewModel.frameworkLayout == FrameworkLayout.list)
+          Tooltip(
+            tooltip: HintTooltip(
+              viewModel.isFrameworkListSticky
+                  ? strings.frameworkUnpinHeaderHint
+                  : strings.frameworkPinHeaderHint,
+            ).call,
+            child: viewModel.isFrameworkListSticky
+                ? IconButton.secondary(
+                    size: ButtonSize.small,
+                    density: ButtonDensity.icon,
+                    icon: const Icon(LucideIcons.pin).iconSmall(),
+                    onPressed: () => viewModel.toggleFrameworkListSticky(),
+                  )
+                : IconButton.ghost(
+                    size: ButtonSize.small,
+                    density: ButtonDensity.icon,
+                    icon: const Icon(LucideIcons.pinOff).iconSmall(),
+                    onPressed: () => viewModel.toggleFrameworkListSticky(),
+                  ),
+          ),
         const FrameworkLayoutToggle(),
       ],
     );

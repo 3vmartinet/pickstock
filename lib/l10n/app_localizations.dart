@@ -2092,6 +2092,30 @@ abstract class AppLocalizations {
   /// **'Show only the answer for the selected question'**
   String get frameworkVerticalCollapsedHint;
 
+  /// No description provided for @frameworkPinHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin header'**
+  String get frameworkPinHeader;
+
+  /// No description provided for @frameworkPinHeaderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the seven questions scorecard pinned to the top while scrolling answers'**
+  String get frameworkPinHeaderHint;
+
+  /// No description provided for @frameworkUnpinHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin header'**
+  String get frameworkUnpinHeader;
+
+  /// No description provided for @frameworkUnpinHeaderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the seven questions scorecard to scroll with answers'**
+  String get frameworkUnpinHeaderHint;
+
   /// No description provided for @evidenceRevenue.
   ///
   /// In en, this message translates to:
