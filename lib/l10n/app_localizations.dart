@@ -856,6 +856,18 @@ abstract class AppLocalizations {
   /// **'Scan {count} companies'**
   String jobsStart(int count);
 
+  /// No description provided for @jobsStartFramework.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Run 7 questions for 1 company} other{Run 7 questions for {count} companies}}'**
+  String jobsStartFramework(int count);
+
+  /// No description provided for @jobsFrameworkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the 7 framework questions for each company using the local model.'**
+  String get jobsFrameworkBody;
+
   /// No description provided for @jobsRunningOne.
   ///
   /// In en, this message translates to:

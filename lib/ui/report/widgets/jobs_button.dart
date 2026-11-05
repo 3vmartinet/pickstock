@@ -219,7 +219,7 @@ class _JobsPanel extends StatelessWidget {
           spacing: ThemeRepo.spaceMedium,
           children: [
             Text(context.strings.jobsTitle).semiBold(),
-            const _StartButton(),
+            const _ReportingActions(),
             // Above the reports and below the scan: a question already asked
             // is the thing most likely to be what the panel was opened for.
             //
@@ -230,7 +230,7 @@ class _JobsPanel extends StatelessWidget {
               const Divider(),
               for (final job in live) _RunningJob(job: job),
             ],
-            if (reports.isEmpty && live.isEmpty)
+            if (reports.isEmpty && live.isEmpty && asked.isEmpty)
               Text(context.strings.jobsEmptyBody).muted().xSmall()
             else if (reports.isNotEmpty) ...[
               const Divider(),
@@ -256,9 +256,10 @@ class _JobsPanel extends StatelessWidget {
   }
 }
 
-/// Starts a scan over whatever the directory is filtered to.
-class _StartButton extends StatelessWidget {
-  const _StartButton();
+/// The reporting actions available for whatever the directory is filtered to:
+/// a valuation scan and a batch framework question evaluation.
+class _ReportingActions extends StatelessWidget {
+  const _ReportingActions();
 
   @override
   Widget build(BuildContext context) {
@@ -271,18 +272,37 @@ class _StartButton extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: ThemeRepo.spaceXSmall,
+      spacing: ThemeRepo.spaceSmall,
       children: [
-        PrimaryButton(
-          enabled: !running && companies.isNotEmpty,
-          leading: const Icon(LucideIcons.play).iconXSmall(),
-          onPressed: () => _start(context, companies),
-          child: Text(context.strings.jobsStart(companies.length)),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: ThemeRepo.spaceXSmall,
+          children: [
+            PrimaryButton(
+              enabled: !running && companies.isNotEmpty,
+              leading: const Icon(LucideIcons.play).iconXSmall(),
+              onPressed: () => _start(context, companies),
+              child: Text(context.strings.jobsStart(companies.length)),
+            ),
+            if (running)
+              Text(context.strings.jobsRunningOne).muted().xSmall()
+            else
+              Text(context.strings.jobsEmptyBody).muted().xSmall(),
+          ],
         ),
-        if (running)
-          Text(context.strings.jobsRunningOne).muted().xSmall()
-        else
-          Text(context.strings.jobsEmptyBody).muted().xSmall(),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: ThemeRepo.spaceXSmall,
+          children: [
+            OutlineButton(
+              enabled: companies.isNotEmpty,
+              leading: const Icon(LucideIcons.sparkles).iconXSmall(),
+              onPressed: () => _startFramework(context, companies),
+              child: Text(context.strings.jobsStartFramework(companies.length)),
+            ),
+            Text(context.strings.jobsFrameworkBody).muted().xSmall(),
+          ],
+        ),
       ],
     );
   }
@@ -295,6 +315,11 @@ class _StartButton extends StatelessWidget {
     // Only out of the way once something is actually under way. A panel that
     // closed on a refused start looked exactly like one that had worked.
     if (started) closeOverlay(context);
+  }
+
+  void _startFramework(BuildContext context, List<Company> companies) {
+    final count = context.read<SnapshotViewModel>().runFrameworkBatch(companies);
+    if (count > 0 || companies.isNotEmpty) closeOverlay(context);
   }
 }
 

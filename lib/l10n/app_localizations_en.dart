@@ -536,6 +536,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String jobsStartFramework(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Run 7 questions for $countString companies',
+      one: 'Run 7 questions for 1 company',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get jobsFrameworkBody =>
+      'Ask the 7 framework questions for each company using the local model.';
+
+  @override
   String get jobsRunningOne => 'A scan is already running.';
 
   @override

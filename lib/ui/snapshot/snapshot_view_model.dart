@@ -512,7 +512,6 @@ class SnapshotViewModel extends ChangeNotifier {
     });
     if (isBusy) return;
 
-    final prompts = FrameworkPrompts(snapshot: current, valuation: valuation);
     final company = current.company;
     final kind = frameworkKind(questions)!;
     questions.forEach(_frameworkFailures.remove);
@@ -524,8 +523,92 @@ class SnapshotViewModel extends ChangeNotifier {
       insight: null,
       frameworkQuestions: questions,
       work: (isCancelled) =>
-          _screen(company, prompts, questions, kind, isCancelled),
+          _screenCompany(company, questions, kind, isCancelled),
     );
+  }
+
+  /// Queues a full seven-question framework evaluation for each company in
+  /// [companies].
+  ///
+  /// Deduplicates by CIK so multiple listings for one company are queued once.
+  /// Skips any company that already has an active framework task in the queue.
+  /// Returns the number of companies newly enqueued.
+  int runFrameworkBatch(List<Company> companies) {
+    if (companies.isEmpty) return 0;
+    final questions = FrameworkQuestion.values;
+    final kind = frameworkKind(questions)!;
+    var queuedCount = 0;
+
+    final seen = <String>{};
+    final uniqueCompanies = [
+      for (final c in companies)
+        if (seen.add(c.cik)) c,
+    ];
+
+    for (final company in uniqueCompanies) {
+      final existing = _queue.taskFor(cik: company.cik, kind: kind);
+      if (existing != null && existing.isActive) continue;
+
+      if (_isOnScreen(company)) {
+        questions.forEach(_frameworkFailures.remove);
+      }
+
+      _queue.enqueue(
+        cik: company.cik,
+        ticker: company.ticker,
+        companyName: company.name,
+        insight: null,
+        frameworkQuestions: questions,
+        work: (isCancelled) =>
+            _screenCompany(company, questions, kind, isCancelled),
+      );
+      queuedCount++;
+    }
+    return queuedCount;
+  }
+
+  Future<void> _screenCompany(
+    Company company,
+    List<FrameworkQuestion> questions,
+    String kind,
+    bool Function() isCancelled,
+  ) async {
+    FinancialSnapshot? currentSnapshot;
+    Valuation? currentValuation;
+
+    if (_isOnScreen(company)) {
+      currentSnapshot = snapshot;
+      currentValuation = valuation;
+    } else {
+      try {
+        currentSnapshot = await _secRepo.fetchSnapshot(company.ticker);
+        final storedQuote = await _priceRepo.priceFor(company.cik);
+        if (storedQuote != null) {
+          final rate = await _marketRatesRepo.rateFor(company.ticker);
+          currentValuation = Valuation(
+            snapshot: currentSnapshot,
+            pricePerShare: storedQuote.pricePerShare,
+            discountRatePercent: rate?.percent,
+          );
+        }
+      } catch (error) {
+        logWarning(
+          () =>
+              'Could not prepare framework snapshot for ${company.ticker}: $error',
+        );
+      }
+    }
+
+    if (isCancelled()) return;
+    if (currentSnapshot == null) {
+      throw StateError('Could not load SEC snapshot for ${company.ticker}');
+    }
+
+    final prompts = FrameworkPrompts(
+      snapshot: currentSnapshot,
+      valuation: currentValuation,
+    );
+    await _screen(company, prompts, questions, kind, isCancelled);
   }
 
   /// Works through [questions] one after another, filing each answer as it
