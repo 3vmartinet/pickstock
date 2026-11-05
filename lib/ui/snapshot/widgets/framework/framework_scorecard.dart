@@ -7,6 +7,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/snapshot/widgets/framework/framework_layout_toggle.dart';
 import 'package:pickstock/ui/snapshot/widgets/framework/framework_question_card.dart';
 import 'package:pickstock/ui/watchlist/widgets/add_to_watchlist_button.dart';
 import 'package:pickstock/ui/widgets/hint_tooltip.dart';
@@ -25,10 +26,17 @@ ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 /// the first thing on the tab and the row of steps under it shows *which*
 /// question did it without reading a word. Each step jumps to its card.
 class FrameworkScorecard extends StatelessWidget {
-  const FrameworkScorecard({super.key, required this.onJump});
+  const FrameworkScorecard({
+    super.key,
+    required this.onJump,
+    this.activeQuestion,
+  });
 
-  /// Scrolls to a question's card.
+  /// Scrolls or switches to a question's card.
   final ValueChanged<FrameworkQuestion> onJump;
+
+  /// Highlighted question when navigated in carousel/pager mode.
+  final FrameworkQuestion? activeQuestion;
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +53,7 @@ class FrameworkScorecard extends StatelessWidget {
         spacing: ThemeRepo.spaceLarge,
         children: [
           _Outcome(outcome: outcome),
-          _Steps(onJump: onJump),
+          _Steps(onJump: onJump, activeQuestion: activeQuestion),
           if (run != null)
             _RunProgress(run: run)
           else if (!viewModel.canResearch)
@@ -226,6 +234,7 @@ class _Actions extends StatelessWidget {
               ),
             ),
           ],
+        const FrameworkLayoutToggle(),
       ],
     );
   }
@@ -233,9 +242,10 @@ class _Actions extends StatelessWidget {
 
 /// The seven, as numbered steps joined by a rule.
 class _Steps extends StatelessWidget {
-  const _Steps({required this.onJump});
+  const _Steps({required this.onJump, this.activeQuestion});
 
   final ValueChanged<FrameworkQuestion> onJump;
+  final FrameworkQuestion? activeQuestion;
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +254,11 @@ class _Steps extends StatelessWidget {
       children: [
         for (final question in FrameworkQuestion.values)
           Expanded(
-            child: _Step(question: question, onJump: onJump),
+            child: _Step(
+              question: question,
+              onJump: onJump,
+              isActive: question == activeQuestion,
+            ),
           ),
       ],
     );
@@ -254,10 +268,15 @@ class _Steps extends StatelessWidget {
 /// One question on the scorecard: its number in a ring the colour of its
 /// verdict, the verdict's word under it, and a press that goes to its card.
 class _Step extends StatelessWidget {
-  const _Step({required this.question, required this.onJump});
+  const _Step({
+    required this.question,
+    required this.onJump,
+    this.isActive = false,
+  });
 
   final FrameworkQuestion question;
   final ValueChanged<FrameworkQuestion> onJump;
+  final bool isActive;
 
   @override
   Widget build(BuildContext context) {
@@ -286,13 +305,28 @@ class _Step extends StatelessWidget {
             ? theme.colorScheme.background
             : accent.withValues(alpha: ThemeRepo.frameworkTint),
         border: Border.all(
-          color: verdict == null ? theme.colorScheme.border : accent,
-          width: ThemeRepo.frameworkStepRing,
+          color: isActive
+              ? (verdict == null ? theme.colorScheme.primary : accent)
+              : (verdict == null ? theme.colorScheme.border : accent),
+          width: isActive
+              ? ThemeRepo.frameworkStepRing + 1.5
+              : ThemeRepo.frameworkStepRing,
         ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: (verdict == null ? theme.colorScheme.primary : accent)
+                      .withValues(alpha: 0.35),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
       child: switch (state) {
         InsightState.loading => const CircularProgressIndicator(
           size: ThemeRepo.inlineSpinnerSize,
+          strokeWidth: ThemeRepo.inlineSpinnerStroke,
         ),
         _ when verdict != null => Icon(verdict.icon, color: accent).iconSmall(),
         _ => Text(
@@ -315,32 +349,58 @@ class _Step extends StatelessWidget {
       child: GhostButton(
         density: ButtonDensity.compact,
         onPressed: () => onJump(question),
-        child: Column(
-          spacing: ThemeRepo.spaceXSmall,
-          children: [
-            Row(
-              children: [
-                if (isFirst) const Spacer() else rule,
-                marker,
-                if (isLast) const Spacer() else rule,
-              ],
-            ),
-            // Shrunk rather than cut: seven labels across a phone-width pane
-            // left "Management" reading "Manag".
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(question.getLabel(strings)).xSmall(),
-            ),
-            // The word under the marker repeats what its icon and colour say,
-            // so it is the first thing to go where there is no room.
-            if (!context.isCompact)
+        child: Container(
+          decoration: isActive
+              ? BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.6),
+                  borderRadius: theme.borderRadiusMd,
+                )
+              : null,
+          padding: const EdgeInsets.symmetric(
+            horizontal: ThemeRepo.spaceXSmall,
+            vertical: ThemeRepo.spaceXSmall,
+          ),
+          child: Column(
+            spacing: ThemeRepo.spaceXSmall,
+            children: [
+              Row(
+                children: [
+                  if (isFirst) const Spacer() else rule,
+                  marker,
+                  if (isLast) const Spacer() else rule,
+                ],
+              ),
+              // Shrunk rather than cut: seven labels across a phone-width pane
+              // left "Management" reading "Manag".
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(verdict?.getLabel(strings) ?? '—')
-                    .xSmall(color: accent)
-                    .semiBold(),
+                child: Text(
+                  question.getLabel(strings),
+                  style: TextStyle(
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ).xSmall(),
               ),
-          ],
+              // The word under the marker repeats what its icon and colour say,
+              // so it is the first thing to go where there is no room.
+              if (!context.isCompact)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(verdict?.getLabel(strings) ?? '—')
+                      .xSmall(color: accent)
+                      .semiBold(),
+                ),
+              if (isActive)
+                Container(
+                  width: 20,
+                  height: 2.5,
+                  decoration: BoxDecoration(
+                    color: verdict == null ? theme.colorScheme.primary : accent,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

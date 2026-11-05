@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/repo/db/app_database.dart';
@@ -15,6 +16,9 @@ const String _industriesKey = 'browseIndustries';
 const String _positiveCashFlowKey = 'browsePositiveCashFlow';
 const String _masterPaneKey = 'masterPaneWidth';
 const String _autoDownloadKey = 'autoDownloadUpdates';
+const String _autoApplyKey = 'autoApplyUpdates';
+const String _frameworkLayoutKey = 'frameworkLayout';
+const String _frameworkVerticalCollapsedKey = 'frameworkVerticalCollapsed';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -72,6 +76,20 @@ abstract interface class SettingsRepo {
   /// press either way.
   bool get autoDownloadUpdates;
   Future<void> setAutoDownloadUpdates(bool value);
+
+  /// Whether a downloaded SEC archive is automatically applied to the database
+  /// once downloading finishes, rather than waiting for manual confirmation.
+  bool get autoApplyUpdates;
+  Future<void> setAutoApplyUpdates(bool value);
+
+  /// The active layout option for the seven-questions Framework tab.
+  FrameworkLayout get frameworkLayout;
+  Future<void> setFrameworkLayout(FrameworkLayout layout);
+
+  /// Whether the vertical pane layout shows only the selected question's answer
+  /// (collapsed mode) or the full list of answers (expanded mode).
+  bool get frameworkVerticalCollapsed;
+  Future<void> setFrameworkVerticalCollapsed(bool value);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -155,6 +173,35 @@ class LocalSettingsRepo implements SettingsRepo {
   Future<void> setAutoDownloadUpdates(bool value) =>
       value ? _erase(_autoDownloadKey) : _write(_autoDownloadKey, 'false');
 
+  /// Stored only when turned on, so the default is false (manual intervention required).
+  @override
+  bool get autoApplyUpdates => _values[_autoApplyKey] == 'true';
+
+  @override
+  Future<void> setAutoApplyUpdates(bool value) =>
+      value ? _write(_autoApplyKey, 'true') : _erase(_autoApplyKey);
+
+  @override
+  FrameworkLayout get frameworkLayout =>
+      _read(_frameworkLayoutKey, FrameworkLayout.values) ??
+      FrameworkLayout.list;
+
+  @override
+  Future<void> setFrameworkLayout(FrameworkLayout layout) =>
+      layout == FrameworkLayout.list
+          ? _erase(_frameworkLayoutKey)
+          : _write(_frameworkLayoutKey, layout.name);
+
+  @override
+  bool get frameworkVerticalCollapsed =>
+      _values[_frameworkVerticalCollapsedKey] == 'true';
+
+  @override
+  Future<void> setFrameworkVerticalCollapsed(bool value) =>
+      value
+          ? _write(_frameworkVerticalCollapsedKey, 'true')
+          : _erase(_frameworkVerticalCollapsedKey);
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -189,6 +236,9 @@ class MemorySettingsRepo implements SettingsRepo {
   bool _positiveCashFlowOnly = false;
   double? _masterPaneWidth;
   bool _autoDownloadUpdates = true;
+  bool _autoApplyUpdates = false;
+  FrameworkLayout _frameworkLayout = FrameworkLayout.list;
+  bool _frameworkVerticalCollapsed = false;
 
   @override
   Future<void> load() async {}
@@ -249,4 +299,25 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setAutoDownloadUpdates(bool value) async =>
       _autoDownloadUpdates = value;
+
+  @override
+  bool get autoApplyUpdates => _autoApplyUpdates;
+
+  @override
+  Future<void> setAutoApplyUpdates(bool value) async =>
+      _autoApplyUpdates = value;
+
+  @override
+  FrameworkLayout get frameworkLayout => _frameworkLayout;
+
+  @override
+  Future<void> setFrameworkLayout(FrameworkLayout layout) async =>
+      _frameworkLayout = layout;
+
+  @override
+  bool get frameworkVerticalCollapsed => _frameworkVerticalCollapsed;
+
+  @override
+  Future<void> setFrameworkVerticalCollapsed(bool value) async =>
+      _frameworkVerticalCollapsed = value;
 }

@@ -29,6 +29,7 @@ import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
+import 'package:pickstock/repo/sec/institutional_repo.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -406,6 +407,7 @@ Future<AppDatabase> registerTestDependencies({
   SettingsRepo? settingsRepo,
   MarketRatesRepo? marketRatesRepo,
   bool autoDownloadUpdates = false,
+  bool autoApplyUpdates = false,
 }) async {
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
@@ -483,6 +485,7 @@ Future<AppDatabase> registerTestDependencies({
     )
     ..registerLazySingleton<ResearchQueue>(ResearchQueue.new)
     ..registerLazySingleton<SecRepo>(() => const MockSecRepo())
+    ..registerLazySingleton<InstitutionalRepo>(() => const MockInstitutionalRepo())
     // The real implementation, against the in-memory database: remembering a
     // price is a round trip through drift and is worth exercising as one.
     ..registerLazySingleton<PriceRepo>(() => const LocalPriceRepo())
@@ -505,6 +508,9 @@ Future<AppDatabase> registerTestDependencies({
   // would take out of their hands before they could look.
   if (!autoDownloadUpdates) {
     await GetIt.I.get<SettingsRepo>().setAutoDownloadUpdates(false);
+  }
+  if (autoApplyUpdates) {
+    await GetIt.I.get<SettingsRepo>().setAutoApplyUpdates(true);
   }
 
   if (withIngest) await directory.load();
@@ -533,6 +539,7 @@ const Map<ReportTab, String> _tabLabels = {
   ReportTab.overview: 'Overview',
   ReportTab.valuation: 'Valuation',
   ReportTab.expectations: 'Expectations',
+  ReportTab.holdings: 'Holdings',
   ReportTab.framework: 'Framework',
 };
 

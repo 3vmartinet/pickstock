@@ -162,6 +162,9 @@ class _SecDataSection extends StatelessWidget {
     final autoDownload = context.select<SettingsViewModel, bool>(
       (viewModel) => viewModel.autoDownloadUpdates,
     );
+    final autoApply = context.select<SettingsViewModel, bool>(
+      (viewModel) => viewModel.autoApplyUpdates,
+    );
 
     return _Section(
       title: strings.settingsSecDataTitle,
@@ -180,6 +183,21 @@ class _SecDataSection extends StatelessWidget {
             // the next launch.
             if (value && context.mounted) {
               context.read<IngestViewModel>().downloadUpdateIfWanted();
+            }
+          },
+        ),
+        SettingSwitchRow(
+          key: autoApplySwitchKey,
+          label: strings.settingsAutoApplyLabel,
+          description: strings.settingsAutoApplyDescription,
+          value: autoApply,
+          onChanged: (value) async {
+            await context.read<SettingsViewModel>().setAutoApplyUpdates(
+              value,
+            );
+            // Turned on with a staged update waiting: apply it now.
+            if (value && context.mounted) {
+              context.read<IngestViewModel>().applyUpdateIfWanted();
             }
           },
         ),
@@ -239,3 +257,6 @@ class _UpdateStatus extends StatelessWidget {
 
 /// Finds the auto-download row in a test.
 const Key autoDownloadSwitchKey = ValueKey('autoDownloadSwitch');
+
+/// Finds the auto-apply row in a test.
+const Key autoApplySwitchKey = ValueKey('autoApplySwitch');

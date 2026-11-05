@@ -9,6 +9,7 @@ import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/snapshot/period_figures.dart';
 import 'package:pickstock/data/research/company_event.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
@@ -22,20 +23,25 @@ import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/data/valuation/discount_rate.dart';
+import 'package:pickstock/data/snapshot/institutional_shareholding.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/sec/institutional_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
+InstitutionalRepo get _institutionalRepo => GetIt.I.get<InstitutionalRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 OllamaRepo get _researchRepo => GetIt.I.get<OllamaRepo>();
 ResearchNoteRepo get _noteRepo => GetIt.I.get<ResearchNoteRepo>();
 MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
 ResearchQueue get _queue => GetIt.I.get<ResearchQueue>();
+SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 
 /// How old a stored quote may be before opening a company refetches it.
 ///
@@ -753,7 +759,22 @@ class SnapshotViewModel extends ChangeNotifier {
     if (tab == _reportTab) return;
     _reportTab = tab;
     notifyListeners();
+    if (tab == ReportTab.holdings &&
+        _institutionalShareholding == null &&
+        snapshot != null &&
+        !_isHoldingsLoading) {
+      unawaited(_loadHoldings(snapshot!.company, _requestGeneration));
+    }
   }
+
+  InstitutionalShareholding? _institutionalShareholding;
+
+  /// Institutional shareholding and beneficial ownership from SEC EDGAR.
+  InstitutionalShareholding? get institutionalShareholding =>
+      _institutionalShareholding;
+
+  bool _isHoldingsLoading = false;
+  bool get isHoldingsLoading => _isHoldingsLoading;
 
   String? _highlightedKind;
   Timer? _highlightTimer;
@@ -1017,6 +1038,28 @@ class SnapshotViewModel extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadHoldings(Company company, int generation) async {
+    _isHoldingsLoading = true;
+    notifyListeners();
+    try {
+      final holdings = await _institutionalRepo.fetchShareholding(
+        company,
+        currentPrice: _quote?.pricePerShare,
+      );
+      if (generation != _requestGeneration) return;
+      _institutionalShareholding = holdings;
+    } catch (error) {
+      logWarning(
+        () => 'Could not fetch holdings for ${company.ticker}: $error',
+      );
+    } finally {
+      if (generation == _requestGeneration) {
+        _isHoldingsLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
   /// A stored price is refetched when it is absent, older than
   /// [quoteFreshness], or was typed rather than quoted — a real quote beats a
   /// guess, and the user can always type over it again.
@@ -1026,7 +1069,12 @@ class SnapshotViewModel extends ChangeNotifier {
     return DateTime.now().difference(stored.asOf) > quoteFreshness;
   }
 
-  void _showPrice(Quote? price) => _quote = price;
+  void _showPrice(Quote? price) {
+    _quote = price;
+    if (snapshot != null && _institutionalShareholding != null) {
+      unawaited(_loadHoldings(snapshot!.company, _requestGeneration));
+    }
+  }
 
   /// Guards against a slow first request overwriting a newer one's result.
   int _requestGeneration = 0;
@@ -1053,6 +1101,8 @@ class SnapshotViewModel extends ChangeNotifier {
       _events = const [];
       _eventsFailure = null;
       _eventsState = EventsState.idle;
+      _institutionalShareholding = null;
+      _isHoldingsLoading = false;
       _insightStates.clear();
       _insightAnswers.clear();
       _insightFailures.clear();
@@ -1067,6 +1117,7 @@ class SnapshotViewModel extends ChangeNotifier {
       // stale in the time it took to open the company again.
       unawaited(_restoreNotes(snapshot.company.cik, generation));
       unawaited(_loadDiscountRate(symbol, generation));
+      unawaited(_loadHoldings(snapshot.company, generation));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {
       if (generation != _requestGeneration) return;
@@ -1101,6 +1152,61 @@ class SnapshotViewModel extends ChangeNotifier {
   Future<void> retry() async {
     final current = _state;
     if (current is SnapshotFailed) return search(current.ticker);
+  }
+
+  FrameworkQuestion _focusedFrameworkQuestion = FrameworkQuestion.growth;
+
+  /// The question currently focused in carousel mode or collapsed vertical pane mode.
+  FrameworkQuestion get focusedFrameworkQuestion => _focusedFrameworkQuestion;
+  FrameworkQuestion get carouselQuestion => _focusedFrameworkQuestion;
+
+  void selectFocusedFrameworkQuestion(FrameworkQuestion question) {
+    if (_focusedFrameworkQuestion == question) return;
+    _focusedFrameworkQuestion = question;
+    notifyListeners();
+  }
+
+  void selectCarouselQuestion(FrameworkQuestion question) =>
+      selectFocusedFrameworkQuestion(question);
+
+  void nextCarouselQuestion() {
+    final nextIndex = (_focusedFrameworkQuestion.index + 1).clamp(
+      0,
+      FrameworkQuestion.values.length - 1,
+    );
+    selectFocusedFrameworkQuestion(FrameworkQuestion.values[nextIndex]);
+  }
+
+  void previousCarouselQuestion() {
+    final prevIndex = (_focusedFrameworkQuestion.index - 1).clamp(
+      0,
+      FrameworkQuestion.values.length - 1,
+    );
+    selectFocusedFrameworkQuestion(FrameworkQuestion.values[prevIndex]);
+  }
+
+  /// Whether the vertical pane layout shows only the selected question's answer
+  /// (collapsed mode) or the full list of answers (expanded mode).
+  bool get isFrameworkVerticalCollapsed =>
+      _settingsRepo.frameworkVerticalCollapsed;
+
+  Future<void> toggleFrameworkVerticalCollapsed() async {
+    await setFrameworkVerticalCollapsed(!isFrameworkVerticalCollapsed);
+  }
+
+  Future<void> setFrameworkVerticalCollapsed(bool value) async {
+    if (value == isFrameworkVerticalCollapsed) return;
+    await _settingsRepo.setFrameworkVerticalCollapsed(value);
+    notifyListeners();
+  }
+
+  /// The active layout preference for the 7 questions Framework tab.
+  FrameworkLayout get frameworkLayout => _settingsRepo.frameworkLayout;
+
+  Future<void> selectFrameworkLayout(FrameworkLayout layout) async {
+    if (layout == frameworkLayout) return;
+    await _settingsRepo.setFrameworkLayout(layout);
+    notifyListeners();
   }
 
   void _rememberTicker(String ticker) {

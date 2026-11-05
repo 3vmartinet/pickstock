@@ -1068,6 +1068,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tabExpectations => 'Expectations';
 
   @override
+  String get tabHoldings => 'Holdings';
+
+  @override
   String get settingsTitle => 'PickStock Settings';
 
   @override
@@ -1085,7 +1088,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAutoDownloadDescription =>
-      'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it into the app still waits for yours.';
+      'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click.';
+
+  @override
+  String get settingsAutoApplyLabel => 'Apply updates automatically';
+
+  @override
+  String get settingsAutoApplyDescription =>
+      'Automatically load downloaded archives into the database once the download finishes, without waiting for manual confirmation.';
 
   @override
   String settingsStatusCurrent(String date) {
@@ -1320,6 +1330,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get frameworkTimingLookFor =>
       'Even great companies are terrible investments at the wrong price: recent pullbacks, upcoming catalysts, sector rotation.';
+
+  @override
+  String get frameworkLayoutList => 'List view';
+
+  @override
+  String get frameworkLayoutListHint =>
+      'Show all seven questions and answers in a vertical list';
+
+  @override
+  String get frameworkLayoutCarousel => 'Carousel view';
+
+  @override
+  String get frameworkLayoutCarouselHint =>
+      'Scorecard on top with questions in a horizontal carousel';
+
+  @override
+  String get frameworkLayoutVertical => 'Vertical pane view';
+
+  @override
+  String get frameworkLayoutVerticalHint =>
+      'Seven-questions pane on the left with answers on the right';
+
+  @override
+  String get frameworkPrevious => 'Previous question';
+
+  @override
+  String get frameworkNext => 'Next question';
+
+  @override
+  String frameworkQuestionPagination(int current, int total) {
+    return 'Question $current of $total';
+  }
+
+  @override
+  String get frameworkVerticalExpanded => 'Full list';
+
+  @override
+  String get frameworkVerticalExpandedHint =>
+      'Show all seven answers as a list';
+
+  @override
+  String get frameworkVerticalCollapsed => 'Single answer';
+
+  @override
+  String get frameworkVerticalCollapsedHint =>
+      'Show only the answer for the selected question';
 
   @override
   String get evidenceRevenue => 'Revenue';
@@ -2045,6 +2101,151 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get hintPriceToSales =>
       'Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.';
+
+  @override
+  String get sectionHoldings => 'Institutional ownership';
+
+  @override
+  String get sectionOwnershipComposition => 'Ownership structure';
+
+  @override
+  String get sectionTopHoldings => 'Top institutional holders';
+
+  @override
+  String holdingsFilersCount(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString institutional filers in EDGAR',
+      one: '1 institutional filer in EDGAR',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get holdingsTotalTitle => 'Institutional ownership';
+
+  @override
+  String get holdingsTop10Title => 'Top 10 concentration';
+
+  @override
+  String get holdingsNetFlowTitle => 'Net quarterly flow';
+
+  @override
+  String get holdingsActivistTitle => 'Beneficial & activist stakes';
+
+  @override
+  String get holdingsActivistNone => 'None on record';
+
+  @override
+  String holdingsActivistActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count active 13D filings',
+      one: '1 active 13D filing',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String holdingsFlowBuyersSellers(int buyers, int sellers) {
+    final intl.NumberFormat buyersNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String buyersString = buyersNumberFormat.format(buyers);
+    final intl.NumberFormat sellersNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String sellersString = sellersNumberFormat.format(sellers);
+
+    return '$buyersString buyers · $sellersString sellers';
+  }
+
+  @override
+  String get hintInstitutionalOwnership =>
+      'The percentage of total reported shares held by institutional managers required to file Form 13F with the SEC.';
+
+  @override
+  String get hintTop10Concentration =>
+      'The combined stake held by the ten largest institutional owners. High concentration indicates dominant influence by indexers or mega-funds.';
+
+  @override
+  String get hintNetInstitutionalFlow =>
+      'The net aggregate shares bought or sold across institutional 13F filers during the latest reporting quarter.';
+
+  @override
+  String get hintActivistStakes =>
+      'Schedule 13D filings indicate active investors with ≥5% beneficial ownership who may advocate for strategic, governance, or operational changes.';
+
+  @override
+  String get managerTypePassive => 'Passive Index';
+
+  @override
+  String get managerTypeAssetManager => 'Asset Manager';
+
+  @override
+  String get managerTypeHedgeFund => 'Hedge Fund';
+
+  @override
+  String get managerTypeSovereign => 'Sovereign / Pension';
+
+  @override
+  String get managerTypeInsider => 'Officers & Insiders';
+
+  @override
+  String get concentrationHigh => 'High concentration';
+
+  @override
+  String get concentrationModerate => 'Moderate concentration';
+
+  @override
+  String get concentrationBroad => 'Broadly distributed';
+
+  @override
+  String get ownershipPassive => 'Passive index';
+
+  @override
+  String get ownershipActive => 'Active funds';
+
+  @override
+  String get ownershipInsiders => 'Insiders & management';
+
+  @override
+  String get ownershipFloat => 'Public float / retail';
+
+  @override
+  String get colInstitution => 'Institution';
+
+  @override
+  String get colSharesHeld => 'Shares held';
+
+  @override
+  String get colMarketValue => 'Market value';
+
+  @override
+  String get colQoQChange => 'QoQ change';
+
+  @override
+  String get colPortfolioPercent => '13F weight';
+
+  @override
+  String get colFiling => 'Filing';
+
+  @override
+  String holdingsCycleLabel(String cycle) {
+    return 'Reporting cycle: $cycle';
+  }
+
+  @override
+  String get holdingsNoData =>
+      'No Form 13F institutional shareholding data on file for this registrant.';
+
+  @override
+  String get footnoteHoldings =>
+      'Source: SEC EDGAR Form 13F-HR, Schedule 13D, and Schedule 13G filings. Form 13F is filed quarterly within 45 days of calendar quarter-end by managers controlling ≥\$100M in Section 13(f) qualifying securities. Excludes short positions, foreign exchanges, cash, and debt.';
 
   @override
   String footnoteValuation(String low, String high, String basis) {

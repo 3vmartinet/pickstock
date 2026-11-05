@@ -3,6 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
@@ -18,6 +19,7 @@ import 'package:pickstock/ui/snapshot/widgets/order_book_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/framework/framework_section.dart';
+import 'package:pickstock/ui/snapshot/widgets/holdings/holdings_section.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_order_toggle.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
@@ -43,33 +45,72 @@ class SnapshotReport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The company and its tabs stay put while the report scrolls under them:
-    // on a long tab you would otherwise lose both the name of what you are
-    // reading and the way to the other tab.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(
-            context.pageGutter,
-            context.pageGutter,
-            context.pageGutter,
-            0,
-          ),
-          child: const _Pinned(),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              context.pageGutter,
-              0,
-              context.pageGutter,
-              context.pageGutter,
+    final tab = context.select<SnapshotViewModel, ReportTab>(
+      (viewModel) => viewModel.reportTab,
+    );
+    final frameworkLayout = context.select<SnapshotViewModel, FrameworkLayout>(
+      (viewModel) => viewModel.frameworkLayout,
+    );
+    final isVerticalFramework =
+        tab == ReportTab.framework &&
+        frameworkLayout == FrameworkLayout.verticalPanel;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (isVerticalFramework && constraints.maxWidth >= 840) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  context.pageGutter,
+                  context.pageGutter,
+                  context.pageGutter,
+                  0,
+                ),
+                child: const _Pinned(),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    context.pageGutter,
+                    0,
+                    context.pageGutter,
+                    context.pageGutter,
+                  ),
+                  child: const FrameworkSection(),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                context.pageGutter,
+                context.pageGutter,
+                context.pageGutter,
+                0,
+              ),
+              child: const _Pinned(),
             ),
-            child: const ReportTabBody(),
-          ),
-        ),
-      ],
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  context.pageGutter,
+                  0,
+                  context.pageGutter,
+                  context.pageGutter,
+                ),
+                child: const ReportTabBody(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -237,6 +278,7 @@ class _TabBody extends StatelessWidget {
       // and was read by nobody.
       ReportTab.valuation => const <Widget>[_ValuationSection()],
       ReportTab.expectations => const <Widget>[_ExpectationsSection()],
+      ReportTab.holdings => const <Widget>[HoldingsSection()],
       ReportTab.framework => const <Widget>[FrameworkSection()],
     };
 
@@ -587,8 +629,8 @@ class _HistorySection extends StatelessWidget {
   }
 }
 
-class _Footnotes extends StatelessWidget {
-  const _Footnotes();
+class ReportFootnotes extends StatelessWidget {
+  const ReportFootnotes({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -630,6 +672,8 @@ class _Footnotes extends StatelessWidget {
                 basis.getLabel(context.strings),
               ),
             ).muted().xSmall(),
+          if (tab == ReportTab.holdings)
+            Text(context.strings.footnoteHoldings).muted().xSmall(),
           if (isQuarterly)
             Text(context.strings.footnoteQuarters).muted().xSmall(),
           Text(context.strings.footnoteSource).muted().xSmall(),
@@ -638,3 +682,5 @@ class _Footnotes extends StatelessWidget {
     );
   }
 }
+
+typedef _Footnotes = ReportFootnotes;

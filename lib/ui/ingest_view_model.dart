@@ -315,7 +315,9 @@ class IngestViewModel extends ChangeNotifier {
       }
 
       if (_staged != null && !_cancelDownload) {
-        return _setUpdatePhase(UpdatePhase.staged);
+        _setUpdatePhase(UpdatePhase.staged);
+        applyUpdateIfWanted();
+        return;
       }
       await _abandonDownload();
     } on Object catch (error) {
@@ -335,6 +337,13 @@ class IngestViewModel extends ChangeNotifier {
     if (_updatePhase != UpdatePhase.offered) return;
     if (!_settingsRepo.autoDownloadUpdates) return;
     unawaited(downloadUpdate());
+  }
+
+  /// Applies a staged update to the database, if the settings say to.
+  void applyUpdateIfWanted() {
+    if (_updatePhase != UpdatePhase.staged) return;
+    if (!_settingsRepo.autoApplyUpdates) return;
+    unawaited(applyUpdate());
   }
 
   /// Stops a background download.
@@ -458,7 +467,9 @@ class IngestViewModel extends ChangeNotifier {
     final staged = await _bulkIngestRepo.readStaged();
     if (staged != null && !_isRedundant(staged)) {
       _staged = staged;
-      return _setUpdatePhase(UpdatePhase.staged);
+      _setUpdatePhase(UpdatePhase.staged);
+      applyUpdateIfWanted();
+      return;
     }
     if (staged != null) await _bulkIngestRepo.discardStaged();
 

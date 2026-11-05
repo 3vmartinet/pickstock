@@ -64,6 +64,13 @@ void main() {
     ),
   );
 
+  Switch autoApplySwitch(WidgetTester tester) => tester.widget<Switch>(
+    find.descendant(
+      of: find.byKey(autoApplySwitchKey),
+      matching: find.byType(Switch),
+    ),
+  );
+
   group('opened from the app menu', () {
     testWidgets('as a window titled the way Apple names it', (tester) async {
       database = await registerTestDependencies();
@@ -192,11 +199,51 @@ void main() {
       await pumpApp(tester);
       await chooseSettingsFromMenu(tester);
 
-      await tester.tap(find.byType(Switch));
+      await tester.tap(find.text('Download updates automatically'));
       await pumpFrames(tester);
 
       expect(autoDownloadSwitch(tester).value, isFalse);
       expect(GetIt.I.get<SettingsRepo>().autoDownloadUpdates, isFalse);
+    });
+
+    testWidgets('auto-apply turned on with a staged update, applies it', (
+      tester,
+    ) async {
+      final ingest = FakeBulkIngestRepo()
+        ..staged = fakeStagedIngest(testNewerArchiveDate);
+      database = await registerTestDependencies(bulkIngestRepo: ingest);
+      await pumpApp(tester);
+      expect(phaseOf(tester), UpdatePhase.staged);
+
+      await chooseSettingsFromMenu(tester);
+      expect(autoApplySwitch(tester).value, isFalse);
+
+      await tester.tap(find.text('Apply updates automatically'));
+      await pumpFrames(tester);
+
+      expect(autoApplySwitch(tester).value, isTrue);
+      expect(phaseOf(tester), UpdatePhase.loading);
+      expect(GetIt.I.get<SettingsRepo>().autoApplyUpdates, isTrue);
+    });
+
+    testWidgets('auto-apply turned on automatically loads once download completes', (
+      tester,
+    ) async {
+      final ingest = FakeBulkIngestRepo();
+      database = await registerTestDependencies(
+        bulkIngestRepo: ingest,
+        autoDownloadUpdates: true,
+        autoApplyUpdates: true,
+      );
+      await pumpApp(tester);
+
+      expect(phaseOf(tester), UpdatePhase.downloading);
+
+      ingest.finishDownload.complete();
+      await pumpFrames(tester);
+
+      // Automatically went from downloaded straight into loading, skipping manual staged prompt!
+      expect(phaseOf(tester), UpdatePhase.loading);
     });
   });
 
@@ -207,6 +254,25 @@ void main() {
       store = AppDatabase.forTesting(NativeDatabase.memory());
       GetIt.I.registerSingleton<AppDatabase>(store);
       database = store;
+    });
+
+    test('auto-apply defaults to false and persists when turned on', () async {
+      final settings = LocalSettingsRepo();
+      await settings.load();
+      expect(settings.autoApplyUpdates, isFalse);
+
+      await settings.setAutoApplyUpdates(true);
+      expect(
+        await store.allSettings(),
+        containsPair('autoApplyUpdates', 'true'),
+      );
+
+      final relaunched = LocalSettingsRepo();
+      await relaunched.load();
+      expect(relaunched.autoApplyUpdates, isTrue);
+
+      await relaunched.setAutoApplyUpdates(false);
+      expect(await store.allSettings(), isNot(contains('autoApplyUpdates')));
     });
 
     test('as nothing at all while it is on, the default', () async {

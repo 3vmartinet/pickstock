@@ -1570,6 +1570,12 @@ abstract class AppLocalizations {
   /// **'Expectations'**
   String get tabExpectations;
 
+  /// No description provided for @tabHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Holdings'**
+  String get tabHoldings;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:
@@ -1603,8 +1609,20 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoDownloadDescription.
   ///
   /// In en, this message translates to:
-  /// **'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click. Loading it into the app still waits for yours.'**
+  /// **'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click.'**
   String get settingsAutoDownloadDescription;
+
+  /// No description provided for @settingsAutoApplyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply updates automatically'**
+  String get settingsAutoApplyLabel;
+
+  /// No description provided for @settingsAutoApplyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically load downloaded archives into the database once the download finishes, without waiting for manual confirmation.'**
+  String get settingsAutoApplyDescription;
 
   /// No description provided for @settingsStatusCurrent.
   ///
@@ -1995,6 +2013,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Even great companies are terrible investments at the wrong price: recent pullbacks, upcoming catalysts, sector rotation.'**
   String get frameworkTimingLookFor;
+
+  /// No description provided for @frameworkLayoutList.
+  ///
+  /// In en, this message translates to:
+  /// **'List view'**
+  String get frameworkLayoutList;
+
+  /// No description provided for @frameworkLayoutListHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all seven questions and answers in a vertical list'**
+  String get frameworkLayoutListHint;
+
+  /// No description provided for @frameworkLayoutCarousel.
+  ///
+  /// In en, this message translates to:
+  /// **'Carousel view'**
+  String get frameworkLayoutCarousel;
+
+  /// No description provided for @frameworkLayoutCarouselHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scorecard on top with questions in a horizontal carousel'**
+  String get frameworkLayoutCarouselHint;
+
+  /// No description provided for @frameworkLayoutVertical.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical pane view'**
+  String get frameworkLayoutVertical;
+
+  /// No description provided for @frameworkLayoutVerticalHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Seven-questions pane on the left with answers on the right'**
+  String get frameworkLayoutVerticalHint;
+
+  /// No description provided for @frameworkPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous question'**
+  String get frameworkPrevious;
+
+  /// No description provided for @frameworkNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next question'**
+  String get frameworkNext;
+
+  /// No description provided for @frameworkQuestionPagination.
+  ///
+  /// In en, this message translates to:
+  /// **'Question {current} of {total}'**
+  String frameworkQuestionPagination(int current, int total);
+
+  /// No description provided for @frameworkVerticalExpanded.
+  ///
+  /// In en, this message translates to:
+  /// **'Full list'**
+  String get frameworkVerticalExpanded;
+
+  /// No description provided for @frameworkVerticalExpandedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all seven answers as a list'**
+  String get frameworkVerticalExpandedHint;
+
+  /// No description provided for @frameworkVerticalCollapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Single answer'**
+  String get frameworkVerticalCollapsed;
+
+  /// No description provided for @frameworkVerticalCollapsedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Show only the answer for the selected question'**
+  String get frameworkVerticalCollapsedHint;
 
   /// No description provided for @evidenceRevenue.
   ///
@@ -3113,6 +3209,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.'**
   String get hintPriceToSales;
+
+  /// No description provided for @sectionHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Institutional ownership'**
+  String get sectionHoldings;
+
+  /// No description provided for @sectionOwnershipComposition.
+  ///
+  /// In en, this message translates to:
+  /// **'Ownership structure'**
+  String get sectionOwnershipComposition;
+
+  /// No description provided for @sectionTopHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Top institutional holders'**
+  String get sectionTopHoldings;
+
+  /// No description provided for @holdingsFilersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 institutional filer in EDGAR} other{{count} institutional filers in EDGAR}}'**
+  String holdingsFilersCount(int count);
+
+  /// No description provided for @holdingsTotalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institutional ownership'**
+  String get holdingsTotalTitle;
+
+  /// No description provided for @holdingsTop10Title.
+  ///
+  /// In en, this message translates to:
+  /// **'Top 10 concentration'**
+  String get holdingsTop10Title;
+
+  /// No description provided for @holdingsNetFlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Net quarterly flow'**
+  String get holdingsNetFlowTitle;
+
+  /// No description provided for @holdingsActivistTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Beneficial & activist stakes'**
+  String get holdingsActivistTitle;
+
+  /// No description provided for @holdingsActivistNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None on record'**
+  String get holdingsActivistNone;
+
+  /// No description provided for @holdingsActivistActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 active 13D filing} other{{count} active 13D filings}}'**
+  String holdingsActivistActive(int count);
+
+  /// No description provided for @holdingsFlowBuyersSellers.
+  ///
+  /// In en, this message translates to:
+  /// **'{buyers} buyers · {sellers} sellers'**
+  String holdingsFlowBuyersSellers(int buyers, int sellers);
+
+  /// No description provided for @hintInstitutionalOwnership.
+  ///
+  /// In en, this message translates to:
+  /// **'The percentage of total reported shares held by institutional managers required to file Form 13F with the SEC.'**
+  String get hintInstitutionalOwnership;
+
+  /// No description provided for @hintTop10Concentration.
+  ///
+  /// In en, this message translates to:
+  /// **'The combined stake held by the ten largest institutional owners. High concentration indicates dominant influence by indexers or mega-funds.'**
+  String get hintTop10Concentration;
+
+  /// No description provided for @hintNetInstitutionalFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'The net aggregate shares bought or sold across institutional 13F filers during the latest reporting quarter.'**
+  String get hintNetInstitutionalFlow;
+
+  /// No description provided for @hintActivistStakes.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule 13D filings indicate active investors with ≥5% beneficial ownership who may advocate for strategic, governance, or operational changes.'**
+  String get hintActivistStakes;
+
+  /// No description provided for @managerTypePassive.
+  ///
+  /// In en, this message translates to:
+  /// **'Passive Index'**
+  String get managerTypePassive;
+
+  /// No description provided for @managerTypeAssetManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset Manager'**
+  String get managerTypeAssetManager;
+
+  /// No description provided for @managerTypeHedgeFund.
+  ///
+  /// In en, this message translates to:
+  /// **'Hedge Fund'**
+  String get managerTypeHedgeFund;
+
+  /// No description provided for @managerTypeSovereign.
+  ///
+  /// In en, this message translates to:
+  /// **'Sovereign / Pension'**
+  String get managerTypeSovereign;
+
+  /// No description provided for @managerTypeInsider.
+  ///
+  /// In en, this message translates to:
+  /// **'Officers & Insiders'**
+  String get managerTypeInsider;
+
+  /// No description provided for @concentrationHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High concentration'**
+  String get concentrationHigh;
+
+  /// No description provided for @concentrationModerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Moderate concentration'**
+  String get concentrationModerate;
+
+  /// No description provided for @concentrationBroad.
+  ///
+  /// In en, this message translates to:
+  /// **'Broadly distributed'**
+  String get concentrationBroad;
+
+  /// No description provided for @ownershipPassive.
+  ///
+  /// In en, this message translates to:
+  /// **'Passive index'**
+  String get ownershipPassive;
+
+  /// No description provided for @ownershipActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active funds'**
+  String get ownershipActive;
+
+  /// No description provided for @ownershipInsiders.
+  ///
+  /// In en, this message translates to:
+  /// **'Insiders & management'**
+  String get ownershipInsiders;
+
+  /// No description provided for @ownershipFloat.
+  ///
+  /// In en, this message translates to:
+  /// **'Public float / retail'**
+  String get ownershipFloat;
+
+  /// No description provided for @colInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get colInstitution;
+
+  /// No description provided for @colSharesHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares held'**
+  String get colSharesHeld;
+
+  /// No description provided for @colMarketValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Market value'**
+  String get colMarketValue;
+
+  /// No description provided for @colQoQChange.
+  ///
+  /// In en, this message translates to:
+  /// **'QoQ change'**
+  String get colQoQChange;
+
+  /// No description provided for @colPortfolioPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'13F weight'**
+  String get colPortfolioPercent;
+
+  /// No description provided for @colFiling.
+  ///
+  /// In en, this message translates to:
+  /// **'Filing'**
+  String get colFiling;
+
+  /// No description provided for @holdingsCycleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reporting cycle: {cycle}'**
+  String holdingsCycleLabel(String cycle);
+
+  /// No description provided for @holdingsNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No Form 13F institutional shareholding data on file for this registrant.'**
+  String get holdingsNoData;
+
+  /// No description provided for @footnoteHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Source: SEC EDGAR Form 13F-HR, Schedule 13D, and Schedule 13G filings. Form 13F is filed quarterly within 45 days of calendar quarter-end by managers controlling ≥\$100M in Section 13(f) qualifying securities. Excludes short positions, foreign exchanges, cash, and debt.'**
+  String get footnoteHoldings;
 
   /// No description provided for @footnoteValuation.
   ///
