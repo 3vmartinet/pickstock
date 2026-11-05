@@ -40,7 +40,13 @@ class SettingsDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: ThemeRepo.spaceMedium,
-          children: const [_Header(), Divider(), _SecDataSection()],
+          children: const [
+            _Header(),
+            Divider(),
+            _SecDataSection(),
+            Divider(),
+            _ResearchSection(),
+          ],
         ),
       ),
     );
@@ -260,3 +266,36 @@ const Key autoDownloadSwitchKey = ValueKey('autoDownloadSwitch');
 
 /// Finds the auto-apply row in a test.
 const Key autoApplySwitchKey = ValueKey('autoApplySwitch');
+
+class _ResearchSection extends StatelessWidget {
+  const _ResearchSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.strings;
+    final autoFetch = context.select<SettingsViewModel, bool>(
+      (viewModel) => viewModel.autoFetchBusinessDescription,
+    );
+
+    return _Section(
+      title: strings.settingsResearchTitle,
+      description: strings.settingsResearchDescription,
+      children: [
+        SettingSwitchRow(
+          key: autoFetchBusinessSwitchKey,
+          label: strings.settingsAutoFetchBusinessLabel,
+          description: strings.settingsAutoFetchBusinessDescription,
+          value: autoFetch,
+          onChanged: (value) async {
+            await context
+                .read<SettingsViewModel>()
+                .setAutoFetchBusinessDescription(value);
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Finds the auto-fetch business description row in a test.
+const Key autoFetchBusinessSwitchKey = ValueKey('autoFetchBusinessSwitch');

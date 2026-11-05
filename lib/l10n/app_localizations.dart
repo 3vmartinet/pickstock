@@ -1585,7 +1585,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsClose.
   ///
   /// In en, this message translates to:
-  /// **'Close. Every change here is already saved.'**
+  /// **'Close'**
   String get settingsClose;
 
   /// No description provided for @settingsSecDataTitle.
@@ -1597,7 +1597,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecDataDescription.
   ///
   /// In en, this message translates to:
-  /// **'The filings every report is built from, downloaded from SEC EDGAR as one archive and kept on this machine.'**
+  /// **'SEC EDGAR filings stored locally.'**
   String get settingsSecDataDescription;
 
   /// No description provided for @settingsAutoDownloadLabel.
@@ -1609,7 +1609,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoDownloadDescription.
   ///
   /// In en, this message translates to:
-  /// **'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click.'**
+  /// **'Download new archives in the background when available (~1.4 GB).'**
   String get settingsAutoDownloadDescription;
 
   /// No description provided for @settingsAutoApplyLabel.
@@ -1621,62 +1621,86 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAutoApplyDescription.
   ///
   /// In en, this message translates to:
-  /// **'Automatically load downloaded archives into the database once the download finishes, without waiting for manual confirmation.'**
+  /// **'Install downloaded updates immediately without confirmation.'**
   String get settingsAutoApplyDescription;
 
   /// No description provided for @settingsStatusCurrent.
   ///
   /// In en, this message translates to:
-  /// **'Up to date: the loaded archive was published on {date}.'**
+  /// **'Up to date ({date}).'**
   String settingsStatusCurrent(String date);
 
   /// No description provided for @settingsStatusOffered.
   ///
   /// In en, this message translates to:
-  /// **'SEC published a newer archive on {date}. It has not been downloaded.'**
+  /// **'New archive published on {date}. It has not been downloaded.'**
   String settingsStatusOffered(String date);
 
   /// No description provided for @settingsStatusDownloading.
   ///
   /// In en, this message translates to:
-  /// **'Downloading the update in the background.'**
+  /// **'Downloading update in the background…'**
   String get settingsStatusDownloading;
 
   /// No description provided for @settingsStatusDownloadingPercent.
   ///
   /// In en, this message translates to:
-  /// **'Downloading the update in the background: {percent}%.'**
+  /// **'Downloading update in the background: {percent}%.'**
   String settingsStatusDownloadingPercent(int percent);
 
   /// No description provided for @settingsStatusCancelling.
   ///
   /// In en, this message translates to:
-  /// **'Stopping the download.'**
+  /// **'Cancelling download…'**
   String get settingsStatusCancelling;
 
   /// No description provided for @settingsStatusStaged.
   ///
   /// In en, this message translates to:
-  /// **'The update is downloaded and waiting to be loaded from the app bar. The app stays usable while it loads.'**
+  /// **'Update downloaded. Ready to load from the app bar.'**
   String get settingsStatusStaged;
 
   /// No description provided for @settingsStatusLoading.
   ///
   /// In en, this message translates to:
-  /// **'Loading the update in the background.'**
+  /// **'Loading update in the background…'**
   String get settingsStatusLoading;
 
   /// No description provided for @settingsStatusLoadingPercent.
   ///
   /// In en, this message translates to:
-  /// **'Loading the update in the background: {percent}%.'**
+  /// **'Loading update in the background: {percent}%.'**
   String settingsStatusLoadingPercent(int percent);
 
   /// No description provided for @settingsStatusFailed.
   ///
   /// In en, this message translates to:
-  /// **'The last download did not finish. It can be retried from the app bar.'**
+  /// **'Download failed. Retry from the app bar.'**
   String get settingsStatusFailed;
+
+  /// No description provided for @settingsResearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Research'**
+  String get settingsResearchTitle;
+
+  /// No description provided for @settingsResearchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Automated analysis using a local language model.'**
+  String get settingsResearchDescription;
+
+  /// No description provided for @settingsAutoFetchBusinessLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-fetch business description'**
+  String get settingsAutoFetchBusinessLabel;
+
+  /// No description provided for @settingsAutoFetchBusinessDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch description when opening a company without one.'**
+  String get settingsAutoFetchBusinessDescription;
 
   /// No description provided for @tabFramework.
   ///

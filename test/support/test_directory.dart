@@ -408,6 +408,7 @@ Future<AppDatabase> registerTestDependencies({
   MarketRatesRepo? marketRatesRepo,
   bool autoDownloadUpdates = false,
   bool autoApplyUpdates = false,
+  bool autoFetchBusinessDescription = false,
 }) async {
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
@@ -511,6 +512,9 @@ Future<AppDatabase> registerTestDependencies({
   }
   if (autoApplyUpdates) {
     await GetIt.I.get<SettingsRepo>().setAutoApplyUpdates(true);
+  }
+  if (!autoFetchBusinessDescription) {
+    await GetIt.I.get<SettingsRepo>().setAutoFetchBusinessDescription(false);
   }
 
   if (withIngest) await directory.load();

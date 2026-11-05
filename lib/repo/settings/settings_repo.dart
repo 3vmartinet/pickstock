@@ -20,6 +20,7 @@ const String _autoApplyKey = 'autoApplyUpdates';
 const String _frameworkLayoutKey = 'frameworkLayout';
 const String _frameworkVerticalCollapsedKey = 'frameworkVerticalCollapsed';
 const String _frameworkListStickyKey = 'frameworkListSticky';
+const String _autoFetchBusinessDescriptionKey = 'autoFetchBusinessDescription';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -95,6 +96,11 @@ abstract interface class SettingsRepo {
   /// Whether the seven-questions scorecard is pinned to the top in the list layout.
   bool get frameworkListSticky;
   Future<void> setFrameworkListSticky(bool value);
+
+  /// Whether the business description is automatically fetched with an LLM
+  /// when opening a company that does not already have one.
+  bool get autoFetchBusinessDescription;
+  Future<void> setAutoFetchBusinessDescription(bool value);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -216,6 +222,16 @@ class LocalSettingsRepo implements SettingsRepo {
           ? _erase(_frameworkListStickyKey)
           : _write(_frameworkListStickyKey, 'false');
 
+  @override
+  bool get autoFetchBusinessDescription =>
+      _values[_autoFetchBusinessDescriptionKey] != 'false';
+
+  @override
+  Future<void> setAutoFetchBusinessDescription(bool value) =>
+      value
+          ? _erase(_autoFetchBusinessDescriptionKey)
+          : _write(_autoFetchBusinessDescriptionKey, 'false');
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -254,6 +270,7 @@ class MemorySettingsRepo implements SettingsRepo {
   FrameworkLayout _frameworkLayout = FrameworkLayout.list;
   bool _frameworkVerticalCollapsed = false;
   bool _frameworkListSticky = true;
+  bool _autoFetchBusinessDescription = true;
 
   @override
   Future<void> load() async {}
@@ -342,4 +359,11 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setFrameworkListSticky(bool value) async =>
       _frameworkListSticky = value;
+
+  @override
+  bool get autoFetchBusinessDescription => _autoFetchBusinessDescription;
+
+  @override
+  Future<void> setAutoFetchBusinessDescription(bool value) async =>
+      _autoFetchBusinessDescription = value;
 }

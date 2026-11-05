@@ -71,6 +71,13 @@ void main() {
     ),
   );
 
+  Switch autoFetchBusinessSwitch(WidgetTester tester) => tester.widget<Switch>(
+    find.descendant(
+      of: find.byKey(autoFetchBusinessSwitchKey),
+      matching: find.byType(Switch),
+    ),
+  );
+
   group('opened from the app menu', () {
     testWidgets('as a window titled the way Apple names it', (tester) async {
       database = await registerTestDependencies();
@@ -115,6 +122,24 @@ void main() {
       // And can be opened again: the guard against a second copy lets go.
       await chooseSettingsFromMenu(tester);
       expect(find.byType(SettingsDialog), findsOneWidget);
+    });
+
+    testWidgets('shows research section with auto-fetch business switch', (
+      tester,
+    ) async {
+      database = await registerTestDependencies();
+      await pumpApp(tester);
+      await chooseSettingsFromMenu(tester);
+
+      expect(find.text('Research'), findsOneWidget);
+      expect(find.text('Auto-fetch business description'), findsOneWidget);
+      expect(autoFetchBusinessSwitch(tester).value, isFalse);
+
+      await tester.tap(find.text('Auto-fetch business description'));
+      await pumpFrames(tester);
+
+      expect(autoFetchBusinessSwitch(tester).value, isTrue);
+      expect(GetIt.I.get<SettingsRepo>().autoFetchBusinessDescription, isTrue);
     });
   });
 
@@ -188,7 +213,7 @@ void main() {
       expect(autoDownloadSwitch(tester).value, isTrue);
       expect(phaseOf(tester), UpdatePhase.downloading);
       expect(
-        find.textContaining('Downloading the update in the background'),
+        find.textContaining('Downloading update in the background'),
         findsOneWidget,
       );
       expect(GetIt.I.get<SettingsRepo>().autoDownloadUpdates, isTrue);
@@ -294,6 +319,28 @@ void main() {
       // And turning it back on removes the row rather than writing "true".
       await relaunched.setAutoDownloadUpdates(true);
       expect(await store.allSettings(), isNot(contains('autoDownloadUpdates')));
+    });
+
+    test('auto-fetch business description defaults to true and persists when toggled', () async {
+      final settings = LocalSettingsRepo();
+      await settings.load();
+      expect(settings.autoFetchBusinessDescription, isTrue);
+
+      await settings.setAutoFetchBusinessDescription(false);
+      expect(
+        await store.allSettings(),
+        containsPair('autoFetchBusinessDescription', 'false'),
+      );
+
+      final relaunched = LocalSettingsRepo();
+      await relaunched.load();
+      expect(relaunched.autoFetchBusinessDescription, isFalse);
+
+      await settings.setAutoFetchBusinessDescription(true);
+      expect(
+        await store.allSettings(),
+        isNot(contains('autoFetchBusinessDescription')),
+      );
     });
   });
 }

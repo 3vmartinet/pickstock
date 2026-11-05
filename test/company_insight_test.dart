@@ -12,6 +12,7 @@ import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_insight_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/napkin_math.dart';
@@ -98,6 +99,17 @@ void main() {
     );
     expect(find.text('Describe the business'), findsOneWidget);
     expect(research.questions, isEmpty);
+  });
+
+  testWidgets('automatically fetches business description when enabled and none on file', (
+    tester,
+  ) async {
+    await GetIt.I.get<SettingsRepo>().setAutoFetchBusinessDescription(true);
+    await openApple(tester);
+
+    expect(research.questions, isNotEmpty);
+    expect(research.questions.first, contains('what does'));
+    expect(research.questions.first, contains('Apple Inc.'));
   });
 
   testWidgets('each tab asks its own question of its own figures', (

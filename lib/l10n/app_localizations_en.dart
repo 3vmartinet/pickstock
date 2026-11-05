@@ -1074,66 +1074,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'PickStock Settings';
 
   @override
-  String get settingsClose => 'Close. Every change here is already saved.';
+  String get settingsClose => 'Close';
 
   @override
   String get settingsSecDataTitle => 'SEC data';
 
   @override
-  String get settingsSecDataDescription =>
-      'The filings every report is built from, downloaded from SEC EDGAR as one archive and kept on this machine.';
+  String get settingsSecDataDescription => 'SEC EDGAR filings stored locally.';
 
   @override
   String get settingsAutoDownloadLabel => 'Download updates automatically';
 
   @override
   String get settingsAutoDownloadDescription =>
-      'When SEC publishes a newer archive, download it in the background (about 1.4 GB) without waiting for a click.';
+      'Download new archives in the background when available (~1.4 GB).';
 
   @override
   String get settingsAutoApplyLabel => 'Apply updates automatically';
 
   @override
   String get settingsAutoApplyDescription =>
-      'Automatically load downloaded archives into the database once the download finishes, without waiting for manual confirmation.';
+      'Install downloaded updates immediately without confirmation.';
 
   @override
   String settingsStatusCurrent(String date) {
-    return 'Up to date: the loaded archive was published on $date.';
+    return 'Up to date ($date).';
   }
 
   @override
   String settingsStatusOffered(String date) {
-    return 'SEC published a newer archive on $date. It has not been downloaded.';
+    return 'New archive published on $date. It has not been downloaded.';
   }
 
   @override
   String get settingsStatusDownloading =>
-      'Downloading the update in the background.';
+      'Downloading update in the background…';
 
   @override
   String settingsStatusDownloadingPercent(int percent) {
-    return 'Downloading the update in the background: $percent%.';
+    return 'Downloading update in the background: $percent%.';
   }
 
   @override
-  String get settingsStatusCancelling => 'Stopping the download.';
+  String get settingsStatusCancelling => 'Cancelling download…';
 
   @override
   String get settingsStatusStaged =>
-      'The update is downloaded and waiting to be loaded from the app bar. The app stays usable while it loads.';
+      'Update downloaded. Ready to load from the app bar.';
 
   @override
-  String get settingsStatusLoading => 'Loading the update in the background.';
+  String get settingsStatusLoading => 'Loading update in the background…';
 
   @override
   String settingsStatusLoadingPercent(int percent) {
-    return 'Loading the update in the background: $percent%.';
+    return 'Loading update in the background: $percent%.';
   }
 
   @override
-  String get settingsStatusFailed =>
-      'The last download did not finish. It can be retried from the app bar.';
+  String get settingsStatusFailed => 'Download failed. Retry from the app bar.';
+
+  @override
+  String get settingsResearchTitle => 'Research';
+
+  @override
+  String get settingsResearchDescription =>
+      'Automated analysis using a local language model.';
+
+  @override
+  String get settingsAutoFetchBusinessLabel =>
+      'Auto-fetch business description';
+
+  @override
+  String get settingsAutoFetchBusinessDescription =>
+      'Fetch description when opening a company without one.';
 
   @override
   String get tabFramework => 'Framework';

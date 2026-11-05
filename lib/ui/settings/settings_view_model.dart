@@ -12,12 +12,17 @@ SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 class SettingsViewModel extends ChangeNotifier {
   bool _autoDownloadUpdates = _settingsRepo.autoDownloadUpdates;
   bool _autoApplyUpdates = _settingsRepo.autoApplyUpdates;
+  bool _autoFetchBusinessDescription =
+      _settingsRepo.autoFetchBusinessDescription;
 
   /// Whether a newer SEC archive downloads as soon as it is offered.
   bool get autoDownloadUpdates => _autoDownloadUpdates;
 
   /// Whether a downloaded update is automatically applied without waiting for confirmation.
   bool get autoApplyUpdates => _autoApplyUpdates;
+
+  /// Whether the business description is fetched automatically with an LLM.
+  bool get autoFetchBusinessDescription => _autoFetchBusinessDescription;
 
   Future<void> setAutoDownloadUpdates(bool value) async {
     if (value == _autoDownloadUpdates) return;
@@ -31,5 +36,12 @@ class SettingsViewModel extends ChangeNotifier {
     _autoApplyUpdates = value;
     notifyListeners();
     await _settingsRepo.setAutoApplyUpdates(value);
+  }
+
+  Future<void> setAutoFetchBusinessDescription(bool value) async {
+    if (value == _autoFetchBusinessDescription) return;
+    _autoFetchBusinessDescription = value;
+    notifyListeners();
+    await _settingsRepo.setAutoFetchBusinessDescription(value);
   }
 }

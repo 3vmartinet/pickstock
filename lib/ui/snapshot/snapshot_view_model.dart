@@ -727,6 +727,11 @@ class SnapshotViewModel extends ChangeNotifier {
         _frameworkGeneratedAt[question] = note.generatedAt;
       }
       notifyListeners();
+      if (_settingsRepo.autoFetchBusinessDescription &&
+          generation == _requestGeneration &&
+          !_insightAnswers.containsKey(CompanyInsight.business)) {
+        unawaited(loadInsight(CompanyInsight.business));
+      }
     } on Object catch (error) {
       logWarning(() => 'Could not read the notes for $cik: $error');
     }
@@ -814,7 +819,9 @@ class SnapshotViewModel extends ChangeNotifier {
     _highlightTimer?.cancel();
     // The queue outlives this: it is app-wide, and a listener left on it would
     // be calling into a disposed notifier for the rest of the session.
-    _queue.removeListener(notifyListeners);
+    if (GetIt.I.isRegistered<ResearchQueue>()) {
+      _queue.removeListener(notifyListeners);
+    }
     super.dispose();
   }
 
