@@ -41,8 +41,9 @@ class SnapshotBody extends StatelessWidget {
           // change, and the tab body underneath already animates itself.
           child: KeyedSubtree(
             // A new key builds a new scroll position, so opening a tab starts
-            // at the top of it rather than wherever the last one was left.
-            key: ValueKey(tab),
+            // at the top of it rather than wherever the last one was left, and
+            // switching companies starts fresh at the top of the new report.
+            key: ValueKey('${state.snapshot.company.cik}-$tab'),
             child: const SnapshotReport(),
           ),
         ),

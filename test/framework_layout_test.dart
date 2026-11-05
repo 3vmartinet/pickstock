@@ -197,4 +197,31 @@ void main() {
     expect(find.byType(FrameworkVerticalScorecard), findsNothing);
     expect(find.byType(FrameworkQuestionCard), findsNWidgets(7));
   });
+
+  testWidgets('switching companies resets focused question to question 1', (
+    tester,
+  ) async {
+    await openFramework(tester);
+
+    // Switch to vertical layout and collapsed mode.
+    await tester.tap(find.byIcon(LucideIcons.layoutPanelLeft));
+    await tester.pumpAndSettle();
+
+    final collapseBtn = find.byIcon(LucideIcons.listCollapse);
+    expect(collapseBtn, findsOneWidget);
+    await tester.tap(collapseBtn);
+    await tester.pumpAndSettle();
+
+    // Select question 3.
+    await tester.tap(find.text('3. Management').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Is management competent?'), findsOneWidget);
+
+    // Switch to another company from the directory list.
+    await tester.tap(find.text('NVIDIA CORP'));
+    await tester.pumpAndSettle();
+
+    // Focused question should have refreshed to Question 1: Growth.
+    expect(find.text('Is the business growing?'), findsOneWidget);
+  });
 }

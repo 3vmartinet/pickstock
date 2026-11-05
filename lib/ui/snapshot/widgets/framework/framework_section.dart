@@ -47,6 +47,9 @@ class _FrameworkSectionState extends State<FrameworkSection> {
     super.initState();
     _listScrollController.addListener(_updateVisibleQuestion);
     _verticalScrollController.addListener(_updateVisibleQuestion);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updateVisibleQuestion();
+    });
   }
 
   @override
@@ -135,10 +138,31 @@ class _FrameworkSectionState extends State<FrameworkSection> {
     );
   }
 
+  String? _lastCik;
+  FrameworkLayout? _lastLayout;
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<SnapshotViewModel>();
     final layout = viewModel.frameworkLayout;
+    final companyCik = viewModel.snapshot?.company.cik;
+
+    if ((_lastCik != null && _lastCik != companyCik) ||
+        (_lastLayout != null && _lastLayout != layout)) {
+      if (_lastCik != companyCik) {
+        if (_listScrollController.hasClients) {
+          _listScrollController.jumpTo(0);
+        }
+        if (_verticalScrollController.hasClients) {
+          _verticalScrollController.jumpTo(0);
+        }
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateVisibleQuestion();
+      });
+    }
+    _lastCik = companyCik;
+    _lastLayout = layout;
 
     return Padding(
       padding: const EdgeInsets.only(top: ThemeRepo.spaceLarge),

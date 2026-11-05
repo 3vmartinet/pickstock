@@ -1118,6 +1118,7 @@ class SnapshotViewModel extends ChangeNotifier {
       _frameworkSources.clear();
       _frameworkGeneratedAt.clear();
       _frameworkFailures.clear();
+      _focusedFrameworkQuestion = FrameworkQuestion.growth;
       _setState(SnapshotLoaded(snapshot));
       // Whatever a model has already said about this company, straight back on
       // screen: it cost a minute each to get and nothing about it has gone
