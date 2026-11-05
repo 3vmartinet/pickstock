@@ -333,7 +333,9 @@ class _RefreshQuoteButton extends StatelessWidget {
           child: isQuoting
               ? const SizedBox.square(
                   dimension: ThemeRepo.inlineSpinnerSize,
-                  child: CircularProgressIndicator(),
+                  child: CircularProgressIndicator(
+                    strokeWidth: ThemeRepo.inlineSpinnerStroke,
+                  ),
                 )
               : const Icon(LucideIcons.refreshCw)
                     .iconXSmall()

@@ -420,8 +420,12 @@ class AppDatabase extends _$AppDatabase {
           // Added, not populated: the figure arrives with the next ingest,
           // which the extractor version already insists on.
           logInfo(() => 'Adding gross profit and impairments');
-          await migrator.addColumn(fiscalYears, fiscalYears.grossProfit);
-          await migrator.addColumn(fiscalYears, fiscalYears.impairment);
+          try {
+            await migrator.addColumn(fiscalYears, fiscalYears.grossProfit);
+          } catch (_) {}
+          try {
+            await migrator.addColumn(fiscalYears, fiscalYears.impairment);
+          } catch (_) {}
         }
         if (from < 17) {
           // Added, not populated: the figures arrive with the next ingest,

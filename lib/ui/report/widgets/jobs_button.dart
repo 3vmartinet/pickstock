@@ -110,7 +110,9 @@ class _JobsButtonState extends State<JobsButton> {
                 // is most of what the app bar has to say.
                 ? const SizedBox.square(
                     dimension: ThemeRepo.inlineSpinnerSize,
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(
+                      strokeWidth: ThemeRepo.inlineSpinnerStroke,
+                    ),
                   )
                 : const Icon(LucideIcons.listChecks),
           ),
@@ -555,7 +557,9 @@ class _StateMark extends StatelessWidget {
       ResearchTaskState.running => const Center(
         child: SizedBox.square(
           dimension: ThemeRepo.inlineSpinnerSize,
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            strokeWidth: ThemeRepo.inlineSpinnerStroke,
+          ),
         ),
       ),
       ResearchTaskState.done => Icon(
