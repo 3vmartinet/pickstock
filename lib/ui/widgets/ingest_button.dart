@@ -189,8 +189,10 @@ class _Downloading extends StatelessWidget {
           // indeterminate bar: the two short stages before it have no size
           // worth putting a figure on.
           fraction: viewModel.updateFraction,
-          // On a filled button, so the bar is drawn in its own foreground.
-          colour: context.theme.colorScheme.primaryForeground,
+          colour: _themeRepo.positive(context.theme),
+          trackColour: _themeRepo.positive(context.theme).withValues(
+            alpha: ThemeRepo.updateProgressTrack,
+          ),
           child: _ActionButton(
             // The figure goes in the tooltip, not the label: a label that
             // changed a hundred times would jitter the app bar, and the bar
@@ -202,8 +204,7 @@ class _Downloading extends StatelessWidget {
                 .animate(onPlay: (controller) => controller.repeat())
                 .rotate(duration: ThemeRepo.updateSpinDuration),
             label: context.strings.updateDownloading,
-            // Nothing to press: it is already happening, and stopping it is
-            // the button beside this one.
+            // Kept inert: work is under way, and cancellation is the button beside it.
             onPressed: null,
           ),
         ),
@@ -299,7 +300,10 @@ class _Loading extends StatelessWidget {
 
     return EdgeProgress(
       fraction: viewModel.updateFraction,
-      colour: context.theme.colorScheme.primaryForeground,
+      colour: _themeRepo.positive(context.theme),
+      trackColour: _themeRepo.positive(context.theme).withValues(
+        alpha: ThemeRepo.updateProgressTrack,
+      ),
       child: _ActionButton(
         hint: percent == null
             ? hint
@@ -355,12 +359,11 @@ class _ActionButton extends StatelessWidget {
       tooltip: HintTooltip(hint).call,
       child: PrimaryButton(
         size: ButtonSize.small,
-        // Kept solid even with nothing to press. Left to work itself out from
-        // `onPressed`, the download's button greys off to a muted outline —
-        // which beside the solid cancel button reads as two unrelated
-        // controls, one of them broken, rather than as one thing happening.
+        // Kept solid even with nothing to press. Providing a callback when null
+        // preserves the button's solid primary filled appearance rather than
+        // falling back to an unstyled transparent outline.
         enabled: true,
-        onPressed: onPressed,
+        onPressed: onPressed ?? () {},
         leading: leading,
         child: Text(label),
       ),

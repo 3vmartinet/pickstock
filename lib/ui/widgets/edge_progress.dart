@@ -16,6 +16,7 @@ class EdgeProgress extends StatelessWidget {
     super.key,
     required this.fraction,
     required this.colour,
+    this.trackColour,
     required this.child,
   });
 
@@ -26,6 +27,10 @@ class EdgeProgress extends StatelessWidget {
   /// because it depends on what the bar is drawn on: a filled button wants its
   /// own foreground, an outlined one the accent colour.
   final Color colour;
+
+  /// What the unfilled track is drawn in. If omitted, uses [colour] scaled by
+  /// [ThemeRepo.updateProgressTrack].
+  final Color? trackColour;
 
   final Widget child;
 
@@ -49,9 +54,10 @@ class EdgeProgress extends StatelessWidget {
                 minHeight: ThemeRepo.updateProgressHeight,
                 borderRadius: BorderRadius.zero,
                 color: colour,
-                backgroundColor: colour.withValues(
-                  alpha: ThemeRepo.updateProgressTrack,
-                ),
+                backgroundColor: trackColour ??
+                    colour.withValues(
+                      alpha: ThemeRepo.updateProgressTrack,
+                    ),
               ),
               child: Progress(progress: fraction),
             ),

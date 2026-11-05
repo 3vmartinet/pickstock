@@ -121,6 +121,7 @@ class ThemeRepo {
 
   /// A spinner sized to sit inside a button without changing its height.
   static const double inlineSpinnerSize = 14;
+  static const double inlineSpinnerStroke = 2.0;
 
   /// The narrowest the eight-column history table can be before its figures
   /// start wrapping mid-number. Below this the report shows one card per
@@ -208,7 +209,7 @@ class ThemeRepo {
   /// The sliver of progress along the bottom edge of the download button, and
   /// how faint its unfilled track is. Thin enough to read as part of the
   /// button's border rather than as a bar laid across it.
-  static const double updateProgressHeight = 3;
+  static const double updateProgressHeight = 3.5;
   static const double updateProgressTrack = 0.3;
 
   /// One turn of the app bar's refresh arrows while an update downloads
