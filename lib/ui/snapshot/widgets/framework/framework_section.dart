@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
@@ -35,6 +37,8 @@ class _FrameworkSectionState extends State<FrameworkSection> {
     for (final question in FrameworkQuestion.values) question: GlobalKey(),
   };
 
+  final GlobalKey _listViewportKey = GlobalKey();
+  final GlobalKey _verticalViewportKey = GlobalKey();
   final ScrollController _listScrollController = ScrollController();
   final ScrollController _verticalScrollController = ScrollController();
 
@@ -61,25 +65,62 @@ class _FrameworkSectionState extends State<FrameworkSection> {
     final shouldTrack =
         (layout == FrameworkLayout.list && viewModel.isFrameworkListSticky) ||
         (layout == FrameworkLayout.verticalPanel &&
-         !viewModel.isFrameworkVerticalCollapsed);
+            !viewModel.isFrameworkVerticalCollapsed);
     if (!shouldTrack) return;
 
-    FrameworkQuestion? best;
-    double bestDistance = double.infinity;
+    final GlobalKey activeViewportKey = switch (layout) {
+      FrameworkLayout.list => _listViewportKey,
+      FrameworkLayout.verticalPanel => _verticalViewportKey,
+      _ => _listViewportKey,
+    };
 
-    for (final entry in _cardKeys.entries) {
-      final renderObj = entry.value.currentContext?.findRenderObject();
-      if (renderObj is! RenderBox || !renderObj.attached) continue;
-      final topInViewport = renderObj.localToGlobal(Offset.zero).dy;
-      final distance = topInViewport.abs();
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = entry.key;
+    final viewportBox =
+        activeViewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (viewportBox == null || !viewportBox.attached) return;
+
+    final viewportTop = viewportBox.localToGlobal(Offset.zero).dy;
+    final viewportBottom = viewportTop + viewportBox.size.height;
+
+    // Tolerance in pixels to absorb minor sub-pixel rendering variances.
+    const epsilon = 2.0;
+
+    FrameworkQuestion? firstFullyVisible;
+    FrameworkQuestion? mostVisibleFallback;
+    double maxOverlap = 0;
+
+    for (final question in FrameworkQuestion.values) {
+      final cardContext = _cardKeys[question]?.currentContext;
+      if (cardContext == null) continue;
+      final cardBox = cardContext.findRenderObject();
+      if (cardBox is! RenderBox || !cardBox.attached) continue;
+
+      final cardTop = cardBox.localToGlobal(Offset.zero).dy;
+      final cardBottom = cardTop + cardBox.size.height;
+
+      // The selection matches the first answer widget that is fully visible
+      // and appears earliest in the list.
+      final isFullyVisible = (cardTop >= viewportTop - epsilon) &&
+          (cardBottom <= viewportBottom + epsilon);
+
+      if (isFullyVisible) {
+        firstFullyVisible = question;
+        break;
+      }
+
+      // Fallback when no question card is 100% fully visible: pick the one
+      // with the largest vertical overlap in the viewport.
+      final overlapTop = math.max(viewportTop, cardTop);
+      final overlapBottom = math.min(viewportBottom, cardBottom);
+      final overlap = math.max(0.0, overlapBottom - overlapTop);
+      if (overlap > maxOverlap) {
+        maxOverlap = overlap;
+        mostVisibleFallback = question;
       }
     }
 
-    if (best != null && best != viewModel.focusedFrameworkQuestion) {
-      viewModel.selectFocusedFrameworkQuestion(best);
+    final target = firstFullyVisible ?? mostVisibleFallback;
+    if (target != null && target != viewModel.focusedFrameworkQuestion) {
+      viewModel.selectFocusedFrameworkQuestion(target);
     }
   }
 
@@ -88,6 +129,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
     if (target == null) return;
     Scrollable.ensureVisible(
       target,
+      alignment: 0.0,
       duration: _jumpDuration,
       curve: Curves.easeOutCubic,
     );
@@ -136,6 +178,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
         const SizedBox(height: ThemeRepo.spaceMedium),
         Expanded(
           child: SingleChildScrollView(
+            key: _listViewportKey,
             controller: _listScrollController,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,6 +280,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
               scorecard,
               Expanded(
                 child: SingleChildScrollView(
+                  key: _verticalViewportKey,
                   controller: _verticalScrollController,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
