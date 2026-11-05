@@ -10,6 +10,7 @@ import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
+import 'package:pickstock/repo/sec/institutional_repo.dart';
 import 'package:pickstock/repo/sec/local_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -34,6 +35,11 @@ abstract final class DependenciesRepo {
       ..registerLazySingleton<BulkIngestRepo>(BulkIngestRepo.new)
       ..registerLazySingleton<SecRepo>(
         () => usesMockData ? const MockSecRepo() : const LocalSecRepo(),
+      )
+      ..registerLazySingleton<InstitutionalRepo>(
+        () => usesMockData
+            ? const MockInstitutionalRepo()
+            : const LocalInstitutionalRepo(),
       )
       ..registerLazySingleton<PriceRepo>(
         () => usesMockData ? MemoryPriceRepo() : const LocalPriceRepo(),
