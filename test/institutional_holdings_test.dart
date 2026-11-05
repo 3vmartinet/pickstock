@@ -59,6 +59,20 @@ void main() {
     expect(holdings.topHolders[1].name, 'BlackRock, Inc.');
   });
 
+  test('institutional repo returns null for unindexed filers rather than fabricating data', () async {
+    const repo = MockInstitutionalRepo();
+    const payoneer = Company(
+      ticker: 'PAYO',
+      cik: '0001845870',
+      name: 'Payoneer Global Inc.',
+      sic: 7389,
+      sharesOutstanding: 360000000,
+    );
+
+    final holdings = await repo.fetchShareholding(payoneer, currentPrice: 10.5);
+    expect(holdings, isNull);
+  });
+
   testWidgets('holdings tab displays institutional metrics and top holders', (
     tester,
   ) async {

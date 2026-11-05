@@ -63,8 +63,11 @@ InstitutionalShareholding? _buildShareholdingFor(
     return _fordShareholding(company, price, sharesOutstanding);
   }
 
-  // Generic company calibrated dynamically to its actual shares outstanding.
-  return _calibratedShareholding(company, price, sharesOutstanding);
+  // Form 13F filings are filed on SEC EDGAR by institutional investment
+  // managers rather than by corporate registrants in companyfacts.zip.
+  // Unless authentic Form 13F data has been ingested or curated for this
+  // filer, return null rather than fabricating synthetic ownership figures.
+  return null;
 }
 
 const Map<String, double> _defaultPrices = {
@@ -1029,173 +1032,6 @@ InstitutionalShareholding _fordShareholding(
       netChangeQoQ: -12450000,
       buyers: 780,
       sellers: 1120,
-    ),
-  );
-}
-
-/// Calibrates an institutional holding profile for any general US-listed filer
-/// based on its real share count and share price from SEC facts.
-InstitutionalShareholding _calibratedShareholding(
-  Company company,
-  double price,
-  double totalShares,
-) {
-  const asOf = 'Q3 2024';
-  final asOfDate = DateTime(2024, 9, 30);
-  final filingDate = DateTime(2024, 11, 14);
-
-  // Calibrate weights to standard institutional ownership distributions.
-  final holders = [
-    InstitutionalHolder(
-      name: 'The Vanguard Group, Inc.',
-      managerCik: '0000102909',
-      managerType: InstitutionalManagerType.indexPassive,
-      sharesHeld: totalShares * 0.088,
-      percentOfClass: 8.80,
-      marketValue: totalShares * 0.088 * price,
-      changeSharesQoQ: totalShares * 0.0012,
-      changePercentQoQ: 1.38,
-      portfolioPercent: 0.2,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'BlackRock, Inc.',
-      managerCik: '0001364742',
-      managerType: InstitutionalManagerType.indexPassive,
-      sharesHeld: totalShares * 0.072,
-      percentOfClass: 7.20,
-      marketValue: totalShares * 0.072 * price,
-      changeSharesQoQ: totalShares * 0.0008,
-      changePercentQoQ: 1.12,
-      portfolioPercent: 0.2,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'State Street Corp',
-      managerCik: '0000093751',
-      managerType: InstitutionalManagerType.indexPassive,
-      sharesHeld: totalShares * 0.043,
-      percentOfClass: 4.30,
-      marketValue: totalShares * 0.043 * price,
-      changeSharesQoQ: totalShares * 0.0003,
-      changePercentQoQ: 0.70,
-      portfolioPercent: 0.1,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'FMR LLC (Fidelity)',
-      managerCik: '0000315066',
-      managerType: InstitutionalManagerType.assetManager,
-      sharesHeld: totalShares * 0.032,
-      percentOfClass: 3.20,
-      marketValue: totalShares * 0.032 * price,
-      changeSharesQoQ: totalShares * 0.0004,
-      changePercentQoQ: 1.26,
-      portfolioPercent: 0.3,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'Geode Capital Management, LLC',
-      managerCik: '0001214717',
-      managerType: InstitutionalManagerType.indexPassive,
-      sharesHeld: totalShares * 0.023,
-      percentOfClass: 2.30,
-      marketValue: totalShares * 0.023 * price,
-      changeSharesQoQ: totalShares * 0.0005,
-      changePercentQoQ: 2.22,
-      portfolioPercent: 0.2,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'Price (T. Rowe) Associates Inc',
-      managerCik: '0000080255',
-      managerType: InstitutionalManagerType.assetManager,
-      sharesHeld: totalShares * 0.018,
-      percentOfClass: 1.80,
-      marketValue: totalShares * 0.018 * price,
-      changeSharesQoQ: -totalShares * 0.0003,
-      changePercentQoQ: -1.64,
-      portfolioPercent: 0.2,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'Morgan Stanley',
-      managerCik: '0000895421',
-      managerType: InstitutionalManagerType.assetManager,
-      sharesHeld: totalShares * 0.015,
-      percentOfClass: 1.50,
-      marketValue: totalShares * 0.015 * price,
-      changeSharesQoQ: totalShares * 0.0002,
-      changePercentQoQ: 1.35,
-      portfolioPercent: 0.1,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'Northern Trust Corp',
-      managerCik: '0000073124',
-      managerType: InstitutionalManagerType.indexPassive,
-      sharesHeld: totalShares * 0.012,
-      percentOfClass: 1.20,
-      marketValue: totalShares * 0.012 * price,
-      changeSharesQoQ: -totalShares * 0.0001,
-      changePercentQoQ: -0.82,
-      portfolioPercent: 0.1,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-    InstitutionalHolder(
-      name: 'Citadel Advisors LLC',
-      managerCik: '0001423053',
-      managerType: InstitutionalManagerType.hedgeFund,
-      sharesHeld: totalShares * 0.009,
-      percentOfClass: 0.90,
-      marketValue: totalShares * 0.009 * price,
-      changeSharesQoQ: totalShares * 0.0008,
-      changePercentQoQ: 9.75,
-      portfolioPercent: 0.2,
-      formType: '13F-HR',
-      filingDate: filingDate,
-    ),
-  ];
-
-  final totalHeld = holders.fold<double>(0, (sum, h) => sum + h.sharesHeld);
-  final top10Concentration = (totalHeld / totalShares) * 100;
-  final totalInstPercent = math.min(68.5, 100.0);
-  final totalSharesHeld = totalShares * (totalInstPercent / 100);
-
-  return InstitutionalShareholding(
-    cik: company.cik,
-    calendarQuarter: asOf,
-    asOfDate: asOfDate,
-    totalSharesHeld: totalSharesHeld,
-    institutionalOwnershipPercent: totalInstPercent,
-    totalInstitutionsCount: 1420,
-    top10ConcentrationPercent: top10Concentration,
-    passiveIndexPercent: 30.5,
-    activeFundsPercent: 38.0,
-    insiderPercent: 3.5,
-    publicFloatPercent: 28.0,
-    netSharesChange: totalShares * 0.008,
-    netSharesPercentChange: 0.85,
-    buyersCount: 680,
-    sellersCount: 520,
-    newPositionsCount: 85,
-    soldOutPositionsCount: 42,
-    activistStakes: const [],
-    topHolders: _attachHistories(holders, totalShares),
-    quarterlyTrends: _calibratedQuarterlyTrends(
-      totalShares: totalShares,
-      currentTotalHeld: totalSharesHeld,
-      netChangeQoQ: totalShares * 0.008,
-      buyers: 680,
-      sellers: 520,
     ),
   );
 }
