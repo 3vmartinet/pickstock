@@ -2,6 +2,7 @@ import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
+import 'package:pickstock/ui/browse/widgets/valuation_sync.dart';
 import 'package:pickstock/ui/browse/widgets/sector_filter_row.dart';
 import 'package:pickstock/ui/browse/widgets/ticker_filter_bar.dart';
 import 'package:pickstock/ui/browse/widgets/ticker_grid.dart';
@@ -46,7 +47,9 @@ class HomeScreen extends StatelessWidget {
       ],
       // Side by side where there is room: picking a company then swaps the
       // report beside the list instead of navigating away from it.
-      child: const WatchlistSync(child: SourceSync(child: _Body())),
+      child: const WatchlistSync(
+        child: ValuationSync(child: SourceSync(child: _Body())),
+      ),
     );
   }
 }

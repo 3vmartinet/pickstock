@@ -29,6 +29,7 @@ class LocalPriceRepo implements PriceRepo {
       pricePerShare: row.pricePerShare,
       asOf: row.asOf,
       isQuoted: row.isQuoted,
+      fetchedAt: row.fetchedAt,
     );
   }
 
@@ -38,6 +39,9 @@ class LocalPriceRepo implements PriceRepo {
     pricePerShare: quote.pricePerShare,
     asOf: quote.asOf,
     isQuoted: quote.isQuoted,
+    // A quote is saved as soon as it arrives, so a quote that does not say
+    // when it was asked for was asked for just now.
+    fetchedAt: quote.isQuoted ? quote.fetchedAt ?? DateTime.now() : null,
   );
 
   @override

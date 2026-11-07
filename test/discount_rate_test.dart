@@ -1,7 +1,9 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:pickstock/data/valuation/discount_rate.dart';
+import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 
 /// Two rows of the Treasury's daily curve, oldest first — so a reader of the
@@ -92,6 +94,34 @@ void main() {
       // A second company still needs its own beta, but not the yield again.
       await repo.rateFor('MSFT');
       expect(calls, 3);
+    });
+
+    test('remembers both across a relaunch', () async {
+      final database = AppDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(database.close);
+      var calls = 0;
+      MarketRatesRepo launch() => LiveMarketRatesRepo(
+        apiKey: 'test-key',
+        database: database,
+        client: MockClient((request) async {
+          calls++;
+          return request.url.host.contains('treasury')
+              ? http.Response(_curve, 200)
+              : http.Response(_metric(1.094), 200);
+        }),
+      );
+
+      final first = await launch().rateFor('AAPL');
+      expect(calls, 2);
+      // Written down as it arrives; let the writes land.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // The next launch has the same rate without asking anyone, which is
+      // what lets the list judge every company on its own rate from the
+      // start rather than on the assumed one.
+      final again = await launch().rateFor('AAPL');
+      expect(calls, 2);
+      expect(again?.percent, first?.percent);
     });
   });
 }

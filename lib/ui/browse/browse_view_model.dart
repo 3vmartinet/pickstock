@@ -8,6 +8,7 @@ import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/snapshot/sic_industry.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
+import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -34,7 +35,7 @@ class BrowseViewModel extends ChangeNotifier {
     _cashGenerative = _settingsRepo.cashGenerative;
     _revenueGrowthFilter = _settingsRepo.revenueGrowthFilter;
     _directoryRevision = _tickerDirectoryRepo.revision;
-    _results = _tickerDirectoryRepo.allCompanies;
+    _results = _unjudged = _tickerDirectoryRepo.allCompanies;
     _loadSamples();
   }
 
@@ -232,6 +233,66 @@ class BrowseViewModel extends ChangeNotifier {
   int get _revenueYears => _revenueGrowthFilter?.years ?? 1;
   bool get _revenueUnbroken => _revenueGrowthFilter?.needsUnbrokenRun ?? false;
 
+  ValuationVerdict? _verdictFilter;
+
+  /// The valuation verdict a company has to carry to stay in the list, or
+  /// `null` with the filter off.
+  ///
+  /// Not kept across launches, unlike the other filters: it rests on share
+  /// prices, which are a quarter of an hour old at best, and a list opening
+  /// already narrowed to them would start spending the quote budget before
+  /// anyone asked it to.
+  ValuationVerdict? get verdictFilter => _verdictFilter;
+
+  /// Picks the verdict to narrow to, or lifts the filter with `null`.
+  void setVerdictFilter(ValuationVerdict? verdict) {
+    if (verdict == _verdictFilter) return;
+    _verdictFilter = verdict;
+    _applyVerdictFilter();
+    notifyListeners();
+  }
+
+  /// The verdicts known so far, by CIK, pushed in by [applyVerdicts].
+  Map<String, ValuationVerdict> _verdicts = const {};
+  int _verdictRevision = -1;
+
+  /// Takes the list valuation's latest verdicts, which is what the verdict
+  /// filter tests against.
+  ///
+  /// Pushed in for the same reason as [applyWatchlist]: the two view models
+  /// are siblings. Cheap when nothing changed, and with the filter off it
+  /// only remembers them.
+  void applyVerdicts(Map<String, ValuationVerdict> verdicts, int revision) {
+    if (revision == _verdictRevision) return;
+    _verdictRevision = revision;
+    _verdicts = verdicts;
+    if (_verdictFilter == null) return;
+    _applyVerdictFilter();
+    // Pushed in from a build, like the watchlist.
+    scheduleMicrotask(notifyListeners);
+  }
+
+  /// The list as every other filter leaves it, before the verdict filter.
+  List<Company> _unjudged = const [];
+
+  /// The companies the verdict filter is choosing among, for the list
+  /// valuation to price; empty with the filter off.
+  ///
+  /// The same list until another filter changes it, however many verdicts
+  /// land, so whoever hands it on can tell a new list from the same one.
+  List<Company> get verdictCandidates =>
+      _verdictFilter == null ? const [] : _unjudged;
+
+  void _applyVerdictFilter() {
+    final verdict = _verdictFilter;
+    _results = verdict == null
+        ? _unjudged
+        : [
+            for (final company in _unjudged)
+              if (_verdicts[company.cik] == verdict) company,
+          ];
+  }
+
   /// Growth window ends for the figure the current ordering shows, by CIK.
   Map<String, GrowthSample> _samplesByCik = const {};
 
@@ -386,7 +447,8 @@ class BrowseViewModel extends ChangeNotifier {
         _industries.isEmpty &&
         _cashToDebtMin == null &&
         _cashGenerative == null &&
-        _revenueGrowthFilter == null) {
+        _revenueGrowthFilter == null &&
+        _verdictFilter == null) {
       return;
     }
 
@@ -399,6 +461,7 @@ class BrowseViewModel extends ChangeNotifier {
     final hadRevenueFilter = _revenueGrowthFilter != null;
     _revenueGrowthFilter = null;
     _revenueGrowthCiks = const {};
+    _verdictFilter = null;
     _reorder();
     notifyListeners();
     // The ranking's window was the filter's, so it goes back to a year.
@@ -421,6 +484,7 @@ class BrowseViewModel extends ChangeNotifier {
         strings.cashToDebtChip(formatCashToDebt(ratio)),
       if (_cashGenerative case final window?) window.getChipLabel(strings),
       if (_revenueGrowthFilter case final filter?) filter.getChipLabel(strings),
+      if (_verdictFilter case final verdict?) verdict.getLabel(strings),
       if (_query.isNotEmpty) '"$_query"',
       if (_watchlistMembers != null) strings.watchlistFilterLabel,
     ];
@@ -488,14 +552,15 @@ class BrowseViewModel extends ChangeNotifier {
 
     if (!_sort.ranksByGrowth) {
       // Case-insensitive, so `abc Corp` and `ABC Corp` sit together.
-      _results = matches.toList()
+      _unjudged = matches.toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      _applyVerdictFilter();
       return;
     }
 
     // Fastest growth first, and companies whose growth cannot be stated last
     // rather than interleaved at zero.
-    _results = matches.toList()
+    _unjudged = matches.toList()
       ..sort((a, b) {
         final left = figureFor(a);
         final right = figureFor(b);
@@ -506,6 +571,7 @@ class BrowseViewModel extends ChangeNotifier {
         if (right == null) return -1;
         return right.compareTo(left);
       });
+    _applyVerdictFilter();
   }
 
   @override

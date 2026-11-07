@@ -3085,8 +3085,25 @@ class $SharePricesTable extends SharePrices
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
   @override
-  List<GeneratedColumn> get $columns => [cik, pricePerShare, asOf, isQuoted];
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cik,
+    pricePerShare,
+    asOf,
+    isQuoted,
+    fetchedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3132,6 +3149,12 @@ class $SharePricesTable extends SharePrices
         isQuoted.isAcceptableOrUnknown(data['is_quoted']!, _isQuotedMeta),
       );
     }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -3157,6 +3180,10 @@ class $SharePricesTable extends SharePrices
         DriftSqlType.bool,
         data['${effectivePrefix}is_quoted'],
       )!,
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      ),
     );
   }
 
@@ -3177,11 +3204,19 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
   /// Whether a provider quoted this price. A stale quote and a typed guess are
   /// both prices, and the report must not present them as the same thing.
   final bool isQuoted;
+
+  /// When this machine last asked the provider for the price, which is not
+  /// [asOf]: after the close a quote fetched at nine at night still carries
+  /// the exchange's four o'clock stamp. What the list's background pricing
+  /// reads to leave a company alone for a while after asking about it, across
+  /// launches as well as within one. `null` for a typed price.
+  final DateTime? fetchedAt;
   const SharePriceRow({
     required this.cik,
     required this.pricePerShare,
     required this.asOf,
     required this.isQuoted,
+    this.fetchedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3190,6 +3225,9 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
     map['price_per_share'] = Variable<double>(pricePerShare);
     map['as_of'] = Variable<DateTime>(asOf);
     map['is_quoted'] = Variable<bool>(isQuoted);
+    if (!nullToAbsent || fetchedAt != null) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    }
     return map;
   }
 
@@ -3199,6 +3237,9 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
       pricePerShare: Value(pricePerShare),
       asOf: Value(asOf),
       isQuoted: Value(isQuoted),
+      fetchedAt: fetchedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fetchedAt),
     );
   }
 
@@ -3212,6 +3253,7 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
       pricePerShare: serializer.fromJson<double>(json['pricePerShare']),
       asOf: serializer.fromJson<DateTime>(json['asOf']),
       isQuoted: serializer.fromJson<bool>(json['isQuoted']),
+      fetchedAt: serializer.fromJson<DateTime?>(json['fetchedAt']),
     );
   }
   @override
@@ -3222,6 +3264,7 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
       'pricePerShare': serializer.toJson<double>(pricePerShare),
       'asOf': serializer.toJson<DateTime>(asOf),
       'isQuoted': serializer.toJson<bool>(isQuoted),
+      'fetchedAt': serializer.toJson<DateTime?>(fetchedAt),
     };
   }
 
@@ -3230,11 +3273,13 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
     double? pricePerShare,
     DateTime? asOf,
     bool? isQuoted,
+    Value<DateTime?> fetchedAt = const Value.absent(),
   }) => SharePriceRow(
     cik: cik ?? this.cik,
     pricePerShare: pricePerShare ?? this.pricePerShare,
     asOf: asOf ?? this.asOf,
     isQuoted: isQuoted ?? this.isQuoted,
+    fetchedAt: fetchedAt.present ? fetchedAt.value : this.fetchedAt,
   );
   SharePriceRow copyWithCompanion(SharePricesCompanion data) {
     return SharePriceRow(
@@ -3244,6 +3289,7 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
           : this.pricePerShare,
       asOf: data.asOf.present ? data.asOf.value : this.asOf,
       isQuoted: data.isQuoted.present ? data.isQuoted.value : this.isQuoted,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
     );
   }
 
@@ -3253,13 +3299,15 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
           ..write('cik: $cik, ')
           ..write('pricePerShare: $pricePerShare, ')
           ..write('asOf: $asOf, ')
-          ..write('isQuoted: $isQuoted')
+          ..write('isQuoted: $isQuoted, ')
+          ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(cik, pricePerShare, asOf, isQuoted);
+  int get hashCode =>
+      Object.hash(cik, pricePerShare, asOf, isQuoted, fetchedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3267,7 +3315,8 @@ class SharePriceRow extends DataClass implements Insertable<SharePriceRow> {
           other.cik == this.cik &&
           other.pricePerShare == this.pricePerShare &&
           other.asOf == this.asOf &&
-          other.isQuoted == this.isQuoted);
+          other.isQuoted == this.isQuoted &&
+          other.fetchedAt == this.fetchedAt);
 }
 
 class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
@@ -3275,12 +3324,14 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
   final Value<double> pricePerShare;
   final Value<DateTime> asOf;
   final Value<bool> isQuoted;
+  final Value<DateTime?> fetchedAt;
   final Value<int> rowid;
   const SharePricesCompanion({
     this.cik = const Value.absent(),
     this.pricePerShare = const Value.absent(),
     this.asOf = const Value.absent(),
     this.isQuoted = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SharePricesCompanion.insert({
@@ -3288,6 +3339,7 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
     required double pricePerShare,
     required DateTime asOf,
     this.isQuoted = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cik = Value(cik),
        pricePerShare = Value(pricePerShare),
@@ -3297,6 +3349,7 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
     Expression<double>? pricePerShare,
     Expression<DateTime>? asOf,
     Expression<bool>? isQuoted,
+    Expression<DateTime>? fetchedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3304,6 +3357,7 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
       if (pricePerShare != null) 'price_per_share': pricePerShare,
       if (asOf != null) 'as_of': asOf,
       if (isQuoted != null) 'is_quoted': isQuoted,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3313,6 +3367,7 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
     Value<double>? pricePerShare,
     Value<DateTime>? asOf,
     Value<bool>? isQuoted,
+    Value<DateTime?>? fetchedAt,
     Value<int>? rowid,
   }) {
     return SharePricesCompanion(
@@ -3320,6 +3375,7 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
       pricePerShare: pricePerShare ?? this.pricePerShare,
       asOf: asOf ?? this.asOf,
       isQuoted: isQuoted ?? this.isQuoted,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3339,6 +3395,9 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
     if (isQuoted.present) {
       map['is_quoted'] = Variable<bool>(isQuoted.value);
     }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3352,6 +3411,7 @@ class SharePricesCompanion extends UpdateCompanion<SharePriceRow> {
           ..write('pricePerShare: $pricePerShare, ')
           ..write('asOf: $asOf, ')
           ..write('isQuoted: $isQuoted, ')
+          ..write('fetchedAt: $fetchedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7753,6 +7813,7 @@ typedef $$SharePricesTableCreateCompanionBuilder =
       required double pricePerShare,
       required DateTime asOf,
       Value<bool> isQuoted,
+      Value<DateTime?> fetchedAt,
       Value<int> rowid,
     });
 typedef $$SharePricesTableUpdateCompanionBuilder =
@@ -7761,6 +7822,7 @@ typedef $$SharePricesTableUpdateCompanionBuilder =
       Value<double> pricePerShare,
       Value<DateTime> asOf,
       Value<bool> isQuoted,
+      Value<DateTime?> fetchedAt,
       Value<int> rowid,
     });
 
@@ -7790,6 +7852,11 @@ class $$SharePricesTableFilterComposer
 
   ColumnFilters<bool> get isQuoted => $composableBuilder(
     column: $table.isQuoted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7822,6 +7889,11 @@ class $$SharePricesTableOrderingComposer
     column: $table.isQuoted,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SharePricesTableAnnotationComposer
@@ -7846,6 +7918,9 @@ class $$SharePricesTableAnnotationComposer
 
   GeneratedColumn<bool> get isQuoted =>
       $composableBuilder(column: $table.isQuoted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
 }
 
 class $$SharePricesTableTableManager
@@ -7883,12 +7958,14 @@ class $$SharePricesTableTableManager
                 Value<double> pricePerShare = const Value.absent(),
                 Value<DateTime> asOf = const Value.absent(),
                 Value<bool> isQuoted = const Value.absent(),
+                Value<DateTime?> fetchedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SharePricesCompanion(
                 cik: cik,
                 pricePerShare: pricePerShare,
                 asOf: asOf,
                 isQuoted: isQuoted,
+                fetchedAt: fetchedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7897,12 +7974,14 @@ class $$SharePricesTableTableManager
                 required double pricePerShare,
                 required DateTime asOf,
                 Value<bool> isQuoted = const Value.absent(),
+                Value<DateTime?> fetchedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SharePricesCompanion.insert(
                 cik: cik,
                 pricePerShare: pricePerShare,
                 asOf: asOf,
                 isQuoted: isQuoted,
+                fetchedAt: fetchedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -5,9 +5,11 @@ import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
+import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/browse/widgets/cash_to_debt_filter.dart';
 import 'package:pickstock/ui/browse/widgets/positive_cash_flow_filter.dart';
 import 'package:pickstock/ui/browse/widgets/revenue_growth_filter.dart';
+import 'package:pickstock/ui/browse/widgets/verdict_filter.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
@@ -40,6 +42,7 @@ class TickerFilterBar extends StatelessWidget {
           RevenueGrowthFilterChip(),
           CashToDebtFilter(),
           PositiveCashFlowFilter(),
+          VerdictFilter(),
           _SortSelect(),
           _MatchCount(),
         ],
@@ -172,6 +175,19 @@ class _MatchCount extends StatelessWidget {
     final count = context.select<BrowseViewModel, int>(
       (viewModel) => viewModel.resultCount,
     );
-    return Text(context.strings.browseMatchCount(count)).muted().small();
+    final isFilteringByVerdict = context.select<BrowseViewModel, bool>(
+      (viewModel) => viewModel.verdictFilter != null,
+    );
+    final valuing = context.select<ListValuationViewModel, int>(
+      (viewModel) => viewModel.sweepRemaining,
+    );
+    final matches = context.strings.browseMatchCount(count);
+    // While the verdict filter is still pricing the rest of the list, the
+    // count is a floor, and it says so.
+    return Text(
+      isFilteringByVerdict && valuing > 0
+          ? '$matches · ${context.strings.browseValuingMore(valuing)}'
+          : matches,
+    ).muted().small();
   }
 }

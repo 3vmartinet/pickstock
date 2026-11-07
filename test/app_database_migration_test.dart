@@ -188,6 +188,21 @@ void main() {
     );
     expect((await database.lastIngest())?.loadSeconds, 420);
 
+    // And version 19's fetch time on a stored price, written to for the
+    // same reason: a column that is missing throws.
+    await database.savePrice(
+      '0000320193',
+      pricePerShare: 250,
+      asOf: DateTime.utc(2026, 11, 7, 21),
+      isQuoted: true,
+      fetchedAt: DateTime.utc(2026, 11, 7, 22),
+    );
+    expect(
+      (await database.priceFor('0000320193'))!.fetchedAt!
+          .isAtSameMomentAs(DateTime.utc(2026, 11, 7, 22)),
+      isTrue,
+    );
+
     // And the ingest behind it survived, rather than being rebuilt: an
     // upgrade that dropped the tables would cost the download again.
     expect((await database.lastIngest())?.companyCount, 13582);

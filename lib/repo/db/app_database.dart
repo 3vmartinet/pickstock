@@ -185,6 +185,13 @@ class SharePrices extends Table {
   /// both prices, and the report must not present them as the same thing.
   BoolColumn get isQuoted => boolean().withDefault(const Constant(false))();
 
+  /// When this machine last asked the provider for the price, which is not
+  /// [asOf]: after the close a quote fetched at nine at night still carries
+  /// the exchange's four o'clock stamp. What the list's background pricing
+  /// reads to leave a company alone for a while after asking about it, across
+  /// launches as well as within one. `null` for a typed price.
+  DateTimeColumn get fetchedAt => dateTime().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {cik};
 }
@@ -379,7 +386,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -415,6 +422,12 @@ class AppDatabase extends _$AppDatabase {
             sharePrices.asOf,
           );
           await migrator.addColumn(sharePrices, sharePrices.isQuoted);
+        }
+        // From before 5 the table was created above at today's definition,
+        // so it already has the column.
+        if (from >= 5 && from < 19) {
+          logInfo(() => 'Adding share_prices.fetched_at');
+          await migrator.addColumn(sharePrices, sharePrices.fetchedAt);
         }
         if (from < 18) {
           // Added, not populated: the figure arrives with the next ingest,
@@ -950,6 +963,15 @@ class AppDatabase extends _$AppDatabase {
     return (note, lines);
   }
 
+  /// Every note whose kind starts with [prefix], across all companies, without
+  /// their lines: what the list needs to summarise answers in bulk, in one
+  /// query rather than one per tile.
+  Future<List<ResearchNoteRow>> researchNotesOfKind(String prefix) {
+    return (select(
+      researchNotes,
+    )..where((row) => row.kind.like('$prefix%'))).get();
+  }
+
   /// Replaces whatever was stored for [cik] and [kind].
   Future<void> saveResearchNote({
     required String cik,
@@ -1006,6 +1028,7 @@ class AppDatabase extends _$AppDatabase {
     required double pricePerShare,
     required DateTime asOf,
     required bool isQuoted,
+    DateTime? fetchedAt,
   }) {
     return into(sharePrices).insertOnConflictUpdate(
       SharePricesCompanion.insert(
@@ -1013,6 +1036,7 @@ class AppDatabase extends _$AppDatabase {
         pricePerShare: pricePerShare,
         asOf: asOf,
         isQuoted: Value(isQuoted),
+        fetchedAt: Value(fetchedAt),
       ),
     );
   }

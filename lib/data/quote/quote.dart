@@ -7,10 +7,14 @@ class Quote extends Equatable {
     required this.pricePerShare,
     required this.asOf,
     required this.isQuoted,
+    this.fetchedAt,
   });
 
   /// A price the user typed, with no market timestamp behind it.
-  Quote.entered(this.pricePerShare) : asOf = DateTime.now(), isQuoted = false;
+  Quote.entered(this.pricePerShare)
+    : asOf = DateTime.now(),
+      isQuoted = false,
+      fetchedAt = null;
 
   final double pricePerShare;
 
@@ -23,10 +27,19 @@ class Quote extends Equatable {
   /// look alike.
   final bool isQuoted;
 
+  /// When this machine asked the provider for it, as opposed to [asOf], when
+  /// the exchange says it was true. `null` for a typed price, and for a quote
+  /// stored before the time was kept.
+  ///
+  /// Left out of equality: two quotes of the same price at the same exchange
+  /// time say the same thing, however many times they were asked for.
+  final DateTime? fetchedAt;
+
   Quote copyWith({double? pricePerShare}) => Quote(
     pricePerShare: pricePerShare ?? this.pricePerShare,
     asOf: asOf,
     isQuoted: isQuoted,
+    fetchedAt: fetchedAt,
   );
 
   @override
