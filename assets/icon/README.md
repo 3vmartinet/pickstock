@@ -13,6 +13,11 @@ body centred in a 1024 canvas with the platform's 185.4 corner radius, so the
 tile reads the same size as its neighbours in the Dock. `app_icon_macos.png` is
 its 1024×1024 export and is what `flutter_launcher_icons` reads.
 
+`app_icon_macos_debug.svg` is the same icon with a red DEBUG bar across the
+bottom of the tile. Debug builds use it (`AppIconDebug.appiconset`, selected by
+the Runner target's Debug configuration) so a debug build is easy to tell apart
+from a release one in the Dock; Release and Profile keep `AppIcon`.
+
 ## Regenerating
 
 After editing either SVG, re-export the PNG and rebuild the icon set:
@@ -22,5 +27,16 @@ rsvg-convert -w 1024 -h 1024 assets/icon/app_icon_macos.svg -o assets/icon/app_i
 dart run flutter_launcher_icons
 ```
 
-That rewrites `macos/Runner/Assets.xcassets/AppIcon.appiconset/`. Any SVG
+That rewrites `macos/Runner/Assets.xcassets/AppIcon.appiconset/`.
+`flutter_launcher_icons` only writes one macOS icon set, so the debug set is
+resized by hand:
+
+```sh
+rsvg-convert -w 1024 -h 1024 assets/icon/app_icon_macos_debug.svg -o assets/icon/app_icon_macos_debug.png
+for s in 16 32 64 128 256 512 1024; do
+  sips -z $s $s assets/icon/app_icon_macos_debug.png \
+    --out macos/Runner/Assets.xcassets/AppIconDebug.appiconset/app_icon_$s.png
+done
+```
+ Any SVG
 rasteriser will do; `rsvg-convert` comes from Homebrew's `librsvg`.
