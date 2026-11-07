@@ -198,9 +198,7 @@ class _SecDataSection extends StatelessWidget {
           description: strings.settingsAutoApplyDescription,
           value: autoApply,
           onChanged: (value) async {
-            await context.read<SettingsViewModel>().setAutoApplyUpdates(
-              value,
-            );
+            await context.read<SettingsViewModel>().setAutoApplyUpdates(value);
             // Turned on with a staged update waiting: apply it now.
             if (value && context.mounted) {
               context.read<IngestViewModel>().applyUpdateIfWanted();

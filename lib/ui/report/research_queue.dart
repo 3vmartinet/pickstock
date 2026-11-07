@@ -32,13 +32,10 @@ class ResearchQueue extends ChangeNotifier {
   bool _isWorking = false;
 
   /// Everything asked for and not yet taken away, in the order it was asked.
-  List<ResearchTask> get tasks => [
-    for (final entry in _queued) entry.task,
-  ];
+  List<ResearchTask> get tasks => [for (final entry in _queued) entry.task];
 
   /// How many questions are still owed — being answered or waiting to be.
-  int get activeCount =>
-      _queued.where((entry) => entry.task.isActive).length;
+  int get activeCount => _queued.where((entry) => entry.task.isActive).length;
 
   /// Whether anything is still owed, which is what the app bar's glyph says.
   bool get hasActive => activeCount > 0;

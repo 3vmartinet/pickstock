@@ -55,13 +55,18 @@ class _TotalCard extends StatelessWidget {
           Row(
             spacing: ThemeRepo.spaceXSmall,
             children: [
-              const Icon(LucideIcons.building2).iconXSmall().iconMutedForeground(),
+              const Icon(LucideIcons.building2)
+                  .iconXSmall()
+                  .iconMutedForeground(),
               Expanded(
                 child: Text(context.strings.holdingsTotalTitle).muted().small(),
               ),
               Tooltip(
-                tooltip: HintTooltip(context.strings.hintInstitutionalOwnership).call,
-                child: const Icon(LucideIcons.info).iconXSmall().iconMutedForeground(),
+                tooltip: HintTooltip(context.strings.hintInstitutionalOwnership)
+                    .call,
+                child: const Icon(LucideIcons.info)
+                    .iconXSmall()
+                    .iconMutedForeground(),
               ),
             ],
           ),
@@ -69,7 +74,8 @@ class _TotalCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(_formatRepo.percent(holdings.institutionalOwnershipPercent)).h3(),
+              Text(_formatRepo.percent(holdings.institutionalOwnershipPercent))
+                  .h3(),
               if (pctList.length >= 2)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
@@ -82,9 +88,11 @@ class _TotalCard extends StatelessWidget {
                 ),
             ],
           ),
-          Text(context.strings.holdingsFilersCount(holdings.totalInstitutionsCount))
-              .muted()
-              .xSmall(),
+          Text(
+            context.strings.holdingsFilersCount(
+              holdings.totalInstitutionsCount,
+            ),
+          ).muted().xSmall(),
         ],
       ),
     );
@@ -102,8 +110,8 @@ class _ConcentrationCard extends StatelessWidget {
     final level = concentration >= 50.0
         ? context.strings.concentrationHigh
         : concentration >= 30.0
-            ? context.strings.concentrationModerate
-            : context.strings.concentrationBroad;
+        ? context.strings.concentrationModerate
+        : context.strings.concentrationBroad;
 
     return Card(
       padding: context.cardPadding,
@@ -114,13 +122,18 @@ class _ConcentrationCard extends StatelessWidget {
           Row(
             spacing: ThemeRepo.spaceXSmall,
             children: [
-              const Icon(LucideIcons.chartPie).iconXSmall().iconMutedForeground(),
+              const Icon(LucideIcons.chartPie)
+                  .iconXSmall()
+                  .iconMutedForeground(),
               Expanded(
                 child: Text(context.strings.holdingsTop10Title).muted().small(),
               ),
               Tooltip(
-                tooltip: HintTooltip(context.strings.hintTop10Concentration).call,
-                child: const Icon(LucideIcons.info).iconXSmall().iconMutedForeground(),
+                tooltip: HintTooltip(context.strings.hintTop10Concentration)
+                    .call,
+                child: const Icon(LucideIcons.info)
+                    .iconXSmall()
+                    .iconMutedForeground(),
               ),
             ],
           ),
@@ -154,14 +167,21 @@ class _FlowCard extends StatelessWidget {
           Row(
             spacing: ThemeRepo.spaceXSmall,
             children: [
-              Icon(isPositive ? LucideIcons.trendingUp : LucideIcons.trendingDown, color: accent)
-                  .iconXSmall(),
+              Icon(
+                isPositive ? LucideIcons.trendingUp : LucideIcons.trendingDown,
+                color: accent,
+              ).iconXSmall(),
               Expanded(
-                child: Text(context.strings.holdingsNetFlowTitle).muted().small(),
+                child: Text(context.strings.holdingsNetFlowTitle)
+                    .muted()
+                    .small(),
               ),
               Tooltip(
-                tooltip: HintTooltip(context.strings.hintNetInstitutionalFlow).call,
-                child: const Icon(LucideIcons.info).iconXSmall().iconMutedForeground(),
+                tooltip: HintTooltip(context.strings.hintNetInstitutionalFlow)
+                    .call,
+                child: const Icon(LucideIcons.info)
+                    .iconXSmall()
+                    .iconMutedForeground(),
               ),
             ],
           ),
@@ -201,25 +221,32 @@ class _ActivistCard extends StatelessWidget {
             children: [
               Icon(LucideIcons.megaphone, color: accent).iconXSmall(),
               Expanded(
-                child: Text(context.strings.holdingsActivistTitle).muted().small(),
+                child: Text(context.strings.holdingsActivistTitle)
+                    .muted()
+                    .small(),
               ),
               Tooltip(
                 tooltip: HintTooltip(context.strings.hintActivistStakes).call,
-                child: const Icon(LucideIcons.info).iconXSmall().iconMutedForeground(),
+                child: const Icon(LucideIcons.info)
+                    .iconXSmall()
+                    .iconMutedForeground(),
               ),
             ],
           ),
           Text(
             hasActive
-                ? context.strings.holdingsActivistActive(holdings.activistStakes.length)
+                ? context.strings.holdingsActivistActive(
+                    holdings.activistStakes.length,
+                  )
                 : context.strings.holdingsActivistNone,
           ).h3(color: hasActive ? accent : null),
-          Text(hasActive ? 'Schedule 13D active filings' : 'Schedule 13G passive filers')
-              .muted()
-              .xSmall(),
+          Text(
+            hasActive
+                ? 'Schedule 13D active filings'
+                : 'Schedule 13G passive filers',
+          ).muted().xSmall(),
         ],
       ),
     );
   }
 }
-

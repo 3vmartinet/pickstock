@@ -256,14 +256,18 @@ class InstitutionalShareholding extends Equatable {
   /// Holders who are net acquirers (increasing position) over time.
   List<InstitutionalHolder> get netAcquirers {
     final list = topHolders.where((h) => h.isNetAcquiring).toList();
-    list.sort((a, b) => b.netChangeOverHistory.compareTo(a.netChangeOverHistory));
+    list.sort(
+      (a, b) => b.netChangeOverHistory.compareTo(a.netChangeOverHistory),
+    );
     return list;
   }
 
   /// Holders who are net releasers (trimming or liquidating position) over time.
   List<InstitutionalHolder> get netReleasers {
     final list = topHolders.where((h) => h.isNetReleasing).toList();
-    list.sort((a, b) => a.netChangeOverHistory.compareTo(b.netChangeOverHistory));
+    list.sort(
+      (a, b) => a.netChangeOverHistory.compareTo(b.netChangeOverHistory),
+    );
     return list;
   }
 
@@ -291,4 +295,3 @@ class InstitutionalShareholding extends Equatable {
     quarterlyTrends,
   ];
 }
-

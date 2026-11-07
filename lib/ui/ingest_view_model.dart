@@ -497,8 +497,7 @@ class IngestViewModel extends ChangeNotifier {
   /// chunk, which is hundreds a second.
   void _reportUpdatePercent(IngestProgress progress) {
     final percent = switch (progress) {
-      IngestDownloading(:final fraction) ||
-      IngestLoading(:final fraction) =>
+      IngestDownloading(:final fraction) || IngestLoading(:final fraction) =>
         fraction == null ? null : (fraction * _percent).round(),
       // The other stages are too short, or too small, to be worth a figure.
       _ => null,

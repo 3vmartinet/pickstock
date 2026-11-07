@@ -43,9 +43,8 @@ void main() {
   });
 
   test('works it out from the cost where only that is tagged', () {
-    final year = CompanyFactsParser.parse(
-      _facts(costOfRevenue: 58 * _billion),
-    ).single;
+    final year = CompanyFactsParser.parse(_facts(costOfRevenue: 58 * _billion))
+        .single;
     expect(year.grossProfit, 42 * _billion);
     expect(year.grossMarginPercent, closeTo(42, 0.01));
   });
@@ -57,9 +56,8 @@ void main() {
   });
 
   test('drops a gross profit larger than the revenue it came from', () {
-    final year = CompanyFactsParser.parse(
-      _facts(grossProfit: 140 * _billion),
-    ).single;
+    final year = CompanyFactsParser.parse(_facts(grossProfit: 140 * _billion))
+        .single;
     expect(year.grossProfit, isNull);
   });
 }

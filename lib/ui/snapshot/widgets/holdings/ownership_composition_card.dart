@@ -39,9 +39,7 @@ class OwnershipCompositionCard extends StatelessWidget {
               children: [
                 _CompositionDonut(holdings: holdings),
                 const SizedBox(width: ThemeRepo.spaceLarge),
-                Expanded(
-                  child: _CompositionLegend(holdings: holdings),
-                ),
+                Expanded(child: _CompositionLegend(holdings: holdings)),
               ],
             ),
           ),
@@ -59,17 +57,17 @@ class _CompositionDonut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final passiveColor = context.theme.colorScheme.primary;
-    final activeColor =
-        context.theme.colorScheme.primary.withValues(alpha: 0.55);
+    final activeColor = context.theme.colorScheme.primary.withValues(
+      alpha: 0.55,
+    );
     final insiderColor = _themeRepo.caution(context.theme);
     final floatColor = context.theme.colorScheme.muted;
 
     final passiveWeight = holdings.passiveIndexPercent.clamp(0.0, 100.0);
     final activeWeight = holdings.activeFundsPercent.clamp(0.0, 100.0);
     final insiderWeight = holdings.insiderPercent.clamp(0.0, 100.0);
-    final floatWeight =
-        (100.0 - (passiveWeight + activeWeight + insiderWeight))
-            .clamp(0.0, 100.0);
+    final floatWeight = (100.0 - (passiveWeight + activeWeight + insiderWeight))
+        .clamp(0.0, 100.0);
 
     final totalInstitutional = (passiveWeight + activeWeight).clamp(0.0, 100.0);
 
@@ -78,14 +76,20 @@ class _CompositionDonut extends StatelessWidget {
         width: 150,
         height: 150,
         child: CustomPaint(
-          painter: _DonutPainter(segments: [
-            _DonutSegment(
-                color: passiveColor, fraction: passiveWeight / 100.0),
-            _DonutSegment(color: activeColor, fraction: activeWeight / 100.0),
-            _DonutSegment(
-                color: insiderColor, fraction: insiderWeight / 100.0),
-            _DonutSegment(color: floatColor, fraction: floatWeight / 100.0),
-          ]),
+          painter: _DonutPainter(
+            segments: [
+              _DonutSegment(
+                color: passiveColor,
+                fraction: passiveWeight / 100.0,
+              ),
+              _DonutSegment(color: activeColor, fraction: activeWeight / 100.0),
+              _DonutSegment(
+                color: insiderColor,
+                fraction: insiderWeight / 100.0,
+              ),
+              _DonutSegment(color: floatColor, fraction: floatWeight / 100.0),
+            ],
+          ),
           child: Center(
             child: SizedBox(
               width: 90,
@@ -102,10 +106,7 @@ class _CompositionDonut extends StatelessWidget {
                       context.strings.holdingsTotalTitle,
                       textAlign: TextAlign.center,
                       maxLines: 2,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        height: 1.15,
-                      ),
+                      style: const TextStyle(fontSize: 10, height: 1.15),
                     ).muted(),
                   ),
                 ],
@@ -128,8 +129,10 @@ class _DonutPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = math.min(size.width, size.height) / 2;
     const strokeWidth = 18.0;
-    final rect =
-        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
+    final rect = Rect.fromCircle(
+      center: center,
+      radius: radius - strokeWidth / 2,
+    );
 
     var startAngle = -math.pi / 2; // Start from top
     for (final segment in segments) {
@@ -163,7 +166,9 @@ class _CompositionLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final passiveColor = context.theme.colorScheme.primary;
-    final activeColor = context.theme.colorScheme.primary.withValues(alpha: 0.55);
+    final activeColor = context.theme.colorScheme.primary.withValues(
+      alpha: 0.55,
+    );
     final insiderColor = _themeRepo.caution(context.theme);
     final floatColor = context.theme.colorScheme.muted;
 
@@ -223,7 +228,9 @@ class _LegendItem extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: border ? Border.all(color: context.theme.colorScheme.border) : null,
+            border: border
+                ? Border.all(color: context.theme.colorScheme.border)
+                : null,
           ),
         ),
         Text(label).muted().xSmall(),
@@ -232,4 +239,3 @@ class _LegendItem extends StatelessWidget {
     );
   }
 }
-

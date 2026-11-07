@@ -63,8 +63,8 @@ class SnapshotReport extends StatelessWidget {
         final isFrameworkOwnsScroll =
             (isVerticalFramework && constraints.maxWidth >= 840) ||
             (tab == ReportTab.framework &&
-             frameworkLayout == FrameworkLayout.list &&
-             isFrameworkListSticky);
+                frameworkLayout == FrameworkLayout.list &&
+                isFrameworkListSticky);
 
         if (isFrameworkOwnsScroll) {
           return Column(

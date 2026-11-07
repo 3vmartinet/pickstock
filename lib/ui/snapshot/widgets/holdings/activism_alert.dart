@@ -28,7 +28,9 @@ class ActivismAlert extends StatelessWidget {
       title: Row(
         spacing: ThemeRepo.spaceSmall,
         children: [
-          Text('Activist Presence Detected (${filer.formType})').semiBold().small(),
+          Text('Activist Presence Detected (${filer.formType})')
+              .semiBold()
+              .small(),
           OutlineBadge(
             child: Text('${_formatRepo.percent(filer.stakePercent)} Stake'),
           ),
@@ -42,4 +44,3 @@ class ActivismAlert extends StatelessWidget {
     );
   }
 }
-

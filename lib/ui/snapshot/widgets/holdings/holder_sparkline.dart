@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 /// A miniature sparkline chart rendering an institutional holder's position trajectory.
@@ -75,15 +76,10 @@ class _SparklinePainter extends CustomPainter {
     // Draw a small dot on the latest point.
     final lastX = xOf(values.length - 1);
     final lastY = yOf(values.last);
-    canvas.drawCircle(
-      Offset(lastX, lastY),
-      2.0,
-      Paint()..color = colour,
-    );
+    canvas.drawCircle(Offset(lastX, lastY), 2.0, Paint()..color = colour);
   }
 
   @override
   bool shouldRepaint(_SparklinePainter old) =>
       old.values != values || old.colour != colour;
 }
-

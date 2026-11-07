@@ -33,7 +33,10 @@ class InstitutionalOwnershipChart extends StatelessWidget {
     final isPositive = diffPct >= 0;
     final sign = diffPct > 0 ? '+' : '';
     final diffText = '$sign${_formatRepo.percent(diffPct)}';
-    final changeLabel = context.strings.ownershipTrendChange(diffText, trends.length);
+    final changeLabel = context.strings.ownershipTrendChange(
+      diffText,
+      trends.length,
+    );
     final accent = _themeRepo.forOutcome(context.theme, isGood: isPositive);
 
     return Card(
@@ -52,7 +55,9 @@ class InstitutionalOwnershipChart extends StatelessWidget {
               ),
               Tooltip(
                 tooltip: HintTooltip(context.strings.hintOwnershipTrend).call,
-                child: const Icon(LucideIcons.info).iconXSmall().iconMutedForeground(),
+                child: const Icon(LucideIcons.info)
+                    .iconXSmall()
+                    .iconMutedForeground(),
               ),
               const SizedBox(width: ThemeRepo.spaceSmall),
               OutlineBadge(
@@ -61,7 +66,9 @@ class InstitutionalOwnershipChart extends StatelessWidget {
                   spacing: ThemeRepo.spaceXSmall,
                   children: [
                     Icon(
-                      isPositive ? LucideIcons.trendingUp : LucideIcons.trendingDown,
+                      isPositive
+                          ? LucideIcons.trendingUp
+                          : LucideIcons.trendingDown,
                       color: accent,
                     ).iconXSmall(),
                     Text(changeLabel).semiBold().xSmall(color: accent),
@@ -76,7 +83,9 @@ class InstitutionalOwnershipChart extends StatelessWidget {
               trends: trends,
               lineColour: context.theme.colorScheme.primary,
               surfaceColour: context.theme.colorScheme.card,
-              gridColour: context.theme.colorScheme.border.withValues(alpha: 0.5),
+              gridColour: context.theme.colorScheme.border.withValues(
+                alpha: 0.5,
+              ),
             ),
           ),
         ],
@@ -147,7 +156,10 @@ class _TrendGraph extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(trend.calendarQuarter).semiBold().xSmall().singleLine(),
+                        Text(trend.calendarQuarter)
+                            .semiBold()
+                            .xSmall()
+                            .singleLine(),
                         Text(_formatRepo.compactCount(trend.totalSharesHeld))
                             .muted()
                             .xSmall()
@@ -163,7 +175,12 @@ class _TrendGraph extends StatelessWidget {
     );
   }
 
-  static double _calculateY(double val, double yMin, double yMax, double height) {
+  static double _calculateY(
+    double val,
+    double yMin,
+    double yMax,
+    double height,
+  ) {
     const insetTop = 24.0;
     const insetBottom = 16.0;
     final plotH = height - insetTop - insetBottom;
@@ -282,16 +299,8 @@ class _TrendChartPainter extends CustomPainter {
     // Draw circular dots at each point.
     for (var i = 0; i < pcts.length; i++) {
       final pt = Offset(xOf(i), yOf(pcts[i]));
-      canvas.drawCircle(
-        pt,
-        4.5,
-        Paint()..color = surfaceColour,
-      );
-      canvas.drawCircle(
-        pt,
-        3.0,
-        Paint()..color = lineColour,
-      );
+      canvas.drawCircle(pt, 4.5, Paint()..color = surfaceColour);
+      canvas.drawCircle(pt, 3.0, Paint()..color = lineColour);
     }
   }
 
@@ -301,4 +310,3 @@ class _TrendChartPainter extends CustomPainter {
       old.lineColour != lineColour ||
       old.gridColour != gridColour;
 }
-

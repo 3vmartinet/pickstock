@@ -72,9 +72,7 @@ void main() {
     // Dragged from the start of the name to the end of the line under it, as
     // a hand would: the two are one region, so one drag takes both.
     final name = tester.getRect(find.text('Apple Inc.').last);
-    final subtitle = tester.getRect(
-      find.textContaining('0000320193').last,
-    );
+    final subtitle = tester.getRect(find.textContaining('0000320193').last);
     final gesture = await tester.startGesture(name.centerLeft);
     await tester.pump(const Duration(milliseconds: 500));
     await gesture.moveTo(subtitle.centerRight);

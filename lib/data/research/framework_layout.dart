@@ -28,4 +28,3 @@ enum FrameworkLayout {
     FrameworkLayout.verticalPanel => strings.frameworkLayoutVerticalHint,
   };
 }
-

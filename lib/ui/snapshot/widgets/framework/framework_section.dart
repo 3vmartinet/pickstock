@@ -102,7 +102,8 @@ class _FrameworkSectionState extends State<FrameworkSection> {
 
       // The selection matches the first answer widget that is fully visible
       // and appears earliest in the list.
-      final isFullyVisible = (cardTop >= viewportTop - epsilon) &&
+      final isFullyVisible =
+          (cardTop >= viewportTop - epsilon) &&
           (cardBottom <= viewportBottom + epsilon);
 
       if (isFullyVisible) {
@@ -169,8 +170,10 @@ class _FrameworkSectionState extends State<FrameworkSection> {
       child: switch (layout) {
         FrameworkLayout.list => _buildListLayout(context),
         FrameworkLayout.carousel => _buildCarouselLayout(context, viewModel),
-        FrameworkLayout.verticalPanel =>
-          _buildVerticalPaneLayout(context, viewModel),
+        FrameworkLayout.verticalPanel => _buildVerticalPaneLayout(
+          context,
+          viewModel,
+        ),
       },
     );
   }
@@ -209,7 +212,10 @@ class _FrameworkSectionState extends State<FrameworkSection> {
               spacing: ThemeRepo.spaceMedium,
               children: [
                 for (final question in FrameworkQuestion.values)
-                  FrameworkQuestionCard(key: _cardKeys[question], question: question),
+                  FrameworkQuestionCard(
+                    key: _cardKeys[question],
+                    question: question,
+                  ),
                 Text(context.strings.insightCaveat).muted().xSmall().italic(),
                 const ReportFootnotes(),
               ],

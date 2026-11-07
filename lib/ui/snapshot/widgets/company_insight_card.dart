@@ -51,11 +51,8 @@ class CompanyInsightCard extends StatelessWidget {
         ],
       ),
       content: switch (state) {
-        InsightState.idle ||
-        InsightState.queued ||
-        InsightState.loading => Text(
-          insight.getInvitation(context.strings),
-        ).muted().xSmall(),
+        InsightState.idle || InsightState.queued || InsightState.loading =>
+          Text(insight.getInvitation(context.strings)).muted().xSmall(),
         InsightState.failed => Text(
           viewModel.insightFailure(insight)?.describe(context.strings) ??
               context.strings.eventsFailedOther,

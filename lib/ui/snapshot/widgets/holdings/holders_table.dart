@@ -60,7 +60,9 @@ class _HoldingsTableState extends State<HoldingsTable> {
               density: ButtonDensity.compact,
               onPressed: () => setState(() => _sortByChange = !_sortByChange),
               leading: Icon(
-                _sortByChange ? LucideIcons.trendingUp : LucideIcons.arrowDownUp,
+                _sortByChange
+                    ? LucideIcons.trendingUp
+                    : LucideIcons.arrowDownUp,
               ).iconXSmall(),
               child: Text(_sortByChange ? 'Sort: Flow' : 'Sort: Stake'),
             ),
@@ -104,7 +106,11 @@ class _WideHoldersTable extends StatelessWidget {
               _headingCell(context, strings.colSharesHeld, isNumeric: true),
               _headingCell(context, strings.colMarketValue, isNumeric: true),
               _headingCell(context, strings.colQoQChange, isNumeric: true),
-              _headingCell(context, strings.colPortfolioPercent, isNumeric: true),
+              _headingCell(
+                context,
+                strings.colPortfolioPercent,
+                isNumeric: true,
+              ),
               _headingCell(context, strings.colFiling, isNumeric: false),
             ],
           ),
@@ -175,7 +181,9 @@ class _WideHoldersTable extends StatelessWidget {
       child: Container(
         padding: ThemeRepo.tableCellPadding,
         alignment: Alignment.centerRight,
-        child: Text(_formatRepo.compactCurrency(holder.marketValue)).small().singleLine(),
+        child: Text(_formatRepo.compactCurrency(holder.marketValue))
+            .small()
+            .singleLine(),
       ),
     );
   }
@@ -220,7 +228,9 @@ class _WideHoldersTable extends StatelessWidget {
           spacing: ThemeRepo.spaceXSmall,
           children: [
             Icon(
-              isPositive ? LucideIcons.arrowUpRight : LucideIcons.arrowDownRight,
+              isPositive
+                  ? LucideIcons.arrowUpRight
+                  : LucideIcons.arrowDownRight,
               color: accent,
             ).iconXSmall(),
             Text('$countText$pctText').small(color: accent).singleLine(),
@@ -236,7 +246,9 @@ class _WideHoldersTable extends StatelessWidget {
       child: Container(
         padding: ThemeRepo.tableCellPadding,
         alignment: Alignment.centerRight,
-        child: Text(pct == null ? '—' : _formatRepo.percent(pct)).small().singleLine(),
+        child: Text(pct == null ? '—' : _formatRepo.percent(pct))
+            .small()
+            .singleLine(),
       ),
     );
   }
@@ -262,9 +274,7 @@ class _HolderCards extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: ThemeRepo.spaceSmall,
-      children: [
-        for (final holder in holders) _HolderCard(holder: holder),
-      ],
+      children: [for (final holder in holders) _HolderCard(holder: holder)],
     );
   }
 }
@@ -292,9 +302,7 @@ class _HolderCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(holder.name).semiBold().small(),
-              ),
+              Expanded(child: Text(holder.name).semiBold().small()),
               const SizedBox(width: ThemeRepo.spaceSmall),
               SecondaryBadge(
                 child: Text(holder.managerType.getLabel(context.strings)),
@@ -339,4 +347,3 @@ class _HolderCard extends StatelessWidget {
     );
   }
 }
-

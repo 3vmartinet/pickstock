@@ -132,7 +132,8 @@ class _VerticalOutcome extends StatelessWidget {
                     FrameworkOutcome.incomplete =>
                       strings.frameworkOutcomeIncomplete,
                     FrameworkOutcome.moveOn => strings.frameworkOutcomeMoveOn,
-                    FrameworkOutcome.watchlist => strings.frameworkOutcomeWatchlist,
+                    FrameworkOutcome.watchlist =>
+                      strings.frameworkOutcomeWatchlist,
                   }).semiBold().small(color: accent),
                 ],
               ),
@@ -333,7 +334,10 @@ class _VerticalStep extends StatelessWidget {
           size: 10,
           strokeWidth: ThemeRepo.inlineSpinnerStroke,
         ),
-        _ when verdict != null => Icon(verdict.icon, color: accent).iconXSmall(),
+        _ when verdict != null => Icon(
+          verdict.icon,
+          color: accent,
+        ).iconXSmall(),
         _ => Text(
           question.number.toString(),
           style: TextStyle(
@@ -406,9 +410,7 @@ class _VerticalStep extends StatelessWidget {
                 ).small(),
               ),
               if (verdict != null)
-                Text(
-                  verdict.getLabel(strings),
-                ).xSmall(color: accent).semiBold()
+                Text(verdict.getLabel(strings)).xSmall(color: accent).semiBold()
               else
                 Text('—').xSmall().muted(),
             ],

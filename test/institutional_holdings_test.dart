@@ -129,4 +129,3 @@ void main() {
     expect(find.text('Q3 2024'), findsWidgets);
   });
 }
-

@@ -251,25 +251,26 @@ void main() {
       expect(GetIt.I.get<SettingsRepo>().autoApplyUpdates, isTrue);
     });
 
-    testWidgets('auto-apply turned on automatically loads once download completes', (
-      tester,
-    ) async {
-      final ingest = FakeBulkIngestRepo();
-      database = await registerTestDependencies(
-        bulkIngestRepo: ingest,
-        autoDownloadUpdates: true,
-        autoApplyUpdates: true,
-      );
-      await pumpApp(tester);
+    testWidgets(
+      'auto-apply turned on automatically loads once download completes',
+      (tester) async {
+        final ingest = FakeBulkIngestRepo();
+        database = await registerTestDependencies(
+          bulkIngestRepo: ingest,
+          autoDownloadUpdates: true,
+          autoApplyUpdates: true,
+        );
+        await pumpApp(tester);
 
-      expect(phaseOf(tester), UpdatePhase.downloading);
+        expect(phaseOf(tester), UpdatePhase.downloading);
 
-      ingest.finishDownload.complete();
-      await pumpFrames(tester);
+        ingest.finishDownload.complete();
+        await pumpFrames(tester);
 
-      // Automatically went from downloaded straight into loading, skipping manual staged prompt!
-      expect(phaseOf(tester), UpdatePhase.loading);
-    });
+        // Automatically went from downloaded straight into loading, skipping manual staged prompt!
+        expect(phaseOf(tester), UpdatePhase.loading);
+      },
+    );
   });
 
   group('stored', () {

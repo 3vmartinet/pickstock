@@ -112,7 +112,9 @@ List<HolderQuarterHistory> _makeHolderHistory({
     final count = shareCounts[i];
     final prev = i > 0 ? shareCounts[i - 1] : null;
     final changeShares = prev != null ? count - prev : null;
-    final changePercent = prev != null && prev > 0 ? ((count - prev) / prev) * 100 : null;
+    final changePercent = prev != null && prev > 0
+        ? ((count - prev) / prev) * 100
+        : null;
     result.add(
       HolderQuarterHistory(
         calendarQuarter: _historicalQuarters[i],
@@ -221,7 +223,9 @@ List<InstitutionalQuarterlyTrend> _calibratedQuarterlyTrends({
     final count = counts[i];
     final prev = i > 0 ? counts[i - 1] : null;
     final changeShares = prev != null ? count - prev : (count * 0.003);
-    final changePercent = prev != null && prev > 0 ? ((count - prev) / prev) * 100 : 0.3;
+    final changePercent = prev != null && prev > 0
+        ? ((count - prev) / prev) * 100
+        : 0.3;
     result.add(
       InstitutionalQuarterlyTrend(
         calendarQuarter: _historicalQuarters[i],
@@ -394,11 +398,41 @@ InstitutionalShareholding _appleShareholding(
   final top10Concentration = (totalHeld / totalShares) * 100;
 
   final appleCustomHistories = {
-    'Berkshire Hathaway Inc': [915560000.0, 905560000.0, 789370000.0, 400000000.0, 300000000.0],
-    'The Vanguard Group, Inc.': [1280000000.0, 1295000000.0, 1305000000.0, 1314310000.0, 1328520000.0],
-    'BlackRock, Inc.': [1040000000.0, 1055000000.0, 1062000000.0, 1069990000.0, 1078940000.0],
-    'FMR LLC (Fidelity)': [332000000.0, 328000000.0, 325000000.0, 323660000.0, 318450000.0],
-    'Price (T. Rowe) Associates Inc': [230000000.0, 221000000.0, 212000000.0, 207090000.0, 198640000.0],
+    'Berkshire Hathaway Inc': [
+      915560000.0,
+      905560000.0,
+      789370000.0,
+      400000000.0,
+      300000000.0,
+    ],
+    'The Vanguard Group, Inc.': [
+      1280000000.0,
+      1295000000.0,
+      1305000000.0,
+      1314310000.0,
+      1328520000.0,
+    ],
+    'BlackRock, Inc.': [
+      1040000000.0,
+      1055000000.0,
+      1062000000.0,
+      1069990000.0,
+      1078940000.0,
+    ],
+    'FMR LLC (Fidelity)': [
+      332000000.0,
+      328000000.0,
+      325000000.0,
+      323660000.0,
+      318450000.0,
+    ],
+    'Price (T. Rowe) Associates Inc': [
+      230000000.0,
+      221000000.0,
+      212000000.0,
+      207090000.0,
+      198640000.0,
+    ],
   };
 
   return InstitutionalShareholding(
@@ -1035,4 +1069,3 @@ InstitutionalShareholding _fordShareholding(
     ),
   );
 }
-

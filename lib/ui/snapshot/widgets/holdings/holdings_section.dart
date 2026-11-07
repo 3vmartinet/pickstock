@@ -30,7 +30,9 @@ class HoldingsSection extends StatelessWidget {
             spacing: ThemeRepo.spaceMedium,
             children: [
               const CircularProgressIndicator(),
-              Text('Reading Form 13F and Schedule 13D filings…').muted().small(),
+              Text('Reading Form 13F and Schedule 13D filings…')
+                  .muted()
+                  .small(),
             ],
           ),
         ),
@@ -95,4 +97,3 @@ class HoldingsSection extends StatelessWidget {
     );
   }
 }
-

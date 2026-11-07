@@ -318,7 +318,9 @@ class _ReportingActions extends StatelessWidget {
   }
 
   void _startFramework(BuildContext context, List<Company> companies) {
-    final count = context.read<SnapshotViewModel>().runFrameworkBatch(companies);
+    final count = context.read<SnapshotViewModel>().runFrameworkBatch(
+      companies,
+    );
     if (count > 0 || companies.isNotEmpty) closeOverlay(context);
   }
 }
@@ -438,9 +440,7 @@ class _ResearchSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: ThemeRepo.spaceXSmall,
-              children: [
-                for (final task in tasks) _ResearchRow(task: task),
-              ],
+              children: [for (final task in tasks) _ResearchRow(task: task)],
             ),
           ),
         ),
@@ -484,9 +484,9 @@ class _ResearchRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: ThemeRepo.spaceXSmall,
                 children: [
-                  Text(
-                    '${task.ticker} · ${_asked(task, strings)}',
-                  ).small().singleLine(),
+                  Text('${task.ticker} · ${_asked(task, strings)}')
+                      .small()
+                      .singleLine(),
                   Text(_status(task, strings)).muted().xSmall().singleLine(),
                 ],
               ),
@@ -523,11 +523,7 @@ class _ResearchRow extends StatelessWidget {
     closeOverlay(context);
     queue.remove(task.id);
     unawaited(
-      snapshot.revealNote(
-        ticker: task.ticker,
-        tab: task.tab,
-        kind: task.kind,
-      ),
+      snapshot.revealNote(ticker: task.ticker, tab: task.tab, kind: task.kind),
     );
     // Beside the list the report is already on screen; on a narrow window it
     // gets a screen of its own.

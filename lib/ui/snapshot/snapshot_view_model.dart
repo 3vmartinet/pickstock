@@ -149,12 +149,11 @@ class SnapshotViewModel extends ChangeNotifier {
   /// Asked of the queue first while a question about this company is still in
   /// it: waiting and being answered are the queue's to say, and a second copy
   /// kept here would be the one that went stale.
-  EventsState get eventsState =>
-      switch (_queuedState(eventsNoteKind)) {
-        ResearchTaskState.pending => EventsState.queued,
-        ResearchTaskState.running => EventsState.loading,
-        _ => _eventsState,
-      };
+  EventsState get eventsState => switch (_queuedState(eventsNoteKind)) {
+    ResearchTaskState.pending => EventsState.queued,
+    ResearchTaskState.running => EventsState.loading,
+    _ => _eventsState,
+  };
 
   /// Where the queue has got to with [kind] for the company on screen, or
   /// `null` where it has nothing about it.

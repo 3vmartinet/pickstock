@@ -101,16 +101,17 @@ void main() {
     expect(research.questions, isEmpty);
   });
 
-  testWidgets('automatically fetches business description when enabled and none on file', (
-    tester,
-  ) async {
-    await GetIt.I.get<SettingsRepo>().setAutoFetchBusinessDescription(true);
-    await openApple(tester);
+  testWidgets(
+    'automatically fetches business description when enabled and none on file',
+    (tester) async {
+      await GetIt.I.get<SettingsRepo>().setAutoFetchBusinessDescription(true);
+      await openApple(tester);
 
-    expect(research.questions, isNotEmpty);
-    expect(research.questions.first, contains('what does'));
-    expect(research.questions.first, contains('Apple Inc.'));
-  });
+      expect(research.questions, isNotEmpty);
+      expect(research.questions.first, contains('what does'));
+      expect(research.questions.first, contains('Apple Inc.'));
+    },
+  );
 
   testWidgets('each tab asks its own question of its own figures', (
     tester,

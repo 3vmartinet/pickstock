@@ -54,10 +54,9 @@ class EdgeProgress extends StatelessWidget {
                 minHeight: ThemeRepo.updateProgressHeight,
                 borderRadius: BorderRadius.zero,
                 color: colour,
-                backgroundColor: trackColour ??
-                    colour.withValues(
-                      alpha: ThemeRepo.updateProgressTrack,
-                    ),
+                backgroundColor:
+                    trackColour ??
+                    colour.withValues(alpha: ThemeRepo.updateProgressTrack),
               ),
               child: Progress(progress: fraction),
             ),
