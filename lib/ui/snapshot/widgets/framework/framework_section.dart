@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:pickstock/ui/widgets/model_caveat.dart';
 import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/research/framework_question.dart';
-import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/snapshot/widgets/framework/framework_carousel_view.dart';
@@ -190,7 +190,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
           FrameworkScorecard(onJump: _jumpTo),
           for (final question in FrameworkQuestion.values)
             FrameworkQuestionCard(key: _cardKeys[question], question: question),
-          Text(context.strings.insightCaveat).muted().xSmall().italic(),
+          const ModelCaveat(),
         ],
       );
     }
@@ -216,7 +216,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
                     key: _cardKeys[question],
                     question: question,
                   ),
-                Text(context.strings.insightCaveat).muted().xSmall().italic(),
+                const ModelCaveat(),
                 const ReportFootnotes(),
               ],
             ),
@@ -317,10 +317,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
                     spacing: ThemeRepo.spaceMedium,
                     children: [
                       answersContent,
-                      Text(context.strings.insightCaveat)
-                          .muted()
-                          .xSmall()
-                          .italic(),
+                      const ModelCaveat(),
                       const ReportFootnotes(),
                     ],
                   ),
@@ -345,7 +342,7 @@ class _FrameworkSectionState extends State<FrameworkSection> {
               activeQuestion: focused,
             ),
             answersContent,
-            Text(context.strings.insightCaveat).muted().xSmall().italic(),
+            const ModelCaveat(),
           ],
         );
       },

@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
 
 /// Where a queued question has got to.
 ///
@@ -33,6 +34,8 @@ class ResearchTask extends Equatable {
     this.frameworkQuestions = const [],
     this.stepsDone = 0,
     this.state = ResearchTaskState.pending,
+    this.isSeen = false,
+    this.failure,
   });
 
   final int id;
@@ -58,6 +61,18 @@ class ResearchTask extends Equatable {
   final int stepsDone;
 
   final ResearchTaskState state;
+
+  /// Whether the reader has opened the answer since it landed.
+  ///
+  /// A finished row stays in the list after it is opened, so the list is also
+  /// the way back to an answer read a minute ago. What marks the ones not yet
+  /// looked at is this: a dot on the row and a count on the app bar's button,
+  /// so an answer that arrived while the reader was elsewhere is not lost
+  /// among the ones already read.
+  final bool isSeen;
+
+  /// Why it failed, where it did: what the row says in place of "ready".
+  final ResearchFailure? failure;
 
   bool get isFramework => frameworkQuestions.isNotEmpty;
 
@@ -93,17 +108,32 @@ class ResearchTask extends Equatable {
   /// cancellable rather than openable.
   bool get isActive => isPending || isRunning;
 
-  ResearchTask copyWith({ResearchTaskState? state, int? stepsDone}) =>
-      ResearchTask(
-        id: id,
-        cik: cik,
-        ticker: ticker,
-        companyName: companyName,
-        insight: insight,
-        frameworkQuestions: frameworkQuestions,
-        stepsDone: stepsDone ?? this.stepsDone,
-        state: state ?? this.state,
-      );
+  /// Whether the model is done with it, answered or not.
+  bool get isFinished => !isActive;
+
+  bool get isFailed => state == ResearchTaskState.failed;
+
+  /// Whether it has finished and the reader has not opened it since. A failure
+  /// counts: the reason it failed is news too, and it is on the card.
+  bool get isUnseen => isFinished && !isSeen;
+
+  ResearchTask copyWith({
+    ResearchTaskState? state,
+    int? stepsDone,
+    bool? isSeen,
+    ResearchFailure? failure,
+  }) => ResearchTask(
+    id: id,
+    cik: cik,
+    ticker: ticker,
+    companyName: companyName,
+    insight: insight,
+    frameworkQuestions: frameworkQuestions,
+    stepsDone: stepsDone ?? this.stepsDone,
+    state: state ?? this.state,
+    isSeen: isSeen ?? this.isSeen,
+    failure: failure ?? this.failure,
+  );
 
   @override
   List<Object?> get props => [
@@ -115,6 +145,8 @@ class ResearchTask extends Equatable {
     frameworkQuestions,
     stepsDone,
     state,
+    isSeen,
+    failure,
   ];
 }
 

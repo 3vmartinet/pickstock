@@ -4,14 +4,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/ui/report/widgets/jobs_button.dart';
+import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_insight_card.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'support/finders.dart';
 import 'support/test_directory.dart';
 
 /// Wide enough for the list and a report side by side, and tall enough that
@@ -271,6 +274,14 @@ void main() {
     await pumpFrames(tester);
     expect(find.byKey(jobsCountBadgeKey), findsNothing);
     expect(find.byIcon(LucideIcons.listChecks), findsOneWidget);
+    // And now counts what came back and has not been looked at.
+    expect(
+      find.descendant(
+        of: find.byKey(jobsUnseenBadgeKey),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a finished question is the way back to its answer', (
@@ -287,16 +298,28 @@ void main() {
     research.finishAsk!.complete();
     await pumpFrames(tester);
 
+    final queue = GetIt.I.get<ResearchQueue>();
+    final task = queue.tasks.single;
+    // Back and not yet opened: counted on the button, dotted in the list.
+    expect(
+      find.descendant(
+        of: find.byKey(jobsUnseenBadgeKey),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
+
     await onDesktop(() async {
       await openPanel(tester);
       expect(find.text('Ready — open it'), findsOneWidget);
+      expect(find.byKey(researchUnseenDotKey(task.id)), findsOneWidget);
       await click(tester, find.text('AAPL · Describe the business'));
     });
     await pumpFrames(tester);
 
     // Back on Apple, on the tab the question was asked from, with the answer
     // in the block that asked it.
-    expect(find.textContaining('Apple designs and sells'), findsOneWidget);
+    expect(findProse('Apple designs and sells'), findsOneWidget);
     // And marked, because a report is a dozen cards and only one of them is
     // what the trip was for.
     expect(find.text('Just fetched'), findsOneWidget);
@@ -308,7 +331,184 @@ void main() {
       findsOneWidget,
     );
 
-    // Collected, so the row has nothing left to say.
+    // Opened, so the count and the dot go, but the row stays as the way
+    // back to it.
+    expect(find.byKey(jobsUnseenBadgeKey), findsNothing);
+    expect(queue.tasks.single.isSeen, isTrue);
+    expect(queue.unseenCount, 0);
+    await onDesktop(() async {
+      await openPanel(tester);
+      expect(find.text('Opened — open it again'), findsOneWidget);
+      expect(find.byKey(researchUnseenDotKey(task.id)), findsNothing);
+
+      // And the cross takes it off the list.
+      await click(tester, find.byKey(researchCancelKey(task.id)));
+    });
+    expect(queue.tasks, isEmpty);
+  });
+
+  test(
+    'lists the latest question first and answers the oldest first',
+    () async {
+      final queue = ResearchQueue();
+      addTearDown(queue.dispose);
+      final answered = <String>[];
+      final gates = <String, Completer<void>>{};
+
+      for (final ticker in ['AAA', 'BBB', 'CCC']) {
+        gates[ticker] = Completer<void>();
+        queue.enqueue(
+          cik: ticker,
+          ticker: ticker,
+          companyName: ticker,
+          insight: CompanyInsight.business,
+          work: (_) async {
+            await gates[ticker]!.future;
+            answered.add(ticker);
+          },
+        );
+      }
+
+      expect(queue.tasks.map((task) => task.ticker), ['CCC', 'BBB', 'AAA']);
+      expect(queue.tasks.last.isRunning, isTrue);
+
+      for (final ticker in ['AAA', 'BBB', 'CCC']) {
+        gates[ticker]!.complete();
+        await pumpEventQueue();
+      }
+      expect(answered, ['AAA', 'BBB', 'CCC']);
+      // Still newest first once answered, and all three waiting to be opened.
+      expect(queue.tasks.map((task) => task.ticker), ['CCC', 'BBB', 'AAA']);
+      expect(queue.unseenCount, 3);
+
+      queue.markSeen(queue.tasks.first.id);
+      expect(queue.unseenCount, 2);
+      expect(queue.tasks.first.isSeen, isTrue);
+    },
+  );
+
+  testWidgets('a question that found nothing says so briefly, in red', (
+    tester,
+  ) async {
+    research.failure = ResearchFailure.nothingFound;
+    await openApp(tester);
+    await openCompany(tester, 'Apple Inc.');
+    await ask(tester, 'Describe the business');
+    await pumpFrames(tester);
+
+    final task = GetIt.I.get<ResearchQueue>().tasks.single;
+    expect(task.failure, ResearchFailure.nothingFound);
+    // On the card: a line, not the model's apology.
+    expect(find.text('Nothing found on the web'), findsOneWidget);
+
+    await onDesktop(() async {
+      await openPanel(tester);
+      expect(find.text('Background tasks'), findsOneWidget);
+      expect(find.text('Nothing found on the web'), findsWidgets);
+      expect(find.text('Ready — open it'), findsNothing);
+      // The cross at the start says it failed; no unread dot beside it.
+      expect(find.byKey(researchUnseenDotKey(task.id)), findsNothing);
+
+      await click(tester, find.byKey(researchClearFinishedKey));
+    });
     expect(GetIt.I.get<ResearchQueue>().tasks, isEmpty);
+  });
+
+  testWidgets('a spent search allowance offers the way round it', (
+    tester,
+  ) async {
+    research.failure = ResearchFailure.searchRefused;
+    await openApp(tester);
+    await openCompany(tester, 'Apple Inc.');
+    await ask(tester, 'Describe the business');
+    await pumpFrames(tester);
+
+    expect(find.text('Web search limit reached'), findsOneWidget);
+    expect(find.byKey(searchSetupLinkKey), findsOneWidget);
+
+    await tester.tap(find.byKey(searchSetupLinkKey));
+    await pumpFrames(tester);
+    expect(find.text('Unlimited web search'), findsOneWidget);
+  });
+
+  test('a failed question carries the reason it failed', () async {
+    final queue = ResearchQueue();
+    addTearDown(queue.dispose);
+
+    queue.enqueue(
+      cik: 'AAA',
+      ticker: 'AAA',
+      companyName: 'AAA',
+      insight: CompanyInsight.business,
+      work: (_) async =>
+          throw const ResearchException(ResearchFailure.searchRefused),
+    );
+    await pumpEventQueue();
+
+    final task = queue.tasks.single;
+    expect(task.isFailed, isTrue);
+    expect(task.failure, ResearchFailure.searchRefused);
+  });
+
+  test('the toolbar marks all read and clears only what is finished', () async {
+    final queue = ResearchQueue();
+    addTearDown(queue.dispose);
+    final gate = Completer<void>();
+
+    for (final ticker in ['AAA', 'BBB']) {
+      queue.enqueue(
+        cik: ticker,
+        ticker: ticker,
+        companyName: ticker,
+        insight: CompanyInsight.business,
+        work: (_) async {},
+      );
+    }
+    queue.enqueue(
+      cik: 'CCC',
+      ticker: 'CCC',
+      companyName: 'CCC',
+      insight: CompanyInsight.business,
+      work: (_) => gate.future,
+    );
+    await pumpEventQueue();
+    expect(queue.unseenCount, 2);
+
+    queue.markAllSeen();
+    expect(queue.unseenCount, 0);
+
+    queue.clearFinished();
+    // The one still being answered stays.
+    expect(queue.tasks.map((task) => task.ticker), ['CCC']);
+    gate.complete();
+  });
+
+  group('an answer that found nothing', () {
+    test('is the marker the model is told to use', () {
+      expect(isNothingFound('NOTHING_FOUND'), isTrue);
+      expect(isNothingFound(' nothing_found.'), isTrue);
+    });
+
+    test('is an apology in its opening words', () {
+      expect(
+        isNothingFound(
+          'I am sorry, but I am unable to find any official SEC filings.',
+        ),
+        isTrue,
+      );
+      expect(isNothingFound("**I couldn’t find** anything on it."), isTrue);
+      expect(isNothingFound('Unfortunately, I could not locate it.'), isTrue);
+    });
+
+    test('is not an answer that mentions a gap further in', () {
+      expect(
+        isNothingFound(
+          'PEDEVCO produces oil in the Permian. I could not find its 2025 '
+          'guidance.',
+        ),
+        isFalse,
+      );
+      expect(isNothingFound(''), isFalse);
+    });
   });
 }

@@ -5,6 +5,7 @@ import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
 
 /// One question's work, run when the queue reaches it.
 ///
@@ -31,8 +32,54 @@ class ResearchQueue extends ChangeNotifier {
   int _nextId = 1;
   bool _isWorking = false;
 
-  /// Everything asked for and not yet taken away, in the order it was asked.
-  List<ResearchTask> get tasks => [for (final entry in _queued) entry.task];
+  /// Everything asked for and not yet taken away, the most recently asked
+  /// first.
+  ///
+  /// Newest at the top because that is the question the reader has in mind:
+  /// they open the list straight after asking, or to see whether what they
+  /// just asked has come back. The line is still answered oldest first — this
+  /// is the order it is shown in, not the order it is worked through.
+  List<ResearchTask> get tasks => [
+    for (final entry in _queued.reversed) entry.task,
+  ];
+
+  /// How many answers have landed that the reader has not opened yet.
+  int get unseenCount => _queued.where((entry) => entry.task.isUnseen).length;
+
+  /// Records that [id]'s answer has been opened, which takes its dot away and
+  /// counts it off the app bar's badge. The row stays, as the way back to it.
+  void markSeen(int id) {
+    final index = _indexOf(id);
+    if (index < 0 || _queued[index].task.isSeen) return;
+    _queued[index] = _queued[index].withTask(
+      _queued[index].task.copyWith(isSeen: true),
+    );
+    notifyListeners();
+  }
+
+  /// Marks every finished question as opened, from the section's toolbar.
+  void markAllSeen() {
+    var changed = false;
+    for (var index = 0; index < _queued.length; index++) {
+      final task = _queued[index].task;
+      if (!task.isUnseen) continue;
+      _queued[index] = _queued[index].withTask(task.copyWith(isSeen: true));
+      changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Whether anything has finished, answered or failed, which is what the
+  /// toolbar's clearing is for.
+  bool get hasFinished => _queued.any((entry) => entry.task.isFinished);
+
+  /// Takes every finished question off the list, answered or failed, and
+  /// leaves the ones still owed. The answers stay on the companies' reports.
+  void clearFinished() {
+    final before = _queued.length;
+    _queued.removeWhere((entry) => entry.task.isFinished);
+    if (_queued.length != before) notifyListeners();
+  }
 
   /// How many questions are still owed — being answered or waiting to be.
   int get activeCount => _queued.where((entry) => entry.task.isActive).length;
@@ -124,9 +171,9 @@ class ResearchQueue extends ChangeNotifier {
 
   /// Takes a question out of the list, whether it has been asked yet or not.
   ///
-  /// The one call behind both halves of the row: cancelling one still waiting,
-  /// and clearing one whose answer has been gone to look at. Both end the same
-  /// way — the row has nothing left to say and goes.
+  /// The one call behind the row's cross: cancelling one still waiting, and
+  /// dismissing one whose answer is no longer wanted in the list. Both end the
+  /// same way — the row has nothing left to say and goes.
   void remove(int id) {
     final index = _indexOf(id);
     if (index < 0) return;
@@ -176,7 +223,7 @@ class ResearchQueue extends ChangeNotifier {
 
   Future<void> _runOne(_Queued entry) async {
     final id = entry.task.id;
-    var hasFailed = false;
+    ResearchFailure? failure;
 
     // Kept as a future rather than awaited directly, so abandoning it does not
     // mean waiting for it. Its errors are caught in here rather than left to
@@ -184,9 +231,12 @@ class ResearchQueue extends ChangeNotifier {
     final work = () async {
       try {
         await entry.work(() => _isGone(id));
+      } on ResearchException catch (error) {
+        logWarning(() => 'Research task $id did not finish: $error');
+        failure = error.failure;
       } on Object catch (error, trace) {
         logWarning(() => 'Research task $id did not finish: $error\n$trace');
-        hasFailed = true;
+        failure = ResearchFailure.failed;
       }
     }();
 
@@ -196,15 +246,16 @@ class ResearchQueue extends ChangeNotifier {
     if (_isGone(id)) return;
     _setState(
       id,
-      hasFailed ? ResearchTaskState.failed : ResearchTaskState.done,
+      failure != null ? ResearchTaskState.failed : ResearchTaskState.done,
+      failure: failure,
     );
   }
 
-  void _setState(int id, ResearchTaskState state) {
+  void _setState(int id, ResearchTaskState state, {ResearchFailure? failure}) {
     final index = _indexOf(id);
     if (index < 0) return;
     _queued[index] = _queued[index].withTask(
-      _queued[index].task.copyWith(state: state),
+      _queued[index].task.copyWith(state: state, failure: failure),
     );
     notifyListeners();
   }

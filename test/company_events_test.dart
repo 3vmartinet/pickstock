@@ -238,7 +238,7 @@ void main() {
 
     // Named, not merely refused: which of the several things that have to be
     // running is not is the only useful thing to say.
-    expect(find.textContaining('Start Ollama'), findsOneWidget);
+    expect(find.textContaining('Ollama is not running'), findsOneWidget);
   });
 
   testWidgets('clears the news when another company is opened', (tester) async {

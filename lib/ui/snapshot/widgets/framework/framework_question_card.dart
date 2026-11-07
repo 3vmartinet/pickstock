@@ -3,7 +3,6 @@ import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/research/framework_evidence.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
-import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -18,6 +17,7 @@ import 'package:pickstock/ui/widgets/source_link.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
+import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
 
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
@@ -272,8 +272,15 @@ class _Reading extends StatelessWidget {
       _ => failure?.describe(strings),
     };
     final failureLine = state == InsightState.failed && reason != null
-        ? Text(strings.frameworkFailed(reason))
-              .xSmall(color: _themeRepo.negative(context.theme))
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(strings.frameworkFailed(reason))
+                  .xSmall(color: _themeRepo.negative(context.theme)),
+              if (SearchSetupLink.cures(failure)) const SearchSetupLink(),
+            ],
+          )
         : null;
 
     if (answer == null) {
@@ -321,7 +328,11 @@ class _Reading extends StatelessWidget {
             _PointRow(point: point, question: question, cik: cik),
         ],
         ?failureLine,
-        if (sources.isNotEmpty) _Sources(sources: sources.values, cik: cik),
+        // Listed as the overview's insights list theirs.
+        if (sources.isNotEmpty) ...[
+          const Divider(),
+          SourcesList(sources: sources.values, cik: cik),
+        ],
         if (generatedAt != null && viewModel.canResearch && !isBusy)
           Align(
             alignment: AlignmentDirectional.centerEnd,
@@ -370,29 +381,36 @@ class _PointRow extends StatelessWidget {
           ).iconXSmall().iconMutedForeground(),
         ),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: ThemeRepo.spaceXSmall,
-            children: [
-              Text(point.text).small(),
-              if (url != null)
-                SourceLink(label: _host(url), url: url, cik: cik)
-              else if (point.isFromFilings)
-                _OriginMark(
-                  icon: LucideIcons.fileText,
-                  label: context.strings.frameworkFilingsMark,
-                  hint: context.strings.frameworkFilingsMarkHint,
-                )
-              else
-                // Neither a page nor a figure on file: the model's own
-                // reading, which is worth having and worth knowing it is.
-                _OriginMark(
-                  icon: LucideIcons.messageCircleQuestion,
-                  label: context.strings.frameworkUnsourcedMark,
-                  hint: context.strings.frameworkUnsourcedMarkHint,
+          // Where it was read at the end of the point, as a citation is, so
+          // it takes a line of its own only when the point fills its last.
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '${point.text} '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: switch (url) {
+                    final url? => SourceLinks(
+                      sources: [(label: _host(url), url: url)],
+                      cik: cik,
+                    ),
+                    _ when point.isFromFilings => _OriginMark(
+                      icon: LucideIcons.fileText,
+                      label: context.strings.frameworkFilingsMark,
+                      hint: context.strings.frameworkFilingsMarkHint,
+                    ),
+                    // Neither a page nor a figure on file: the model's own
+                    // reading, which is worth having and worth knowing it is.
+                    _ => _OriginMark(
+                      icon: LucideIcons.messageCircleQuestion,
+                      label: context.strings.frameworkUnsourcedMark,
+                      hint: context.strings.frameworkUnsourcedMarkHint,
+                    ),
+                  },
                 ),
-            ],
-          ),
+              ],
+            ),
+          ).small(),
         ),
       ],
     );
@@ -423,43 +441,6 @@ class _OriginMark extends StatelessWidget {
     return Tooltip(
       tooltip: HintTooltip(hint).call,
       child: OutlineBadge(leading: Icon(icon).iconXSmall(), child: Text(label)),
-    );
-  }
-}
-
-/// Every page read for the answer, folded away: the points above cite the
-/// ones that mattered, and five more links under every card is a wall.
-class _Sources extends StatelessWidget {
-  const _Sources({required this.sources, required this.cik});
-
-  final Iterable<SearchResult> sources;
-  final String cik;
-
-  @override
-  Widget build(BuildContext context) {
-    return Collapsible(
-      children: [
-        CollapsibleTrigger(
-          child: Text('${context.strings.insightSources} (${sources.length})')
-              .muted()
-              .xSmall()
-              .semiBold(),
-        ),
-        CollapsibleContent(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: ThemeRepo.spaceXSmall,
-            children: [
-              for (final source in sources)
-                SourceLink(
-                  label: source.title.isEmpty ? source.url : source.title,
-                  url: source.url,
-                  cik: cik,
-                ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

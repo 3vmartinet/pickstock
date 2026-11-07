@@ -21,6 +21,7 @@ import 'package:pickstock/ui/snapshot/widgets/source_pane.dart';
 import 'package:pickstock/ui/snapshot/widgets/valuation_grid.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'support/finders.dart';
 import 'support/test_directory.dart';
 
 /// Wide enough for the list and a report side by side, and tall enough that a
@@ -149,7 +150,7 @@ void main() {
     await ask(tester, 'Describe the business');
 
     // The question and its answer are never in two places.
-    expect(find.textContaining('Apple designs and sells'), findsOneWidget);
+    expect(findProse('Apple designs and sells'), findsOneWidget);
     expect(find.textContaining('EDGAR publishes no description'), findsNothing);
     // And the offer is gone: it would be offering work already done.
     expect(find.text('Describe the business'), findsNothing);
@@ -159,7 +160,7 @@ void main() {
     await openApple(tester);
     await ask(tester, 'Describe the business');
 
-    expect(find.text('Read from'), findsOneWidget);
+    expect(find.text('Sources'), findsOneWidget);
     expect(find.text('Apple Inc. Form 10-K'), findsOneWidget);
     expect(find.text('Apple Newsroom'), findsOneWidget);
 
@@ -197,7 +198,7 @@ void main() {
 
     research.finishAsk!.complete();
     await tester.pumpAndSettle();
-    expect(find.textContaining('Apple designs and sells'), findsOneWidget);
+    expect(findProse('Apple designs and sells'), findsOneWidget);
     expect(research.questions, hasLength(1));
   });
 
@@ -208,7 +209,7 @@ void main() {
     await openApple(tester);
     await ask(tester, 'Describe the business');
 
-    expect(find.textContaining('Start Ollama'), findsOneWidget);
+    expect(find.textContaining('Ollama is not running'), findsOneWidget);
   });
 
   testWidgets('offers nothing at all without a key', (tester) async {
@@ -230,14 +231,14 @@ void main() {
   testWidgets('asks again for another company', (tester) async {
     await openApple(tester);
     await ask(tester, 'Describe the business');
-    expect(find.textContaining('Apple designs and sells'), findsOneWidget);
+    expect(findProse('Apple designs and sells'), findsOneWidget);
 
     await tester.tap(find.text('NVIDIA CORP'));
     await tester.pumpAndSettle();
 
     // Last company's answer says nothing about this one, and a minute of work
     // nobody asked for is not started on their behalf.
-    expect(find.textContaining('Apple designs and sells'), findsNothing);
+    expect(findProse('Apple designs and sells'), findsNothing);
     expect(find.text('Describe the business'), findsOneWidget);
     expect(research.questions, hasLength(1));
   });
@@ -267,7 +268,7 @@ void main() {
 
     // On screen without being asked for, and without a minute of a local
     // model to get it back.
-    expect(find.textContaining('Read some time ago'), findsOneWidget);
+    expect(findProse('Read some time ago'), findsOneWidget);
     expect(find.text('Form 10-K'), findsOneWidget);
     expect(research.questions, isEmpty);
     expect(find.text('Describe the business'), findsNothing);
@@ -313,7 +314,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(research.questions, hasLength(2));
-    expect(find.textContaining('Apple designs and sells'), findsOneWidget);
+    expect(findProse('Apple designs and sells'), findsOneWidget);
   });
 
   testWidgets('the audit sits under the ratios, beside the working', (

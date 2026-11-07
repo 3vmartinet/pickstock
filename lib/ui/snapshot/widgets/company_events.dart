@@ -15,6 +15,9 @@ import 'package:pickstock/ui/widgets/source_link.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
+import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
+
+ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
@@ -138,10 +141,18 @@ class CompanyEvents extends StatelessWidget {
             EventsState.empty => Text(
               context.strings.eventsEmpty,
             ).muted().xSmall(),
-            EventsState.failed => Text(
-              viewModel.eventsFailure?.describe(context.strings) ??
-                  context.strings.eventsFailedOther,
-            ).muted().xSmall(),
+            EventsState.failed => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  viewModel.eventsFailure?.describe(context.strings) ??
+                      context.strings.eventsFailedOther,
+                ).xSmall(color: _themeRepo.negative(context.theme)),
+                if (SearchSetupLink.cures(viewModel.eventsFailure))
+                  const SearchSetupLink(),
+              ],
+            ),
             _ => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,

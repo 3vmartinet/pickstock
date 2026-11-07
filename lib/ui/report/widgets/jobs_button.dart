@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:flutter/rendering.dart'
+    show BoxHitTestEntry, BoxHitTestResult, RenderProxyBox;
 
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/report/valuation_job.dart';
@@ -8,6 +12,7 @@ import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
+import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
@@ -20,6 +25,8 @@ import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
+import 'package:pickstock/ui/settings/settings_view_model.dart';
+import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
 
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
@@ -60,6 +67,7 @@ class _JobsButtonState extends State<JobsButton> {
     final jobs = context.read<JobsViewModel>();
     final browse = context.read<BrowseViewModel>();
     final snapshot = context.read<SnapshotViewModel>();
+    final settings = context.read<SettingsViewModel>();
 
     _menu.show<void>(
       context,
@@ -78,6 +86,7 @@ class _JobsButtonState extends State<JobsButton> {
           ChangeNotifierProvider<BrowseViewModel>.value(value: browse),
           ChangeNotifierProvider<SnapshotViewModel>.value(value: snapshot),
           ChangeNotifierProvider<ResearchQueue>.value(value: _researchQueue),
+          ChangeNotifierProvider<SettingsViewModel>.value(value: settings),
         ],
         child: const _JobsPanel(),
       ),
@@ -93,6 +102,9 @@ class _JobsButtonState extends State<JobsButton> {
       (queue) => queue.activeCount,
     );
     final outstanding = running + asked;
+    final unseen = context.select<ResearchQueue, int>(
+      (queue) => queue.unseenCount,
+    );
 
     // The controller notifies on opening and on closing, however the close
     // came about, so the press follows the panel rather than having to be kept
@@ -100,30 +112,119 @@ class _JobsButtonState extends State<JobsButton> {
     return ListenableBuilder(
       listenable: _menu,
       builder: (context, _) {
-        final button = Tooltip(
-          tooltip: HintTooltip(context.strings.jobsTooltip).call,
-          child: GhostButton(
-            density: ButtonDensity.icon,
-            onPressed: _menu.hasOpenOverlay ? _menu.close : _open,
-            child: outstanding > 0
-                // The spinner is the badge: that something is running at all
-                // is most of what the app bar has to say.
-                ? const SizedBox.square(
-                    dimension: ThemeRepo.inlineSpinnerSize,
-                    child: CircularProgressIndicator(
-                      strokeWidth: ThemeRepo.inlineSpinnerStroke,
-                    ),
-                  )
-                : const Icon(LucideIcons.listChecks),
-          ),
+        final onPressed = _menu.hasOpenOverlay ? _menu.close : _open;
+        final scheme = context.theme.colorScheme;
+        // The spinner's own pair, set on it explicitly so the counts can wear
+        // the same: its ring for their digits and marks, its track for their
+        // fill. Quieter than a green and an orange of their own, and of a
+        // piece with the spinner they sit against.
+        // The counts take the SEC data stamp's pair, so the app bar's two
+        // small labels read as one family; the spinner keeps its own.
+        final ink = scheme.primary;
+        final track = ink.withValues(
+          alpha: ink.a * ThemeRepo.spinnerTrackShare,
         );
 
-        // The count only once there is a queue worth calling one. One or two
-        // things running is what the spinner already says, and a badge reading
-        // "2" beside it would be a second way of saying the same thing; a
-        // badge reading "7" says something the spinner cannot.
-        if (outstanding <= jobsBadgeThreshold) return button;
-        return _CountBadge(count: outstanding, child: button);
+        final segments = [
+          // Answers that have landed and not been opened — only once nothing
+          // is running. While work is under way the pill is about that, and a
+          // second figure beside it was one more thing to read for no gain:
+          // the answers are in the list, and the count comes back the moment
+          // the last of the work is done.
+          if (unseen > 0 && outstanding == 0)
+            _Segment(
+              key: jobsUnseenBadgeKey,
+              count: unseen,
+              colour: scheme.muted,
+              textColour: scheme.mutedForeground,
+              isPending: false,
+            ),
+          // The count only once there is a queue worth calling one. One or
+          // two things running is what the spinner already says, and a badge
+          // reading "2" beside it would be a second way of saying the same
+          // thing; a badge reading "7" says something the spinner cannot.
+          if (outstanding > jobsBadgeThreshold)
+            _Segment(
+              key: jobsCountBadgeKey,
+              count: outstanding,
+              colour: scheme.muted,
+              textColour: scheme.mutedForeground,
+              isPending: true,
+            ),
+        ];
+
+        return Tooltip(
+          tooltip: HintTooltip(context.strings.jobsTooltip).call,
+          // The counts inside the button, before its glyph: one control, so
+          // its hover lights them and the glyph together and a press on
+          // either is the same press, rather than a count sitting outside a
+          // highlight that stopped short of it.
+          child: GhostButton(
+            density: ButtonDensity.icon,
+            onPressed: onPressed,
+            child: Builder(
+              builder: (inside) {
+                final box =
+                    IconTheme.of(inside).size ??
+                    ThemeRepo.jobsSpinnerFallbackSize;
+                final ringDiameter = box * ThemeRepo.lucideDrawnShare;
+                final glyph = outstanding > 0
+                    // The spinner is the badge: that something is running at
+                    // all is most of what the app bar has to say.
+                    //
+                    // As large as the glyph it stands in for, read from the
+                    // button's own icon size: a Lucide glyph is drawn inside
+                    // a margin of its box, so the ring is sized to the
+                    // drawing, not to the box. In the glyph's own box, so the
+                    // button keeps its size as work starts and stops.
+                    ? SizedBox.square(
+                        dimension: box,
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: ringDiameter,
+                            child: CircularProgressIndicator(
+                              strokeWidth: ThemeRepo.jobsSpinnerStroke,
+                              color: ink,
+                              backgroundColor: track,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const Icon(LucideIcons.listChecks);
+                if (segments.isEmpty) return glyph;
+
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _CountBadges(
+                      segments: segments,
+                      // Marked while anything is still under way: then
+                      // "done" and "running" both mean something, and the
+                      // marks say which count is which. With everything
+                      // finished, the count left is plain.
+                      isMarked: outstanding > 0,
+                      // Its end hollowed to the spinner's curve while the
+                      // spinner shows, and slid in against it: two pieces
+                      // made to fit. The ring is centred in the glyph's box,
+                      // which follows straight after.
+                      ring: outstanding > 0
+                          ? _Ring(
+                              centreFromLeft: box / 2,
+                              // The track is stroked on the box's own edge,
+                              // so it reaches half a stroke beyond it.
+                              radius:
+                                  ringDiameter / 2 +
+                                  ThemeRepo.jobsSpinnerStroke / 2,
+                            )
+                          : null,
+                    ),
+                    glyph,
+                  ],
+                );
+              },
+            ),
+          ),
+        );
       },
     );
   }
@@ -132,65 +233,383 @@ class _JobsButtonState extends State<JobsButton> {
 /// Past this the spinner has stopped being the whole story.
 const int jobsBadgeThreshold = 2;
 
-/// How many things are outstanding, on the corner of the button they are
-/// outstanding on.
+/// The counts before the jobs button's glyph, as one pill: how many answers
+/// are waiting to be opened and how many things are outstanding, either or
+/// both, with a solid line between the two.
 ///
-/// Filled in the accent colour rather than outlined: it sits on a ghost button
-/// with nothing else around it, and an outlined count at this size reads as a
-/// smudge on the glyph.
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count, required this.child});
+/// Filled rather than outlined: an outlined count at this size reads as a
+/// smudge beside the glyph. Rounded at its start, and at its end too unless
+/// that end is hollowed to fit the spinner.
+class _CountBadges extends StatelessWidget {
+  const _CountBadges({
+    required this.segments,
+    required this.isMarked,
+    required this.ring,
+  });
 
-  final int count;
-  final Widget child;
+  final List<_Segment> segments;
+
+  /// Whether each count carries its mark: a check for done, running dots for
+  /// under way.
+  final bool isMarked;
+
+  /// The spinner's ring after the counts, which their end follows, or `null`
+  /// for a plain rounded end.
+  final _Ring? ring;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = context.theme.colorScheme;
+    const end = Radius.circular(ThemeRepo.countBadgeHeight / 2);
+    final ring = this.ring;
+    // The hollow: a circle round the ring's centre, a little wider than the
+    // ring, so the end runs parallel to it at an even gap.
+    final hollow = ring == null ? null : ring.radius + ThemeRepo.countRingGap;
+    const half = ThemeRepo.countBadgeHeight / 2;
+    // How far in from its corners the hollow's deepest point is.
+    final sag = hollow == null
+        ? 0.0
+        : hollow - math.sqrt(hollow * hollow - half * half);
+    final last = segments.length - 1;
 
-    return Stack(
-      // The badge sits outside the button's bounds, so it must not be trimmed
-      // back to them.
-      clipBehavior: Clip.none,
+    final pill = Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        child,
-        Positioned(
-          top: ThemeRepo.countBadgeOffset,
-          right: ThemeRepo.countBadgeOffset,
-          child: Container(
-            key: jobsCountBadgeKey,
-            height: ThemeRepo.countBadgeHeight,
-            padding: ThemeRepo.countBadgePadding,
-            alignment: Alignment.center,
-            constraints: const BoxConstraints(
-              minWidth: ThemeRepo.countBadgeMinWidth,
-            ),
-            decoration: BoxDecoration(
-              color: scheme.primary,
-              borderRadius: BorderRadius.circular(
-                ThemeRepo.countBadgeHeight / 2,
+        for (final (index, segment) in segments.indexed) ...[
+          // A solid line between two counts, in their ink, so they read as
+          // two figures rather than one run of digits and marks.
+          if (index > 0)
+            Container(
+              width: ThemeRepo.countSeparatorWidth,
+              height: ThemeRepo.countBadgeHeight,
+              color: segment.colour,
+              alignment: Alignment.center,
+              child: Container(
+                width: ThemeRepo.countSeparatorWidth,
+                height:
+                    ThemeRepo.countBadgeHeight -
+                    2 * ThemeRepo.countSeparatorInset,
+                color: segment.textColour,
               ),
             ),
-            child: Text(
-              '$count',
-              style: TextStyle(
-                color: scheme.primaryForeground,
-                fontSize: ThemeRepo.countBadgeFontSize,
-                fontWeight: FontWeight.w600,
-                // Flat, so the digits sit on the badge's own centre line
-                // rather than on a line height built for a paragraph.
-                height: 1,
-              ),
+          segment.build(
+            BorderRadius.horizontal(
+              left: index == 0 ? end : Radius.zero,
+              right: index == last ? end : Radius.zero,
             ),
+            // Roomier where two counts share the pill, so each half reads as
+            // a count of its own.
+            padding:
+                (segments.length > 1
+                    ? ThemeRepo.countPillPadding
+                    : ThemeRepo.countBadgePadding) +
+                // Room for the hollow, so the count stays centred in what is
+                // left of its half.
+                EdgeInsets.only(right: index == last ? sag : 0),
+            isMarked: isMarked,
+            hollow: index == last ? hollow : null,
           ),
-        ),
+        ],
       ],
+    );
+
+    if (ring == null || hollow == null) {
+      // A plain gap before the glyph.
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(end: ThemeRepo.spaceXSmall),
+        child: pill,
+      );
+    }
+    // Slid in until the hollow's corners sit on the circle round the ring:
+    // the count's end then lies an even gap from the spinner all along it.
+    return _Overhang(
+      by: ring.centreFromLeft - math.sqrt(hollow * hollow - half * half),
+      child: pill,
     );
   }
 }
 
-/// The count on the job button's corner.
+/// One count in [_CountBadges].
+class _Segment {
+  const _Segment({
+    required this.key,
+    required this.count,
+    required this.colour,
+    required this.textColour,
+    required this.isPending,
+  });
+
+  final Key key;
+  final int count;
+  final Color colour;
+  final Color textColour;
+
+  /// Whether the count is of work still under way, rather than done.
+  final bool isPending;
+
+  Widget build(
+    BorderRadius radius, {
+    required EdgeInsets padding,
+    required bool isMarked,
+    double? hollow,
+  }) {
+    final digits = Text(
+      '$count',
+      style: TextStyle(
+        color: textColour,
+        fontSize: ThemeRepo.countBadgeFontSize,
+        fontWeight: FontWeight.w600,
+        // Flat, so the digits sit on the badge's own centre line rather than
+        // on a line height built for a paragraph.
+        height: 1,
+      ),
+    );
+    return Container(
+      key: key,
+      height: ThemeRepo.countBadgeHeight,
+      padding: padding,
+      alignment: Alignment.center,
+      constraints: const BoxConstraints(minWidth: ThemeRepo.countBadgeMinWidth),
+      decoration: hollow == null
+          ? BoxDecoration(color: colour, borderRadius: radius)
+          : ShapeDecoration(
+              color: colour,
+              shape: _HollowEndBorder(left: radius.topLeft.x, hollow: hollow),
+            ),
+      child: !isMarked
+          ? digits
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: ThemeRepo.countMarkGap,
+              children: [
+                // A check before what is done, dots running before what is
+                // still under way.
+                if (isPending)
+                  _RunningDots(colour: textColour)
+                else
+                  Icon(
+                    LucideIcons.check,
+                    key: jobsDoneMarkKey,
+                    size: ThemeRepo.countMarkSize,
+                    color: textColour,
+                  ),
+                digits,
+              ],
+            ),
+    );
+  }
+}
+
+/// Three dots lighting one after another, for work under way: the
+/// "still typing" of a count. Held still where the system asks for less
+/// motion.
+class _RunningDots extends StatefulWidget {
+  const _RunningDots({required this.colour});
+
+  final Color colour;
+
+  @override
+  State<_RunningDots> createState() => _RunningDotsState();
+}
+
+class _RunningDotsState extends State<_RunningDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _cycle = AnimationController(
+    vsync: this,
+    duration: ThemeRepo.countDotsCycle,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _cycle.stop();
+    } else if (!_cycle.isAnimating) {
+      _cycle.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cycle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const count = 3;
+    return AnimatedBuilder(
+      key: jobsRunningMarkKey,
+      animation: _cycle,
+      builder: (context, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: ThemeRepo.countDotGap,
+        children: [
+          for (var dot = 0; dot < count; dot++)
+            // Lifted in turn and set back down, a wave running across the
+            // three; a little brighter at the top of its rise.
+            Transform.translate(
+              offset: Offset(
+                0,
+                -ThemeRepo.countDotLift * _rise(_cycle.value, dot / count),
+              ),
+              child: Container(
+                width: ThemeRepo.countDotSize,
+                height: ThemeRepo.countDotSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: widget.colour.withValues(
+                    alpha:
+                        ThemeRepo.countDotDim +
+                        (1 - ThemeRepo.countDotDim) *
+                            _rise(_cycle.value, dot / count),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// How far up its rise a dot is at [time] through the cycle, from nought
+  /// at rest to one at the top, peaking at its [offset]: a soft rise and fall
+  /// over half the cycle, and at rest for the other half, so each dot has
+  /// landed before the one after it is at its highest.
+  static double _rise(double time, double offset) {
+    final phase = (time - offset) % 1;
+    return math.max(0, math.cos(phase * 2 * math.pi)).toDouble();
+  }
+}
+
+/// Where the spinner's ring sits after the counts.
+@immutable
+class _Ring {
+  const _Ring({required this.centreFromLeft, required this.radius});
+
+  /// From the start of the glyph's box to the ring's centre.
+  final double centreFromLeft;
+
+  /// To the outside of the ring's stroke.
+  final double radius;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Ring &&
+      (other.centreFromLeft - centreFromLeft).abs() < 0.5 &&
+      (other.radius - radius).abs() < 0.5;
+
+  @override
+  int get hashCode => Object.hash(centreFromLeft.round(), radius.round());
+}
+
+/// A badge's outline with its right end hollowed into a circle's arc, and its
+/// left end rounded by [left] — a full half circle for a badge of its own, or
+/// square where it is the second half of a pill.
+class _HollowEndBorder extends ShapeBorder {
+  const _HollowEndBorder({required this.left, required this.hollow});
+
+  final double left;
+
+  /// The radius of the circle the right end is hollowed to.
+  final double hollow;
+
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      getOuterPath(rect, textDirection: textDirection);
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
+    final round = math.min(left, rect.height / 2);
+    final path = Path()
+      ..moveTo(rect.left + round, rect.top)
+      ..lineTo(rect.right, rect.top)
+      // Down the hollow, bowing in towards the badge: counter-clockwise, as
+      // the left side of a circle centred out to the right is drawn.
+      ..arcToPoint(
+        Offset(rect.right, rect.bottom),
+        radius: Radius.circular(hollow),
+        clockwise: false,
+      )
+      ..lineTo(rect.left + round, rect.bottom);
+    if (round > 0) {
+      path.arcToPoint(
+        Offset(rect.left + round, rect.top),
+        radius: Radius.circular(round),
+      );
+    } else {
+      path.lineTo(rect.left, rect.top);
+    }
+    return path..close();
+  }
+
+  @override
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {}
+
+  @override
+  ShapeBorder scale(double t) =>
+      _HollowEndBorder(left: left * t, hollow: hollow * t);
+}
+
+/// Lays its child out at its own size but takes [by] less width in the row,
+/// so the child's end reaches over whatever comes next.
+class _Overhang extends SingleChildRenderObjectWidget {
+  const _Overhang({required this.by, super.child});
+
+  final double by;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderOverhang(by);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderOverhang renderObject) {
+    renderObject.by = by;
+  }
+}
+
+class _RenderOverhang extends RenderProxyBox {
+  _RenderOverhang(this._by);
+
+  double _by;
+  set by(double value) {
+    if (value == _by) return;
+    _by = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final child = this.child!;
+    child.layout(constraints.loosen(), parentUsesSize: true);
+    size = constraints.constrain(
+      Size(math.max(0, child.size.width - _by), child.size.height),
+    );
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!child!.hitTest(result, position: position)) return false;
+    result.add(BoxHitTestEntry(this, position));
+    return true;
+  }
+}
+
+/// The check before the count of answers done, in the pill.
+const Key jobsDoneMarkKey = Key('jobsDoneMark');
+
+/// The running dots before the count of work under way, in the pill.
+const Key jobsRunningMarkKey = Key('jobsRunningMark');
+
+/// The count of outstanding work on the job button's corner.
 const Key jobsCountBadgeKey = Key('jobsCountBadge');
+
+/// The count of answers not yet opened, on the job button's corner.
+const Key jobsUnseenBadgeKey = Key('jobsUnseenBadge');
+
+/// The dot on a finished question's row until its answer is opened.
+Key researchUnseenDotKey(int id) => ValueKey('researchUnseen-$id');
 
 class _JobsPanel extends StatelessWidget {
   const _JobsPanel();
@@ -414,22 +833,62 @@ class _ReportRow extends StatelessWidget {
 /// lands the reader is three companies away. A row that says which company
 /// and which question, and takes you to it — which is the only useful thing a
 /// finished background job can do.
-class _ResearchSection extends StatelessWidget {
+class _ResearchSection extends StatefulWidget {
   const _ResearchSection({required this.tasks});
 
   final List<ResearchTask> tasks;
 
   @override
+  State<_ResearchSection> createState() => _ResearchSectionState();
+}
+
+class _ResearchSectionState extends State<_ResearchSection> {
+  /// The row of the question being answered now.
+  final GlobalKey _running = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // Opened on the question being answered: with the newest first, it is
+    // somewhere down a list of waiting and finished ones, and it is the one
+    // the list was most likely opened to check on. Once, as the list opens,
+    // so it does not pull the list back while it is being read.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final row = _running.currentContext;
+      if (row == null || !row.mounted) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          row,
+          alignment: ThemeRepo.jobsRunningRowAlignment,
+        ),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final tasks = widget.tasks;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: ThemeRepo.spaceSmall,
       children: [
         const Divider(),
-        Text(context.strings.researchTitle).small().semiBold(),
-        // Said once, under the heading, because it explains every row under
-        // it: they are not slow, they are waiting.
-        Text(context.strings.researchNote).muted().xSmall(),
+        const _ResearchHeader(),
+        // Once, for the section rather than on each row it would cure: a
+        // spent allowance fails every question after it the same way.
+        if (tasks.any((task) => SearchSetupLink.cures(task.failure)))
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: SearchSetupLink(
+              onPressed: () {
+                // The guide is a dialog, and opens over the app, not over a
+                // popover about to close under it.
+                final host = Navigator.of(context, rootNavigator: true).context;
+                closeOverlay(context);
+                unawaited(showSearchSetup(host));
+              },
+            ),
+          ),
         // Bounded like the reports below it: three questions a company adds
         // up quickly, and a panel taller than the window has nowhere to go.
         ConstrainedBox(
@@ -440,7 +899,15 @@ class _ResearchSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: ThemeRepo.spaceXSmall,
-              children: [for (final task in tasks) _ResearchRow(task: task)],
+              children: [
+                for (final task in tasks)
+                  task.state == ResearchTaskState.running
+                      ? KeyedSubtree(
+                          key: _running,
+                          child: _ResearchRow(task: task),
+                        )
+                      : _ResearchRow(task: task),
+              ],
             ),
           ),
         ),
@@ -449,13 +916,58 @@ class _ResearchSection extends StatelessWidget {
   }
 }
 
+/// The section's title, with its two list-wide actions at the row's end.
+class _ResearchHeader extends StatelessWidget {
+  const _ResearchHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.strings;
+    final queue = context.watch<ResearchQueue>();
+
+    return Row(
+      spacing: ThemeRepo.spaceXSmall,
+      children: [
+        Expanded(child: Text(strings.researchTitle).small().semiBold()),
+        Tooltip(
+          tooltip: HintTooltip(strings.researchMarkAllReadHint).call,
+          child: GhostButton(
+            key: researchMarkAllReadKey,
+            density: ButtonDensity.icon,
+            enabled: queue.unseenCount > 0,
+            onPressed: queue.unseenCount > 0 ? queue.markAllSeen : null,
+            child: const Icon(LucideIcons.checkCheck).iconXSmall(),
+          ),
+        ),
+        Tooltip(
+          tooltip: HintTooltip(strings.researchClearFinishedHint).call,
+          child: GhostButton(
+            key: researchClearFinishedKey,
+            density: ButtonDensity.icon,
+            enabled: queue.hasFinished,
+            onPressed: queue.hasFinished ? queue.clearFinished : null,
+            child: const Icon(LucideIcons.listX).iconXSmall(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Marks every finished question in the panel as opened.
+const Key researchMarkAllReadKey = Key('researchMarkAllRead');
+
+/// Clears every finished or failed question off the panel.
+const Key researchClearFinishedKey = Key('researchClearFinished');
+
 /// One question: what was asked, where it has got to, and the one thing that
 /// can be done about it.
 ///
 /// Two bounded halves rather than a row with a button inside it. While the
-/// model still owes an answer the label is inert and only the cross is live;
-/// once it has answered the label is the way to it and the cross is gone,
-/// because there is nothing left to call off.
+/// model still owes an answer the label is inert and the cross calls the
+/// question off; once it has answered the label is the way to it, and the
+/// cross takes the row off the list. A dot at the row's end marks an answer
+/// not opened yet.
 class _ResearchRow extends StatelessWidget {
   const _ResearchRow({required this.task});
 
@@ -480,6 +992,24 @@ class _ResearchRow extends StatelessWidget {
               enabled: !task.isActive,
               onPressed: task.isActive ? null : () => _open(context),
               leading: _StateMark(task: task),
+              // At the end of the row, where an unread mark sits in a mail
+              // list: the state glyph at the start says what happened, this
+              // says whether the reader has been to look.
+              // Not on a failure: the red cross at the start already says it,
+              // and a dot beside it would read as a second error.
+              trailing: task.isUnseen && !task.isFailed
+                  ? Container(
+                      key: researchUnseenDotKey(task.id),
+                      width: ThemeRepo.updateBadgeSize,
+                      height: ThemeRepo.updateBadgeSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        // The green of the count it adds to on the button: an
+                        // unread answer is news, not an error.
+                        color: _themeRepo.positive(context.theme),
+                      ),
+                    )
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: ThemeRepo.spaceXSmall,
@@ -487,31 +1017,43 @@ class _ResearchRow extends StatelessWidget {
                   Text('${task.ticker} · ${_asked(task, strings)}')
                       .small()
                       .singleLine(),
-                  Text(_status(task, strings)).muted().xSmall().singleLine(),
+                  if (task.isFailed)
+                    Text(
+                          (task.failure ?? ResearchFailure.failed).describe(
+                            strings,
+                          ),
+                        )
+                        .xSmall(color: _themeRepo.negative(context.theme))
+                        .singleLine()
+                  else
+                    Text(_status(task, strings)).muted().xSmall().singleLine(),
                 ],
               ),
             ),
           ),
         ),
-        if (task.isActive)
-          Tooltip(
-            tooltip: HintTooltip(strings.researchCancelHint).call,
-            child: GhostButton(
-              key: researchCancelKey(task.id),
-              density: ButtonDensity.icon,
-              onPressed: () => context.read<ResearchQueue>().remove(task.id),
-              child: const Icon(LucideIcons.x).iconXSmall(),
-            ),
+        Tooltip(
+          tooltip: HintTooltip(
+            task.isActive
+                ? strings.researchCancelHint
+                : strings.researchDismissHint,
+          ).call,
+          child: GhostButton(
+            key: researchCancelKey(task.id),
+            density: ButtonDensity.icon,
+            onPressed: () => context.read<ResearchQueue>().remove(task.id),
+            child: const Icon(LucideIcons.x).iconXSmall(),
           ),
+        ),
       ],
     );
   }
 
-  /// Goes to where the answer landed, and takes the row away on the way out.
+  /// Goes to where the answer landed, and marks it as opened on the way out.
   ///
-  /// Removed rather than left ticked: the row exists to say something is owed,
-  /// and once it has been collected it is owed no longer. A list that kept
-  /// every answer ever fetched would be a list nobody reads.
+  /// Kept rather than removed, so the list is also the way back to an answer
+  /// read a moment ago; the dot and the app bar's count are what set apart the
+  /// answers not looked at yet. The cross is the way to clear a row.
   void _open(BuildContext context) {
     final snapshot = context.read<SnapshotViewModel>();
     final queue = context.read<ResearchQueue>();
@@ -521,7 +1063,7 @@ class _ResearchRow extends StatelessWidget {
     final needsItsOwnScreen = !context.showsMasterDetail;
 
     closeOverlay(context);
-    queue.remove(task.id);
+    queue.markSeen(task.id);
     unawaited(
       snapshot.revealNote(ticker: task.ticker, tab: task.tab, kind: task.kind),
     );
@@ -551,8 +1093,10 @@ class _ResearchRow extends StatelessWidget {
             task.frameworkQuestions.length,
           ),
         ResearchTaskState.running => strings.researchStatusRunning,
+        ResearchTaskState.done when task.isSeen => strings.researchStatusOpened,
         ResearchTaskState.done => strings.researchStatusReady,
-        ResearchTaskState.failed => strings.researchStatusFailed,
+        // Shown in the failure's own words instead; see the row.
+        ResearchTaskState.failed => '',
       };
 }
 
@@ -588,8 +1132,8 @@ class _StateMark extends StatelessWidget {
         color: _themeRepo.forOutcome(theme, isGood: true),
       ).iconXSmall(),
       ResearchTaskState.failed => Icon(
-        LucideIcons.triangleAlert,
-        color: theme.colorScheme.destructive,
+        LucideIcons.x,
+        color: _themeRepo.negative(theme),
       ).iconXSmall(),
     };
   }

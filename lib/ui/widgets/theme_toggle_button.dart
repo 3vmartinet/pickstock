@@ -1,3 +1,4 @@
+import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/ui/app_view_model.dart';
 import 'package:provider/provider.dart';
@@ -12,13 +13,18 @@ class ThemeToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.theme.brightness == Brightness.dark;
-    return Tooltip(
-      tooltip: HintTooltip(context.strings.toggleTheme).call,
-      child: GhostButton(
-        density: ButtonDensity.icon,
-        onPressed: () =>
-            context.read<AppViewModel>().toggleTheme(context.theme.brightness),
-        child: Icon(isDark ? LucideIcons.sun : LucideIcons.moon),
+    // Room after it, so the data date's label beside it does not crowd it.
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: ThemeRepo.spaceSmall),
+      child: Tooltip(
+        tooltip: HintTooltip(context.strings.toggleTheme).call,
+        child: GhostButton(
+          density: ButtonDensity.icon,
+          onPressed: () => context.read<AppViewModel>().toggleTheme(
+            context.theme.brightness,
+          ),
+          child: Icon(isDark ? LucideIcons.sun : LucideIcons.moon),
+        ),
       ),
     );
   }

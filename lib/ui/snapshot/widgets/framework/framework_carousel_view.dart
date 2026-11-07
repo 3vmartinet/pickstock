@@ -1,5 +1,5 @@
+import 'package:pickstock/ui/widgets/model_caveat.dart';
 import 'package:pickstock/data/research/framework_question.dart';
-import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/widgets/framework/framework_question_card.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -77,7 +77,7 @@ class FrameworkCarouselView extends StatelessWidget {
           ),
         ),
 
-        Text(context.strings.insightCaveat).muted().xSmall().italic(),
+        const ModelCaveat(),
       ],
     );
   }

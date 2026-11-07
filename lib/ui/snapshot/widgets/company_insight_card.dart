@@ -1,3 +1,5 @@
+import 'package:get_it/get_it.dart';
+import 'package:pickstock/ui/widgets/model_caveat.dart';
 import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
@@ -9,17 +11,25 @@ import 'package:pickstock/ui/widgets/just_fetched.dart';
 import 'package:pickstock/ui/widgets/note_age.dart';
 import 'package:pickstock/ui/widgets/source_link.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/widgets/column_text.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
+import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
+
+ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 
 /// One question the filings cannot settle, asked where it arises.
 ///
 /// An [Alert] rather than a button somewhere: shadcn's alert is the component
 /// for a note *about the thing beside it*, and that is exactly what each of
-/// these is — the leading glyph and the title frame the question, the body
-/// says why the report cannot answer it, and the action sits in the trailing
-/// slot where an alert's action belongs. Answered, the same block holds the
-/// answer, so the question and its answer are never in two places.
+/// these is — the glyph and the title frame the question, the body says why
+/// the report cannot answer it, and the action sits at the end of the title's
+/// line. Answered, the same block holds the answer, so the question and its
+/// answer are never in two places.
+///
+/// Everything but the body on the one top line: the alert's own leading and
+/// trailing slots each run the full height of the block, and beside a page of
+/// answer that left two empty columns down either side of it.
 ///
 /// Never automatic. A minute of a local model is a minute the reader did not
 /// ask for, and two of the three questions only matter to somebody already
@@ -41,34 +51,54 @@ class CompanyInsightCard extends StatelessWidget {
     final isFresh = viewModel.highlightedKind == insight.name;
 
     final alert = Alert(
-      leading: Icon(insight.icon).iconSmall().iconMutedForeground(),
       title: Row(
-        mainAxisSize: MainAxisSize.min,
         spacing: ThemeRepo.spaceSmall,
         children: [
-          Flexible(child: Text(insight.getTitle(context.strings))),
-          if (isFresh) const JustFetchedBadge(),
+          Icon(insight.icon).iconSmall().iconMutedForeground(),
+          // The title takes the free width, which pushes the age or the
+          // offer to the far end of the line.
+          Expanded(
+            child: Row(
+              spacing: ThemeRepo.spaceSmall,
+              children: [
+                Flexible(child: Text(insight.getTitle(context.strings))),
+                if (isFresh) const JustFetchedBadge(),
+              ],
+            ),
+          ),
+          // Once answered the offer gives way to the answer's age and the
+          // offer to read it again: the block has become the answer, and a
+          // button that still said "describe the business" would be offering
+          // work already done.
+          if (state == InsightState.ready)
+            _Age(insight: insight)
+          else
+            _Ask(insight: insight, state: state),
         ],
       ),
       content: switch (state) {
         InsightState.idle || InsightState.queued || InsightState.loading =>
           Text(insight.getInvitation(context.strings)).muted().xSmall(),
-        InsightState.failed => Text(
-          viewModel.insightFailure(insight)?.describe(context.strings) ??
-              context.strings.eventsFailedOther,
-        ).muted().xSmall(),
+        InsightState.failed => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              viewModel.insightFailure(insight)?.describe(context.strings) ??
+                  context.strings.eventsFailedOther,
+            ).xSmall(color: _themeRepo.negative(context.theme)),
+            if (SearchSetupLink.cures(viewModel.insightFailure(insight)))
+              const SearchSetupLink(),
+          ],
+        ),
         InsightState.ready => _Answer(
           answer: viewModel.insightAnswer(insight),
+          // The business described reads as an article about the company,
+          // and is set as one; the tabs' insights are notes on figures.
+          isArticle: insight == CompanyInsight.business,
           cik: viewModel.snapshot?.company.cik ?? '',
         ),
       },
-      // Once answered the offer gives way to the answer's age and the offer
-      // to read it again: the block has become the answer, and a button that
-      // still said "describe the business" would be offering work already
-      // done.
-      trailing: state == InsightState.ready
-          ? _Age(insight: insight)
-          : _Ask(insight: insight, state: state),
     );
 
     return isFresh ? JustFetched(child: alert) : alert;
@@ -148,7 +178,14 @@ class _Age extends StatelessWidget {
 
 /// What came back, and what it was read from.
 class _Answer extends StatelessWidget {
-  const _Answer({required this.answer, required this.cik});
+  const _Answer({
+    required this.answer,
+    required this.cik,
+    this.isArticle = false,
+  });
+
+  /// Whether the prose is set in the serif, as an article.
+  final bool isArticle;
 
   final ResearchAnswer? answer;
   final String cik;
@@ -158,33 +195,21 @@ class _Answer extends StatelessWidget {
     final current = answer;
     if (current == null) return const SizedBox.shrink();
 
-    // One page per line rather than a citation count: a claim a reader cannot
-    // check is a claim they have to take on trust, and this app's whole
-    // argument is that its own arithmetic is inspectable.
-    final sources = {for (final source in current.sources) source.url: source};
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: ThemeRepo.spaceSmall,
       children: [
-        Text(current.text).small(),
-        if (sources.isNotEmpty) ...[
+        ColumnText(current.text, isSerif: isArticle),
+        // Straight under the text it is about, before the sources, so it is
+        // read as a note on the answer rather than on the links.
+        const ModelCaveat(),
+        // Each page listed rather than a citation count: a claim a reader
+        // cannot check is a claim they have to take on trust, and this app's
+        // whole argument is that its own arithmetic is inspectable.
+        if (current.sources.isNotEmpty) ...[
           const Divider(),
-          Text(context.strings.insightSources).muted().xSmall().semiBold(),
-          for (final source in sources.values)
-            SourceLink(
-              label: source.title.isEmpty ? source.url : source.title,
-              url: source.url,
-              cik: cik,
-            ),
+          SourcesList(sources: current.sources, cik: cik),
         ],
-        // Said every time, not once in a settings screen: the paragraph above
-        // reads exactly like the app's own text and did not come from the
-        // filings.
-        //
-        // Italic, because at the same weight as the links above it read as
-        // one more of them — and it is a note about them, not another.
-        Text(context.strings.insightCaveat).muted().xSmall().italic(),
       ],
     );
   }
