@@ -7,7 +7,7 @@ import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
-import 'package:pickstock/ui/browse/widgets/debt_free_filter.dart';
+import 'package:pickstock/ui/browse/widgets/cash_to_debt_filter.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/test_directory.dart';
@@ -27,29 +27,53 @@ void main() {
     await GetIt.I.reset();
   });
 
-  test('keeps the companies that owe nothing and drops the rest', () async {
+  test('keeps the companies whose cash covers their debt', () async {
     database = await registerTestDependencies(withFinancials: true);
     final viewModel = BrowseViewModel();
     addTearDown(viewModel.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    expect(viewModel.canFilterDebtFree, isTrue);
+    expect(viewModel.canFilterCashToDebt, isTrue);
 
-    viewModel.toggleDebtFree();
+    viewModel.setCashToDebtMin(1);
     final tickers = viewModel.results.map((company) => company.ticker);
 
-    // NVIDIA reports no debt line and no interest; Microsoft reports its
-    // borrowings as an explicit zero. Both owe nothing.
-    expect(tickers, containsAll(<String>['NVDA', 'MSFT']));
-    // Apple borrows.
-    expect(tickers, isNot(contains('AAPL')));
+    // Apple holds $150M against $50M of borrowings. NVIDIA reports no debt
+    // line and no interest; Microsoft reports its borrowings as an explicit
+    // zero. Owing nothing is covered at any multiple.
+    expect(tickers, containsAll(<String>['AAPL', 'NVDA', 'MSFT']));
     // Berkshire is the case the interest test exists for: it reports no debt
     // line at all, and $5M of interest on the debt it does not show.
     expect(tickers, isNot(contains('BRK-A')));
     expect(tickers, isNot(contains('BRK-B')));
     // Kensington files figures but no balance sheet with them, which says
-    // nothing either way, so it is not read as owing nothing.
+    // nothing either way.
     expect(tickers, isNot(contains('KCAC-UN')));
+  });
+
+  test('raises the bar with the multiple', () async {
+    database = await registerTestDependencies(withFinancials: true);
+    final viewModel = BrowseViewModel();
+    addTearDown(viewModel.dispose);
+    await Future<void>.delayed(Duration.zero);
+
+    Iterable<String> tickersAt(double ratio) {
+      viewModel.setCashToDebtMin(ratio);
+      return viewModel.results.map((company) => company.ticker);
+    }
+
+    // Apple's cash is exactly three times its debt: in at 3x, out above it.
+    expect(tickersAt(3), contains('AAPL'));
+    expect(tickersAt(3.5), isNot(contains('AAPL')));
+    // The debt-free stay at the top of the scale.
+    expect(tickersAt(10), containsAll(<String>['NVDA', 'MSFT']));
+
+    // Lifted, and the whole directory is back.
+    viewModel.setCashToDebtMin(null);
+    expect(
+      viewModel.results.map((company) => company.ticker),
+      containsAll(<String>['AAPL', 'BRK-A', 'KCAC-UN']),
+    );
   });
 
   test('applies alongside the sector and text filters', () async {
@@ -58,24 +82,14 @@ void main() {
     addTearDown(viewModel.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    viewModel.toggleDebtFree();
+    viewModel.setCashToDebtMin(5);
     viewModel.selectSector(SicSector.technology);
-    expect(
-      viewModel.results.map((company) => company.ticker),
-      containsAll(<String>['NVDA', 'MSFT']),
-    );
+    final tickers = viewModel.results.map((company) => company.ticker);
+    expect(tickers, containsAll(<String>['NVDA', 'MSFT']));
+    expect(tickers, isNot(contains('AAPL')));
 
     viewModel.setQuery('NV');
     expect(viewModel.results.map((company) => company.ticker), ['NVDA']);
-
-    // Cleared again, and the whole directory is back.
-    viewModel.toggleDebtFree();
-    viewModel.selectSector(null);
-    viewModel.setQuery('');
-    expect(
-      viewModel.results.map((company) => company.ticker),
-      contains('AAPL'),
-    );
   });
 
   test('names a report after the filter that produced it', () async {
@@ -84,8 +98,11 @@ void main() {
     addTearDown(viewModel.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    viewModel.toggleDebtFree();
-    expect(viewModel.describeFilter(await _strings()), contains('Debt-free'));
+    viewModel.setCashToDebtMin(2.5);
+    expect(
+      viewModel.describeFilter(await _strings()),
+      contains('Cash ≥ 2.5× debt'),
+    );
   });
 
   test('is remembered between launches', () async {
@@ -98,23 +115,22 @@ void main() {
     addTearDown(first.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    first.toggleDebtFree();
-    // The write is awaited through the repo, not the toggle, so give it a turn.
+    first.setCashToDebtMin(3);
+    // The write is awaited through the repo, not the setter, so give it a
+    // turn.
     await Future<void>.delayed(Duration.zero);
     await settings.load();
 
-    expect(settings.debtFreeOnly, isTrue);
+    expect(settings.cashToDebtMin, 3);
     final second = BrowseViewModel();
     addTearDown(second.dispose);
     // Read before its own figures land: the filter is remembered in the
     // constructor so the list is narrowed from the first frame.
-    expect(second.debtFreeOnly, isTrue);
-    // Let the second model finish loading, so it is not notifying listeners
-    // after the test has disposed it.
+    expect(second.cashToDebtMin, 3);
     await Future<void>.delayed(Duration.zero);
   });
 
-  testWidgets('offers a toggle in the filter bar', (tester) async {
+  testWidgets('offers presets and a slider in a dropdown', (tester) async {
     database = await registerTestDependencies(withFinancials: true);
     tester.view
       ..physicalSize = _wideSize
@@ -124,26 +140,35 @@ void main() {
     await tester.pumpWidget(const PickStockApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(DebtFreeFilter), findsOneWidget);
+    expect(find.byType(CashToDebtFilter), findsOneWidget);
     expect(find.text('Apple Inc.'), findsWidgets);
 
-    await tester.tap(find.text('Debt-free'));
+    await tester.tap(find.text('Cash > debt'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Slider), findsOneWidget);
+
+    await tester.tap(find.text('5× debt'));
     await tester.pumpAndSettle();
 
-    // Apple borrows, so it leaves the list; NVIDIA owes nothing and stays.
+    // Apple holds three times its debt, not five, so it leaves the list;
+    // NVIDIA owes nothing and stays. The chip says what is in force.
     expect(find.text('Apple Inc.'), findsNothing);
     expect(find.text('NVIDIA CORP'), findsWidgets);
+    expect(find.text('Cash ≥ 5× debt'), findsOneWidget);
 
-    await tester.tap(find.text('Debt-free'));
+    await tester.tap(find.text('Cash ≥ 5× debt'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Any balance sheet'));
     await tester.pumpAndSettle();
     expect(find.text('Apple Inc.'), findsWidgets);
+    expect(find.text('Cash > debt'), findsOneWidget);
   });
 
   testWidgets('is not offered on a database that cannot answer', (
     tester,
   ) async {
-    // No financials: nothing on file says whether anyone owes anything, and a
-    // filter that emptied the list would read as a broken directory.
+    // No financials: nothing on file says what anyone owes, and a filter that
+    // emptied the list would read as a broken directory.
     database = await registerTestDependencies();
     tester.view
       ..physicalSize = _wideSize
@@ -153,8 +178,8 @@ void main() {
     await tester.pumpWidget(const PickStockApp());
     await tester.pumpAndSettle();
 
-    expect(find.byType(DebtFreeFilter), findsOneWidget);
-    expect(find.text('Debt-free'), findsNothing);
+    expect(find.byType(CashToDebtFilter), findsOneWidget);
+    expect(find.text('Cash > debt'), findsNothing);
   });
 
   group('a year of figures reads its own borrowings', () {

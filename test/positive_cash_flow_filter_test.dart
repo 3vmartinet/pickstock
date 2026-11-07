@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
@@ -39,7 +40,7 @@ void main() {
 
     expect(viewModel.canFilterPositiveCashFlow, isTrue);
 
-    viewModel.togglePositiveCashFlow();
+    await viewModel.setCashGenerative(CashGenerativeWindow.latestYear);
     final tickers = viewModel.results.map((company) => company.ticker);
 
     // Every filer with real operations turns more cash from them than it
@@ -65,24 +66,47 @@ void main() {
     addTearDown(viewModel.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    viewModel.togglePositiveCashFlow();
+    await viewModel.setCashGenerative(CashGenerativeWindow.latestYear);
     final tickers = viewModel.results.map((company) => company.ticker);
     expect(tickers, isNot(contains('MSFT')));
     expect(tickers, contains('AAPL'));
   });
 
+  test('can ask for several years running', () async {
+    final viewModel = await loadedViewModel();
+
+    // Apple, NVIDIA and Microsoft filed 2024 and 2025 back to back, both
+    // cash generative. Berkshire filed one year, so it has no run to show.
+    await viewModel.setCashGenerative(CashGenerativeWindow.twoYears);
+    final tickers = viewModel.results.map((company) => company.ticker);
+    expect(tickers, containsAll(<String>['AAPL', 'NVDA', 'MSFT']));
+    expect(tickers, isNot(contains('BRK-A')));
+
+    // Nobody filed 2023, so a gap breaks every three-year run rather than
+    // being read through.
+    await viewModel.setCashGenerative(CashGenerativeWindow.threeYears);
+    expect(viewModel.results, isEmpty);
+
+    await viewModel.setCashGenerative(null);
+    expect(
+      viewModel.results.map((company) => company.ticker),
+      contains('KCAC-UN'),
+    );
+  });
+
   test('applies alongside the other filters', () async {
     final viewModel = await loadedViewModel();
 
-    viewModel.togglePositiveCashFlow();
+    await viewModel.setCashGenerative(CashGenerativeWindow.latestYear);
     viewModel.selectSector(SicSector.technology);
     expect(
       viewModel.results.map((company) => company.ticker),
       containsAll(<String>['AAPL', 'NVDA', 'MSFT']),
     );
 
-    // Stacked on the debt-free filter, both narrowings hold: Apple borrows.
-    viewModel.toggleDebtFree();
+    // Stacked on the cash filter, both narrowings hold: Apple's cash covers
+    // its debt three times, not five.
+    viewModel.setCashToDebtMin(5);
     final tickers = viewModel.results.map((company) => company.ticker);
     expect(tickers, containsAll(<String>['NVDA', 'MSFT']));
     expect(tickers, isNot(contains('AAPL')));
@@ -91,8 +115,8 @@ void main() {
     expect(viewModel.results.map((company) => company.ticker), ['NVDA']);
 
     // Cleared again, and the whole directory is back.
-    viewModel.togglePositiveCashFlow();
-    viewModel.toggleDebtFree();
+    await viewModel.setCashGenerative(null);
+    viewModel.setCashToDebtMin(null);
     viewModel.selectSector(null);
     viewModel.setQuery('');
     expect(
@@ -104,10 +128,10 @@ void main() {
   test('names a report after the filter that produced it', () async {
     final viewModel = await loadedViewModel();
 
-    viewModel.togglePositiveCashFlow();
+    await viewModel.setCashGenerative(CashGenerativeWindow.twoYears);
     expect(
       viewModel.describeFilter(await _strings()),
-      contains('Cash generative'),
+      contains('Cash generative 2 yrs'),
     );
   });
 
@@ -121,23 +145,23 @@ void main() {
     addTearDown(first.dispose);
     await Future<void>.delayed(Duration.zero);
 
-    first.togglePositiveCashFlow();
+    await first.setCashGenerative(CashGenerativeWindow.twoYears);
     // The write is awaited through the repo, not the toggle, so give it a turn.
     await Future<void>.delayed(Duration.zero);
     await settings.load();
 
-    expect(settings.positiveCashFlowOnly, isTrue);
+    expect(settings.cashGenerative, CashGenerativeWindow.twoYears);
     final second = BrowseViewModel();
     addTearDown(second.dispose);
     // Read before its own figures land: the filter is remembered in the
     // constructor so the list is narrowed from the first frame.
-    expect(second.positiveCashFlowOnly, isTrue);
+    expect(second.cashGenerative, CashGenerativeWindow.twoYears);
     // Let the second model finish loading, so it is not notifying listeners
     // after the test has disposed it.
     await Future<void>.delayed(Duration.zero);
   });
 
-  testWidgets('offers a toggle in the filter bar', (tester) async {
+  testWidgets('offers its windows in a dropdown', (tester) async {
     database = await registerTestDependencies(withFinancials: true);
     tester.view
       ..physicalSize = _wideSize
@@ -152,12 +176,16 @@ void main() {
 
     await tester.tap(find.text('Cash generative'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Latest year'));
+    await tester.pumpAndSettle();
 
     // Kensington burns cash, so it leaves the list; Apple stays.
     expect(find.text('Kensington Capital Acquisition Corp'), findsNothing);
     expect(find.text('Apple Inc.'), findsWidgets);
 
     await tester.tap(find.text('Cash generative'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Any cash flow'));
     await tester.pumpAndSettle();
     expect(find.text('Kensington Capital Acquisition Corp'), findsWidgets);
   });

@@ -55,11 +55,11 @@ void main() {
 
   test('remembers the ordering and the sector', () async {
     final settings = GetIt.I.get<SettingsRepo>();
-    await settings.setBrowseSort(BrowseSort.revenueFiveYears);
+    await settings.setBrowseSort(BrowseSort.revenueGrowth);
     await settings.setSector(SicSector.technology);
 
     final next = await reopen();
-    expect(next.browseSort, BrowseSort.revenueFiveYears);
+    expect(next.browseSort, BrowseSort.revenueGrowth);
     expect(next.sector, SicSector.technology);
   });
 

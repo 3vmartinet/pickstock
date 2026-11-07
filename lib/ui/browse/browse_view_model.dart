@@ -30,8 +30,9 @@ class BrowseViewModel extends ChangeNotifier {
     _sort = _settingsRepo.browseSort;
     _sector = _settingsRepo.sector;
     _industries = _settingsRepo.industries;
-    _debtFreeOnly = _settingsRepo.debtFreeOnly;
-    _positiveCashFlowOnly = _settingsRepo.positiveCashFlowOnly;
+    _cashToDebtMin = _settingsRepo.cashToDebtMin;
+    _cashGenerative = _settingsRepo.cashGenerative;
+    _revenueGrowthFilter = _settingsRepo.revenueGrowthFilter;
     _directoryRevision = _tickerDirectoryRepo.revision;
     _results = _tickerDirectoryRepo.allCompanies;
     _loadSamples();
@@ -146,49 +147,90 @@ class BrowseViewModel extends ChangeNotifier {
     _settingsRepo.setIndustries(narrowed);
   }
 
-  bool _debtFreeOnly = false;
+  double? _cashToDebtMin;
 
-  /// Whether the list is narrowed to companies that owe nothing.
-  bool get debtFreeOnly => _debtFreeOnly;
+  /// The multiple of its debt a company's cash has to cover for it to stay in
+  /// the list, or `null` with the filter off. 1 is "more cash than debt".
+  double? get cashToDebtMin => _cashToDebtMin;
 
-  /// The companies whose latest filed year shows no borrowings, loaded once
-  /// alongside the sectors. Empty until an ingest has run that collected the
-  /// interest expense the test depends on.
-  Set<String> _debtFreeCiks = const {};
+  /// Each company's cash over its debt as of its latest filed year, loaded
+  /// once alongside the sectors; infinite for a company that owes nothing.
+  /// Empty until an ingest has run that collected the figures.
+  Map<String, double> _cashToDebtByCik = const {};
 
-  /// Whether the debt-free filter can say anything. On a database written
-  /// before interest expense was extracted it cannot, and offering a filter
-  /// that hides the whole directory would look like a broken list.
-  bool get canFilterDebtFree => _debtFreeCiks.isNotEmpty;
+  /// Whether the cash filter can say anything. On a database written before
+  /// interest expense was extracted it cannot, and offering a filter that
+  /// hides the whole directory would look like a broken list.
+  bool get canFilterCashToDebt => _cashToDebtByCik.isNotEmpty;
 
-  void toggleDebtFree() {
-    _debtFreeOnly = !_debtFreeOnly;
+  /// Narrows the list to companies whose cash covers their debt [ratio]
+  /// times over, or lifts the filter with `null`.
+  ///
+  /// Synchronous and in memory, so the slider can call it on every step and
+  /// the list follows the thumb.
+  void setCashToDebtMin(double? ratio) {
+    if (ratio == _cashToDebtMin) return;
+    _cashToDebtMin = ratio;
     _reorder();
     notifyListeners();
-    _settingsRepo.setDebtFreeOnly(_debtFreeOnly);
+    _settingsRepo.setCashToDebtMin(ratio);
   }
 
-  bool _positiveCashFlowOnly = false;
+  CashGenerativeWindow? _cashGenerative;
 
-  /// Whether the list is narrowed to companies that generate cash rather than
-  /// consume it.
-  bool get positiveCashFlowOnly => _positiveCashFlowOnly;
+  /// How many years running a company has to have generated free cash flow,
+  /// or `null` with the filter off.
+  CashGenerativeWindow? get cashGenerative => _cashGenerative;
 
-  /// The companies whose latest filed year turned more cash from operations
-  /// than it spent on capital equipment, loaded once alongside the sectors.
-  Set<String> _positiveCashFlowCiks = const {};
+  /// The cash-generative companies per window, each loaded the first time it
+  /// is asked for. The latest year is loaded up front, both to answer
+  /// [canFilterPositiveCashFlow] and because it is the first window offered.
+  final Map<CashGenerativeWindow, Set<String>> _cashGenerativeCiks = {};
 
   /// Whether the cash-flow filter can say anything. On a database written
   /// before cash flows were extracted it cannot, and offering a filter that
   /// hides the whole directory would look like a broken list.
-  bool get canFilterPositiveCashFlow => _positiveCashFlowCiks.isNotEmpty;
+  bool get canFilterPositiveCashFlow =>
+      _cashGenerativeCiks[CashGenerativeWindow.latestYear]?.isNotEmpty ?? false;
 
-  void togglePositiveCashFlow() {
-    _positiveCashFlowOnly = !_positiveCashFlowOnly;
+  Future<void> setCashGenerative(CashGenerativeWindow? window) async {
+    if (window == _cashGenerative) return;
+    _cashGenerative = window;
+    unawaited(_settingsRepo.setCashGenerative(window));
+    if (window != null && !_cashGenerativeCiks.containsKey(window)) {
+      _cashGenerativeCiks[window] = await _database.positiveFreeCashFlowCiks(
+        years: window.years,
+      );
+      // Picked again while that was loading: the newer choice has its own
+      // load under way, and it is the one that should land.
+      if (window != _cashGenerative) return;
+    }
     _reorder();
     notifyListeners();
-    _settingsRepo.setPositiveCashFlowOnly(_positiveCashFlowOnly);
   }
+
+  RevenueGrowthFilter? _revenueGrowthFilter;
+
+  /// The revenue growth a company has to show to stay in the list, or `null`
+  /// with the filter off. Also the window "Revenue growth" ranks over.
+  RevenueGrowthFilter? get revenueGrowthFilter => _revenueGrowthFilter;
+
+  /// The companies passing [_revenueGrowthFilter], loaded with it.
+  Set<String> _revenueGrowthCiks = const {};
+
+  Future<void> setRevenueGrowthFilter(RevenueGrowthFilter? filter) async {
+    if (filter == _revenueGrowthFilter) return;
+    _revenueGrowthFilter = filter;
+    unawaited(_settingsRepo.setRevenueGrowthFilter(filter));
+    // The ranking's window follows the filter's, so the samples may change
+    // with it as well as the set that passes.
+    await _loadSamples();
+  }
+
+  /// The window "Revenue growth" ranks over: the filter's, so the figure in
+  /// each row is the one the filter tested, or the latest year without one.
+  int get _revenueYears => _revenueGrowthFilter?.years ?? 1;
+  bool get _revenueUnbroken => _revenueGrowthFilter?.needsUnbrokenRun ?? false;
 
   /// Growth window ends for the figure the current ordering shows, by CIK.
   Map<String, GrowthSample> _samplesByCik = const {};
@@ -265,15 +307,38 @@ class BrowseViewModel extends ChangeNotifier {
       _sicByCik = await _database.sicByCik();
       _industriesBySector = _groupIndustries(_sicByCik);
     }
-    if (_debtFreeCiks.isEmpty) _debtFreeCiks = await _database.debtFreeCiks();
-    if (_positiveCashFlowCiks.isEmpty) {
-      _positiveCashFlowCiks = await _database.positiveFreeCashFlowCiks();
+    if (_cashToDebtByCik.isEmpty) {
+      _cashToDebtByCik = await _database.cashToDebtRatios();
     }
-    _samplesByCik = await _database.growthSamples(
-      metric: _sort.displayedMetric,
-      years: _sort.years,
-      unbrokenOnly: _sort.needsUnbrokenRun,
+    if (_cashGenerativeCiks.isEmpty) {
+      _cashGenerativeCiks[CashGenerativeWindow.latestYear] = await _database
+          .positiveFreeCashFlowCiks();
+    }
+    final cashWindow = _cashGenerative;
+    if (cashWindow != null && !_cashGenerativeCiks.containsKey(cashWindow)) {
+      _cashGenerativeCiks[cashWindow] = await _database
+          .positiveFreeCashFlowCiks(years: cashWindow.years);
+    }
+
+    final revenueFilter = _revenueGrowthFilter;
+    final revenueSamples = await _database.growthSamples(
+      metric: GrowthMetric.revenue,
+      years: _revenueYears,
+      unbrokenOnly: _revenueUnbroken,
     );
+    _revenueGrowthCiks = revenueFilter == null
+        ? const {}
+        : {
+            for (final MapEntry(key: cik, value: sample)
+                in revenueSamples.entries)
+              if ((sample.annualisedPercent ?? 0) > 0) cik,
+          };
+    _samplesByCik = _sort.displayedMetric == GrowthMetric.revenue
+        ? revenueSamples
+        : await _database.growthSamples(
+            metric: _sort.displayedMetric,
+            years: 1,
+          );
     _isLoadingSamples = false;
     _reorder();
     notifyListeners();
@@ -319,8 +384,9 @@ class BrowseViewModel extends ChangeNotifier {
     if (_query.isEmpty &&
         _sector == null &&
         _industries.isEmpty &&
-        !_debtFreeOnly &&
-        !_positiveCashFlowOnly) {
+        _cashToDebtMin == null &&
+        _cashGenerative == null &&
+        _revenueGrowthFilter == null) {
       return;
     }
 
@@ -328,23 +394,33 @@ class BrowseViewModel extends ChangeNotifier {
     filterController.clear();
     _sector = null;
     _industries = const {};
-    _debtFreeOnly = false;
-    _positiveCashFlowOnly = false;
+    _cashToDebtMin = null;
+    _cashGenerative = null;
+    final hadRevenueFilter = _revenueGrowthFilter != null;
+    _revenueGrowthFilter = null;
+    _revenueGrowthCiks = const {};
     _reorder();
     notifyListeners();
+    // The ranking's window was the filter's, so it goes back to a year.
+    if (hadRevenueFilter && _sort == BrowseSort.revenueGrowth) {
+      unawaited(_loadSamples());
+    }
 
     _settingsRepo.setSector(null);
     _settingsRepo.setIndustries(const {});
-    _settingsRepo.setDebtFreeOnly(false);
-    _settingsRepo.setPositiveCashFlowOnly(false);
+    _settingsRepo.setCashToDebtMin(null);
+    _settingsRepo.setCashGenerative(null);
+    _settingsRepo.setRevenueGrowthFilter(null);
   }
 
   /// What the current filter is, in a few words, to name a report after.
   String describeFilter(AppLocalizations strings) {
     final parts = [
       if (_sector case final sector?) _describeSector(strings, sector),
-      if (_debtFreeOnly) strings.browseDebtFree,
-      if (_positiveCashFlowOnly) strings.browsePositiveCashFlow,
+      if (_cashToDebtMin case final ratio?)
+        strings.cashToDebtChip(formatCashToDebt(ratio)),
+      if (_cashGenerative case final window?) window.getChipLabel(strings),
+      if (_revenueGrowthFilter case final filter?) filter.getChipLabel(strings),
       if (_query.isNotEmpty) '"$_query"',
       if (_watchlistMembers != null) strings.watchlistFilterLabel,
     ];
@@ -389,15 +465,24 @@ class BrowseViewModel extends ChangeNotifier {
       }).toList();
     }
 
-    if (_debtFreeOnly) {
+    if (_cashToDebtMin case final ratio?) {
+      matches = matches.where((company) {
+        final covered = _cashToDebtByCik[company.cik];
+        return covered != null && covered >= ratio;
+      }).toList();
+    }
+
+    if (_cashGenerative case final window?) {
+      // Still loading: nothing passes yet, which the next notify corrects.
+      final passing = _cashGenerativeCiks[window] ?? const <String>{};
       matches = matches
-          .where((company) => _debtFreeCiks.contains(company.cik))
+          .where((company) => passing.contains(company.cik))
           .toList();
     }
 
-    if (_positiveCashFlowOnly) {
+    if (_revenueGrowthFilter != null) {
       matches = matches
-          .where((company) => _positiveCashFlowCiks.contains(company.cik))
+          .where((company) => _revenueGrowthCiks.contains(company.cik))
           .toList();
     }
 

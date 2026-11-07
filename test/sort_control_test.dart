@@ -41,7 +41,7 @@ void main() {
 
     await tester.tap(find.text('Name (A–Z)'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Revenue growth, 10-year annualised').last);
+    await tester.tap(find.text('Free cash flow growth, 1 year').last);
     await tester.pumpAndSettle();
 
     // Sized to the longest option, not to the chosen one, so picking a long
@@ -57,7 +57,7 @@ void main() {
 
     // The popup used to stretch the full width of the app.
     final option = tester.getRect(
-      find.text('Revenue growth, 10-year annualised').last,
+      find.text('Free cash flow growth, 1 year').last,
     );
     expect(option.right, lessThan(_wideSize.width * 0.6));
     expect(

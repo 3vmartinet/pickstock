@@ -115,10 +115,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Narrow the whole directory to something Apple is not in, the way you
-      // would arrive at a list after browsing: Apple borrows, so the
-      // debt-free filter alone already hides it.
-      await tester.tap(find.text('Debt-free'));
-      await tester.pumpAndSettle();
+      // would arrive at a list after browsing: Apple's cash covers its debt
+      // three times, not five, so the cash filter alone already hides it.
+      await tester.tap(find.text('Cash > debt'));
+      await pumpMenu(tester);
+      await tester.tap(find.text('5× debt'));
+      await pumpMenu(tester);
       await tester.tap(find.text('Finance'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'zzz');
@@ -163,8 +165,10 @@ void main() {
       expect(find.text('1 match'), findsOneWidget);
 
       // A filter that hides the only company in it.
-      await tester.tap(find.text('Debt-free'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cash > debt'));
+      await pumpMenu(tester);
+      await tester.tap(find.text('5× debt'));
+      await pumpMenu(tester);
       expect(find.text('No matches'), findsOneWidget);
 
       // Pressing the list you are already on is still a request to see it.

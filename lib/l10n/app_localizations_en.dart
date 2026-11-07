@@ -694,17 +694,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortByName => 'Name (A–Z)';
 
   @override
-  String get sortRevenueOneYear => 'Revenue growth, 1 year';
-
-  @override
-  String sortRevenueYears(int years) {
-    return 'Revenue growth, $years-year annualised';
-  }
-
-  @override
-  String sortRevenueRising(int years) {
-    return 'Revenue up $years years running';
-  }
+  String get sortRevenueGrowth => 'Revenue growth, fastest first';
 
   @override
   String get sortFreeCashFlowOneYear => 'Free cash flow growth, 1 year';
@@ -791,18 +781,102 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get browseDebtFree => 'Debt-free';
+  String filterYears(int years) {
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years years',
+      one: '1 year',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get browseDebtFreeHint =>
-      'Only companies whose latest filed year reports no borrowings and no interest expense.';
+  String get cashToDebtLabel => 'Cash > debt';
+
+  @override
+  String cashToDebtChip(String ratio) {
+    return 'Cash ≥ $ratio debt';
+  }
+
+  @override
+  String get cashToDebtHint =>
+      'Only companies whose cash covers their borrowings at least this many times over, as of their latest filed year. Companies that owe nothing always pass.';
+
+  @override
+  String get cashToDebtAny => 'Any balance sheet';
+
+  @override
+  String get cashToDebtHeader => 'Cash covers debt at least';
+
+  @override
+  String get cashToDebtMoreThan => 'More cash than debt';
+
+  @override
+  String cashToDebtPreset(String ratio) {
+    return '$ratio debt';
+  }
+
+  @override
+  String get cashToDebtCustom => 'Custom';
 
   @override
   String get browsePositiveCashFlow => 'Cash generative';
 
   @override
   String get browsePositiveCashFlowHint =>
-      'Only companies whose latest filed year turned more cash from operations than it spent on capital equipment.';
+      'Only companies that turned more cash from operations than they spent on capital equipment, in every one of their latest filed years.';
+
+  @override
+  String get cashFilterAny => 'Any cash flow';
+
+  @override
+  String get cashFilterHeader => 'Free cash flow positive';
+
+  @override
+  String get cashFilterLatestYear => 'Latest year';
+
+  @override
+  String cashFilterYearsRunning(int years) {
+    return '$years years running';
+  }
+
+  @override
+  String cashFilterChip(int years) {
+    return 'Cash generative $years yrs';
+  }
+
+  @override
+  String get revenueFilterLabel => 'Revenue growth';
+
+  @override
+  String get revenueFilterHint =>
+      'Only companies whose revenue grew over the window, ending at their latest filed year. Ranking by revenue growth uses the same window.';
+
+  @override
+  String get revenueFilterAny => 'Any revenue trend';
+
+  @override
+  String get revenueFilterGrowingHeader => 'Growing on average over';
+
+  @override
+  String get revenueFilterRisingHeader => 'Up every year for';
+
+  @override
+  String revenueFilterGrowingChip(int years) {
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: '$years-yr avg',
+      one: '1 yr',
+    );
+    return 'Revenue ↑ $_temp0';
+  }
+
+  @override
+  String revenueFilterRisingChip(int years) {
+    return 'Revenue ↑ $years yrs running';
+  }
 
   @override
   String get browseNoFigure => '—';

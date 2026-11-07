@@ -658,63 +658,88 @@ class AppDatabase extends _$AppDatabase {
     };
   }
 
-  /// The companies whose latest filed year shows no borrowings.
+  /// How many times over each company's cash covers its debt, as of its
+  /// latest filed year. [double.infinity] for a company that owes nothing.
   ///
-  /// Debt-free is read as: nothing owed on the balance sheet — either a debt
-  /// line of zero or no debt line at all, since a company that owes nothing
-  /// has nothing to tag — and no interest expense to service any. The second
-  /// half is what makes the first half safe. Ford, Berkshire and KKR report
-  /// their borrowings under concepts the parser cannot see and would
-  /// otherwise all read as debt-free; their interest gives them away.
+  /// Owing nothing is read as: nothing owed on the balance sheet — either a
+  /// debt line of zero or no debt line at all, since a company that owes
+  /// nothing has nothing to tag — and no interest expense to service any. The
+  /// second half is what makes the first half safe. Ford, Berkshire and KKR
+  /// report their borrowings under concepts the parser cannot see and would
+  /// otherwise all read as debt-free; their interest gives them away, and a
+  /// company in that position is left out rather than given a ratio it
+  /// cannot be held to.
   ///
   /// A balance sheet has to be there at all (`total_assets`), so a filing
-  /// thin enough to say nothing is not read as saying no.
+  /// thin enough to say nothing is not read as saying no. A company with debt
+  /// and no cash line is left out for the same reason: a missing cash figure
+  /// is not a cash figure of zero.
   ///
-  /// Two filers still slip through — Textron and NVR report both their debt
-  /// and their interest only inside dimensioned segment facts, which the bulk
-  /// company facts archive does not carry at all. There is nothing in the
-  /// archive to catch them with.
+  /// Two filers still slip through as debt-free — Textron and NVR report both
+  /// their debt and their interest only inside dimensioned segment facts,
+  /// which the bulk company facts archive does not carry at all.
   ///
-  /// Computed in SQL for the same reason [growthSamples] is: the answer
-  /// covers the whole directory, and the alternative is reading every
-  /// company's every fiscal year into Dart to look at one of them.
-  Future<Set<String>> debtFreeCiks() async {
+  /// The ratio itself is worked out here rather than tested against a
+  /// threshold in SQL, so the filter's slider can move without a query per
+  /// step: ten thousand doubles held in memory is the cheap side of that.
+  Future<Map<String, double>> cashToDebtRatios() async {
     final rows = await customSelect(
       'WITH latest AS ('
       '  SELECT cik, MAX(fiscal_year) AS end_year FROM fiscal_years'
       '  GROUP BY cik'
       ') '
-      'SELECT f.cik AS cik FROM fiscal_years f '
+      'SELECT f.cik AS cik, f.cash AS cash, f.total_debt AS debt, '
+      '  f.interest_expense AS interest '
+      'FROM fiscal_years f '
       'JOIN latest l ON l.cik = f.cik AND l.end_year = f.fiscal_year '
-      'WHERE COALESCE(f.total_debt, 0) = 0 '
-      '  AND COALESCE(f.interest_expense, 0) = 0 '
-      '  AND f.total_assets IS NOT NULL',
+      'WHERE f.total_assets IS NOT NULL',
       readsFrom: {fiscalYears},
     ).get();
-    return {for (final row in rows) row.read<String>('cik')};
+
+    final ratios = <String, double>{};
+    for (final row in rows) {
+      final debt = row.readNullable<double>('debt') ?? 0;
+      final cash = row.readNullable<double>('cash');
+      if (debt <= 0) {
+        // Interest with no debt to pay it on is debt the parser missed.
+        if ((row.readNullable<double>('interest') ?? 0) != 0) continue;
+        ratios[row.read<String>('cik')] = double.infinity;
+        continue;
+      }
+      if (cash == null) continue;
+      ratios[row.read<String>('cik')] = cash / debt;
+    }
+    return ratios;
   }
 
-  /// Every company whose latest filed year turned more cash from operations
-  /// than it spent on capital equipment.
+  /// Every company that turned more cash from operations than it spent on
+  /// capital equipment in each of its last [years] filed years.
   ///
-  /// Both figures have to be on file: free cash flow is a subtraction, and a
-  /// filing missing either side says nothing about the answer. Treating a
-  /// missing capex as zero would let a company that never reported it pass
-  /// the filter on its operating cash flow alone.
+  /// Both figures have to be on file in every one of those years: free cash
+  /// flow is a subtraction, and a filing missing either side says nothing
+  /// about the answer. Treating a missing capex as zero would let a company
+  /// that never reported it pass the filter on its operating cash flow alone.
+  /// A year missing from the filings breaks the run the same way, rather than
+  /// being read through — the count has to come to [years] exactly, and the
+  /// years are unique per company.
   ///
-  /// Computed in SQL for the same reason [debtFreeCiks] is: the answer covers
+  /// Computed in SQL for the same reason [growthSamples] is: the answer covers
   /// the whole directory.
-  Future<Set<String>> positiveFreeCashFlowCiks() async {
+  Future<Set<String>> positiveFreeCashFlowCiks({int years = 1}) async {
     final rows = await customSelect(
       'WITH latest AS ('
       '  SELECT cik, MAX(fiscal_year) AS end_year FROM fiscal_years'
       '  GROUP BY cik'
       ') '
       'SELECT f.cik AS cik FROM fiscal_years f '
-      'JOIN latest l ON l.cik = f.cik AND l.end_year = f.fiscal_year '
-      'WHERE f.operating_cash_flow IS NOT NULL '
+      'JOIN latest l ON l.cik = f.cik '
+      'WHERE f.fiscal_year > l.end_year - ?1 '
+      '  AND f.operating_cash_flow IS NOT NULL '
       '  AND f.capital_expenditure IS NOT NULL '
-      '  AND f.operating_cash_flow - f.capital_expenditure > 0',
+      '  AND f.operating_cash_flow - f.capital_expenditure > 0 '
+      'GROUP BY f.cik '
+      'HAVING COUNT(*) = ?1',
+      variables: [Variable.withInt(years)],
       readsFrom: {fiscalYears},
     ).get();
     return {for (final row in rows) row.read<String>('cik')};
@@ -1026,9 +1051,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> createShadowTables() async {
     await dropShadowTables();
     final names = [for (final table in ingestedTables) table.actualTableName];
-    final references = RegExp(
-      'REFERENCES "?(${names.join('|')})"?(\\s*\\()',
-    );
+    final references = RegExp('REFERENCES "?(${names.join('|')})"?(\\s*\\()');
     for (final table in ingestedTables) {
       final name = table.actualTableName;
       final definition = await customSelect(

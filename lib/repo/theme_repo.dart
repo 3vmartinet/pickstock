@@ -218,6 +218,15 @@ class ThemeRepo {
   static const Duration updateSpinDuration = Duration(milliseconds: 1600);
 
   static const double filterFieldMaxWidth = 320;
+
+  /// The slider inside the cash filter's menu. Wide enough that each half-step
+  /// of the multiple is a comfortable drag apart, and no wider than the menu
+  /// its labels already make.
+  static const double filterSliderWidth = 200;
+
+  /// The space the app bar's update button keeps for its percentage, measured
+  /// against "100%" so the label never shifts as the figure climbs.
+  static const String updatePercentWidest = '100';
   static const double sortPopupMaxHeight = 320;
 
   /// The most the sort control may take, however long its longest label

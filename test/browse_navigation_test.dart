@@ -63,9 +63,9 @@ void main() {
 
     await tester.tap(find.text('Name (A–Z)'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Revenue growth, 1 year').last);
+    await tester.tap(find.text('Revenue growth, fastest first').last);
     await tester.pumpAndSettle();
-    expect(find.text('Revenue growth, 1 year'), findsOneWidget);
+    expect(find.text('Revenue growth, fastest first'), findsOneWidget);
 
     // Into a company's report and straight back.
     await tester.tap(find.text('NVIDIA CORP'));
@@ -75,7 +75,7 @@ void main() {
     await returnToList(tester);
 
     // Still ranked by growth, not reset to the default ordering.
-    expect(find.text('Revenue growth, 1 year'), findsOneWidget);
+    expect(find.text('Revenue growth, fastest first'), findsOneWidget);
     expect(find.text('Name (A–Z)'), findsNothing);
   });
 

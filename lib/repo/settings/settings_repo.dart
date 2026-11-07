@@ -14,6 +14,9 @@ const String _watchlistKey = 'browseWatchlist';
 const String _debtFreeKey = 'browseDebtFree';
 const String _industriesKey = 'browseIndustries';
 const String _positiveCashFlowKey = 'browsePositiveCashFlow';
+const String _cashToDebtKey = 'browseCashToDebt';
+const String _cashGenerativeKey = 'browseCashGenerative';
+const String _revenueGrowthKey = 'browseRevenueGrowth';
 const String _masterPaneKey = 'masterPaneWidth';
 const String _autoDownloadKey = 'autoDownloadUpdates';
 const String _autoApplyKey = 'autoApplyUpdates';
@@ -52,14 +55,20 @@ abstract interface class SettingsRepo {
   int? get watchlistId;
   Future<void> setWatchlistId(int? id);
 
-  /// Whether the directory was left narrowed to companies that owe nothing.
-  bool get debtFreeOnly;
-  Future<void> setDebtFreeOnly(bool value);
+  /// The multiple of its debt a company's cash was left having to cover, or
+  /// `null` with the filter off.
+  double? get cashToDebtMin;
+  Future<void> setCashToDebtMin(double? ratio);
 
-  /// Whether the directory was left narrowed to companies whose latest filed
-  /// year generated cash rather than consumed it.
-  bool get positiveCashFlowOnly;
-  Future<void> setPositiveCashFlowOnly(bool value);
+  /// How many years running a company was left having to generate cash, or
+  /// `null` with the filter off.
+  CashGenerativeWindow? get cashGenerative;
+  Future<void> setCashGenerative(CashGenerativeWindow? window);
+
+  /// The revenue growth the directory was left narrowed to, or `null` with
+  /// the filter off.
+  RevenueGrowthFilter? get revenueGrowthFilter;
+  Future<void> setRevenueGrowthFilter(RevenueGrowthFilter? filter);
 
   /// How wide the list was left beside the report, or `null` if the divider
   /// has never been dragged. How much of the window goes to the list and how
@@ -118,7 +127,7 @@ class LocalSettingsRepo implements SettingsRepo {
 
   @override
   BrowseSort get browseSort =>
-      _read(_sortKey, BrowseSort.values) ?? BrowseSort.name;
+      BrowseSort.parse(_values[_sortKey]) ?? BrowseSort.name;
 
   @override
   Future<void> setBrowseSort(BrowseSort sort) => _write(_sortKey, sort.name);
@@ -152,20 +161,49 @@ class LocalSettingsRepo implements SettingsRepo {
   Future<void> setWatchlistId(int? id) =>
       id == null ? _erase(_watchlistKey) : _write(_watchlistKey, '$id');
 
+  /// An earlier version could only ask for no debt at all, stored as a flag.
+  /// The nearest the ratio comes to that is the top of its scale.
   @override
-  bool get debtFreeOnly => _values[_debtFreeKey] == 'true';
+  double? get cashToDebtMin {
+    final stored = double.tryParse(_values[_cashToDebtKey] ?? '');
+    if (stored != null) return stored;
+    return _values[_debtFreeKey] == 'true' ? cashToDebtMax : null;
+  }
 
   @override
-  Future<void> setDebtFreeOnly(bool value) =>
-      value ? _write(_debtFreeKey, 'true') : _erase(_debtFreeKey);
+  Future<void> setCashToDebtMin(double? ratio) => Future.wait([
+    // The flag goes either way, so it cannot outlive the setting it stood for.
+    // Both writes start now rather than one after the other, so neither is
+    // left queued behind the other once the caller has moved on.
+    _erase(_debtFreeKey),
+    ratio == null ? _erase(_cashToDebtKey) : _write(_cashToDebtKey, '$ratio'),
+  ]);
+
+  /// An earlier version only tested the latest year, stored as a flag.
+  @override
+  CashGenerativeWindow? get cashGenerative =>
+      CashGenerativeWindow.parse(_values[_cashGenerativeKey]) ??
+      (_values[_positiveCashFlowKey] == 'true'
+          ? CashGenerativeWindow.latestYear
+          : null);
 
   @override
-  bool get positiveCashFlowOnly => _values[_positiveCashFlowKey] == 'true';
+  Future<void> setCashGenerative(CashGenerativeWindow? window) => Future.wait([
+    _erase(_positiveCashFlowKey),
+    window == null
+        ? _erase(_cashGenerativeKey)
+        : _write(_cashGenerativeKey, window.name),
+  ]);
 
   @override
-  Future<void> setPositiveCashFlowOnly(bool value) => value
-      ? _write(_positiveCashFlowKey, 'true')
-      : _erase(_positiveCashFlowKey);
+  RevenueGrowthFilter? get revenueGrowthFilter =>
+      RevenueGrowthFilter.parse(_values[_revenueGrowthKey]);
+
+  @override
+  Future<void> setRevenueGrowthFilter(RevenueGrowthFilter? filter) =>
+      filter == null
+      ? _erase(_revenueGrowthKey)
+      : _write(_revenueGrowthKey, filter.name);
 
   /// Anything unparseable reads as never set, which opens at the default
   /// width rather than stopping the app.
@@ -200,37 +238,34 @@ class LocalSettingsRepo implements SettingsRepo {
   @override
   Future<void> setFrameworkLayout(FrameworkLayout layout) =>
       layout == FrameworkLayout.list
-          ? _erase(_frameworkLayoutKey)
-          : _write(_frameworkLayoutKey, layout.name);
+      ? _erase(_frameworkLayoutKey)
+      : _write(_frameworkLayoutKey, layout.name);
 
   @override
   bool get frameworkVerticalCollapsed =>
       _values[_frameworkVerticalCollapsedKey] == 'true';
 
   @override
-  Future<void> setFrameworkVerticalCollapsed(bool value) =>
-      value
-          ? _write(_frameworkVerticalCollapsedKey, 'true')
-          : _erase(_frameworkVerticalCollapsedKey);
+  Future<void> setFrameworkVerticalCollapsed(bool value) => value
+      ? _write(_frameworkVerticalCollapsedKey, 'true')
+      : _erase(_frameworkVerticalCollapsedKey);
 
   @override
   bool get frameworkListSticky => _values[_frameworkListStickyKey] != 'false';
 
   @override
-  Future<void> setFrameworkListSticky(bool value) =>
-      value
-          ? _erase(_frameworkListStickyKey)
-          : _write(_frameworkListStickyKey, 'false');
+  Future<void> setFrameworkListSticky(bool value) => value
+      ? _erase(_frameworkListStickyKey)
+      : _write(_frameworkListStickyKey, 'false');
 
   @override
   bool get autoFetchBusinessDescription =>
       _values[_autoFetchBusinessDescriptionKey] != 'false';
 
   @override
-  Future<void> setAutoFetchBusinessDescription(bool value) =>
-      value
-          ? _erase(_autoFetchBusinessDescriptionKey)
-          : _write(_autoFetchBusinessDescriptionKey, 'false');
+  Future<void> setAutoFetchBusinessDescription(bool value) => value
+      ? _erase(_autoFetchBusinessDescriptionKey)
+      : _write(_autoFetchBusinessDescriptionKey, 'false');
 
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
@@ -262,8 +297,9 @@ class MemorySettingsRepo implements SettingsRepo {
   SicSector? _sector;
   Set<int> _industries = const {};
   int? _watchlistId;
-  bool _debtFreeOnly = false;
-  bool _positiveCashFlowOnly = false;
+  double? _cashToDebtMin;
+  CashGenerativeWindow? _cashGenerative;
+  RevenueGrowthFilter? _revenueGrowthFilter;
   double? _masterPaneWidth;
   bool _autoDownloadUpdates = true;
   bool _autoApplyUpdates = false;
@@ -306,17 +342,24 @@ class MemorySettingsRepo implements SettingsRepo {
   Future<void> setWatchlistId(int? id) async => _watchlistId = id;
 
   @override
-  bool get debtFreeOnly => _debtFreeOnly;
+  double? get cashToDebtMin => _cashToDebtMin;
 
   @override
-  Future<void> setDebtFreeOnly(bool value) async => _debtFreeOnly = value;
+  Future<void> setCashToDebtMin(double? ratio) async => _cashToDebtMin = ratio;
 
   @override
-  bool get positiveCashFlowOnly => _positiveCashFlowOnly;
+  CashGenerativeWindow? get cashGenerative => _cashGenerative;
 
   @override
-  Future<void> setPositiveCashFlowOnly(bool value) async =>
-      _positiveCashFlowOnly = value;
+  Future<void> setCashGenerative(CashGenerativeWindow? window) async =>
+      _cashGenerative = window;
+
+  @override
+  RevenueGrowthFilter? get revenueGrowthFilter => _revenueGrowthFilter;
+
+  @override
+  Future<void> setRevenueGrowthFilter(RevenueGrowthFilter? filter) async =>
+      _revenueGrowthFilter = filter;
 
   @override
   double? get masterPaneWidth => _masterPaneWidth;

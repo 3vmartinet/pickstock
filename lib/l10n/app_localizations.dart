@@ -1000,23 +1000,11 @@ abstract class AppLocalizations {
   /// **'Name (A–Z)'**
   String get sortByName;
 
-  /// No description provided for @sortRevenueOneYear.
+  /// No description provided for @sortRevenueGrowth.
   ///
   /// In en, this message translates to:
-  /// **'Revenue growth, 1 year'**
-  String get sortRevenueOneYear;
-
-  /// No description provided for @sortRevenueYears.
-  ///
-  /// In en, this message translates to:
-  /// **'Revenue growth, {years}-year annualised'**
-  String sortRevenueYears(int years);
-
-  /// No description provided for @sortRevenueRising.
-  ///
-  /// In en, this message translates to:
-  /// **'Revenue up {years} years running'**
-  String sortRevenueRising(int years);
+  /// **'Revenue growth, fastest first'**
+  String get sortRevenueGrowth;
 
   /// No description provided for @sortFreeCashFlowOneYear.
   ///
@@ -1150,17 +1138,59 @@ abstract class AppLocalizations {
   /// **'{sector}, {count} industries'**
   String browseIndustriesFilter(String sector, int count);
 
-  /// No description provided for @browseDebtFree.
+  /// No description provided for @filterYears.
   ///
   /// In en, this message translates to:
-  /// **'Debt-free'**
-  String get browseDebtFree;
+  /// **'{years, plural, =1{1 year} other{{years} years}}'**
+  String filterYears(int years);
 
-  /// No description provided for @browseDebtFreeHint.
+  /// No description provided for @cashToDebtLabel.
   ///
   /// In en, this message translates to:
-  /// **'Only companies whose latest filed year reports no borrowings and no interest expense.'**
-  String get browseDebtFreeHint;
+  /// **'Cash > debt'**
+  String get cashToDebtLabel;
+
+  /// No description provided for @cashToDebtChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash ≥ {ratio} debt'**
+  String cashToDebtChip(String ratio);
+
+  /// No description provided for @cashToDebtHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only companies whose cash covers their borrowings at least this many times over, as of their latest filed year. Companies that owe nothing always pass.'**
+  String get cashToDebtHint;
+
+  /// No description provided for @cashToDebtAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any balance sheet'**
+  String get cashToDebtAny;
+
+  /// No description provided for @cashToDebtHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash covers debt at least'**
+  String get cashToDebtHeader;
+
+  /// No description provided for @cashToDebtMoreThan.
+  ///
+  /// In en, this message translates to:
+  /// **'More cash than debt'**
+  String get cashToDebtMoreThan;
+
+  /// No description provided for @cashToDebtPreset.
+  ///
+  /// In en, this message translates to:
+  /// **'{ratio} debt'**
+  String cashToDebtPreset(String ratio);
+
+  /// No description provided for @cashToDebtCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get cashToDebtCustom;
 
   /// No description provided for @browsePositiveCashFlow.
   ///
@@ -1171,8 +1201,80 @@ abstract class AppLocalizations {
   /// No description provided for @browsePositiveCashFlowHint.
   ///
   /// In en, this message translates to:
-  /// **'Only companies whose latest filed year turned more cash from operations than it spent on capital equipment.'**
+  /// **'Only companies that turned more cash from operations than they spent on capital equipment, in every one of their latest filed years.'**
   String get browsePositiveCashFlowHint;
+
+  /// No description provided for @cashFilterAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any cash flow'**
+  String get cashFilterAny;
+
+  /// No description provided for @cashFilterHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Free cash flow positive'**
+  String get cashFilterHeader;
+
+  /// No description provided for @cashFilterLatestYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest year'**
+  String get cashFilterLatestYear;
+
+  /// No description provided for @cashFilterYearsRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'{years} years running'**
+  String cashFilterYearsRunning(int years);
+
+  /// No description provided for @cashFilterChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash generative {years} yrs'**
+  String cashFilterChip(int years);
+
+  /// No description provided for @revenueFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue growth'**
+  String get revenueFilterLabel;
+
+  /// No description provided for @revenueFilterHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Only companies whose revenue grew over the window, ending at their latest filed year. Ranking by revenue growth uses the same window.'**
+  String get revenueFilterHint;
+
+  /// No description provided for @revenueFilterAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any revenue trend'**
+  String get revenueFilterAny;
+
+  /// No description provided for @revenueFilterGrowingHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Growing on average over'**
+  String get revenueFilterGrowingHeader;
+
+  /// No description provided for @revenueFilterRisingHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Up every year for'**
+  String get revenueFilterRisingHeader;
+
+  /// No description provided for @revenueFilterGrowingChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue ↑ {years, plural, =1{1 yr} other{{years}-yr avg}}'**
+  String revenueFilterGrowingChip(int years);
+
+  /// No description provided for @revenueFilterRisingChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue ↑ {years} yrs running'**
+  String revenueFilterRisingChip(int years);
 
   /// No description provided for @browseNoFigure.
   ///

@@ -89,12 +89,18 @@ testFiscalYears = [
 /// borrowings as an explicit zero; and Berkshire reports no debt line but
 /// $5M of interest, which is the shape that reads as debt-free until the
 /// interest is looked at.
-const Map<String, ({double? assets, double? debt, double? interest})>
+///
+/// Apple holds three times what it borrows in cash, so the cash filter keeps
+/// it up to 3× and drops it above.
+const Map<
+  String,
+  ({double? assets, double? debt, double? interest, double? cash})
+>
 testLatestBalanceSheets = {
-  '0000320193': (assets: 300, debt: 50, interest: 2),
-  '0001045810': (assets: 200, debt: null, interest: null),
-  '0000789019': (assets: 400, debt: 0, interest: null),
-  '0001067983': (assets: 900, debt: null, interest: 5),
+  '0000320193': (assets: 300, debt: 50, interest: 2, cash: 150),
+  '0001045810': (assets: 200, debt: null, interest: null, cash: 40),
+  '0000789019': (assets: 400, debt: 0, interest: null, cash: 80),
+  '0001067983': (assets: 900, debt: null, interest: 5, cash: 300),
 };
 
 /// Industry codes for the fixture's filers: two in tech, one in finance, one
@@ -108,11 +114,9 @@ const Map<String, int> _testSicByCik = {
 
 /// The balance sheet for one row, or `null` for a year that is not the
 /// filer's newest — earlier years carry no balance sheet in the fixture.
-({double? assets, double? debt, double? interest})? _balanceSheetFor(
-  String cik,
-  int year,
-  Map<String, int> latestYearByCik,
-) => latestYearByCik[cik] == year ? testLatestBalanceSheets[cik] : null;
+({double? assets, double? debt, double? interest, double? cash})?
+_balanceSheetFor(String cik, int year, Map<String, int> latestYearByCik) =>
+    latestYearByCik[cik] == year ? testLatestBalanceSheets[cik] : null;
 
 double? _scaled(double? millions) =>
     millions == null ? null : millions * _millions;
@@ -461,6 +465,9 @@ Future<AppDatabase> registerTestDependencies({
             interestExpense: Value(
               _scaled(_balanceSheetFor(cik, year, latestYearByCik)?.interest),
             ),
+            cash: Value(
+              _scaled(_balanceSheetFor(cik, year, latestYearByCik)?.cash),
+            ),
           ),
       ], mode: InsertMode.insertOrReplace);
     });
@@ -486,7 +493,9 @@ Future<AppDatabase> registerTestDependencies({
     )
     ..registerLazySingleton<ResearchQueue>(ResearchQueue.new)
     ..registerLazySingleton<SecRepo>(() => const MockSecRepo())
-    ..registerLazySingleton<InstitutionalRepo>(() => const MockInstitutionalRepo())
+    ..registerLazySingleton<InstitutionalRepo>(
+      () => const MockInstitutionalRepo(),
+    )
     // The real implementation, against the in-memory database: remembering a
     // price is a round trip through drift and is worth exercising as one.
     ..registerLazySingleton<PriceRepo>(() => const LocalPriceRepo())

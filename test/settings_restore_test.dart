@@ -68,13 +68,13 @@ void main() {
     await launch(tester);
     await tester.tap(find.text('Name (A–Z)'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Revenue growth, 1 year').last);
+    await tester.tap(find.text('Revenue growth, fastest first').last);
     await tester.pumpAndSettle();
-    expect(settings.browseSort, BrowseSort.revenueOneYear);
+    expect(settings.browseSort, BrowseSort.revenueGrowth);
 
     await launch(tester);
 
-    expect(find.text('Revenue growth, 1 year'), findsOneWidget);
+    expect(find.text('Revenue growth, fastest first'), findsOneWidget);
   });
 
   testWidgets('opens in the theme left chosen', (tester) async {

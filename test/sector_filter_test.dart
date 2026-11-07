@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
@@ -209,8 +210,9 @@ void main() {
 
     viewModel.selectSector(SicSector.technology);
     viewModel.toggleIndustry(SicSector.technology, 3674);
-    viewModel.toggleDebtFree();
-    viewModel.togglePositiveCashFlow();
+    viewModel.setCashToDebtMin(5);
+    await viewModel.setCashGenerative(CashGenerativeWindow.latestYear);
+    await viewModel.setRevenueGrowthFilter(RevenueGrowthFilter.growingOneYear);
     viewModel.setQuery('zzz');
     expect(viewModel.results, isEmpty);
 
@@ -221,8 +223,9 @@ void main() {
 
     expect(viewModel.sector, isNull);
     expect(viewModel.narrowedCountIn(SicSector.technology), 0);
-    expect(viewModel.debtFreeOnly, isFalse);
-    expect(viewModel.positiveCashFlowOnly, isFalse);
+    expect(viewModel.cashToDebtMin, isNull);
+    expect(viewModel.cashGenerative, isNull);
+    expect(viewModel.revenueGrowthFilter, isNull);
     expect(viewModel.query, isEmpty);
     expect(viewModel.filterController.text, isEmpty);
     expect(

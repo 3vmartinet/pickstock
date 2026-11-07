@@ -113,31 +113,43 @@ void main() {
   });
 
   test(
-    'there is a run-of-growth option per window, plainly labelled',
+    'there is a run-of-growth filter per window, plainly labelled',
     () async {
       final strings = await AppLocalizations.delegate.load(const Locale('en'));
       const options = {
-        BrowseSort.revenueRisingTwoYears: 2,
-        BrowseSort.revenueRisingThreeYears: 3,
-        BrowseSort.revenueRisingFiveYears: 5,
-        BrowseSort.revenueRisingTenYears: 10,
+        RevenueGrowthFilter.risingTwoYears: 2,
+        RevenueGrowthFilter.risingThreeYears: 3,
+        RevenueGrowthFilter.risingFiveYears: 5,
+        RevenueGrowthFilter.risingTenYears: 10,
       };
 
       for (final option in options.entries) {
         expect(option.key.years, option.value);
         expect(option.key.needsUnbrokenRun, isTrue);
         expect(
-          option.key.getLabel(strings),
-          'Revenue up ${option.value} years running',
+          option.key.getChipLabel(strings),
+          'Revenue ↑ ${option.value} yrs running',
         );
       }
     },
   );
 
-  test('the new options ask for an unbroken run, the old ones do not', () {
-    expect(BrowseSort.revenueRisingFiveYears.needsUnbrokenRun, isTrue);
-    expect(BrowseSort.revenueRisingFiveYears.years, 5);
-    expect(BrowseSort.revenueFiveYears.needsUnbrokenRun, isFalse);
-    expect(BrowseSort.name.needsUnbrokenRun, isFalse);
+  test(
+    'the rising filters ask for an unbroken run, the growing ones do not',
+    () {
+      expect(RevenueGrowthFilter.risingFiveYears.needsUnbrokenRun, isTrue);
+      expect(RevenueGrowthFilter.risingFiveYears.years, 5);
+      expect(RevenueGrowthFilter.growingFiveYears.needsUnbrokenRun, isFalse);
+    },
+  );
+
+  test('earlier per-window orderings are read back as revenue growth', () {
+    expect(
+      BrowseSort.parse('revenueRisingFiveYears'),
+      BrowseSort.revenueGrowth,
+    );
+    expect(BrowseSort.parse('revenueTenYears'), BrowseSort.revenueGrowth);
+    expect(BrowseSort.parse('name'), BrowseSort.name);
+    expect(BrowseSort.parse('nonsense'), isNull);
   });
 }

@@ -39,27 +39,48 @@ void main() {
   });
 
   test('ranks by one-year revenue growth, fastest first', () async {
-    await viewModel.selectSort(BrowseSort.revenueOneYear);
+    await viewModel.selectSort(BrowseSort.revenueGrowth);
 
     // NVDA tripled, AAPL grew a tenth, MSFT shrank.
-    final ranked = symbolsAfter(BrowseSort.revenueOneYear)
+    final ranked = symbolsAfter(BrowseSort.revenueGrowth)
         .where((s) => const ['NVDA', 'AAPL', 'MSFT'].contains(s))
         .toList();
     expect(ranked, ['NVDA', 'AAPL', 'MSFT']);
   });
 
-  test('a ten-year window ranks on the whole decade', () async {
-    await viewModel.selectSort(BrowseSort.revenueTenYears);
-    final ranked = symbolsAfter(BrowseSort.revenueTenYears)
+  test("ranks over the revenue filter's window", () async {
+    await viewModel.selectSort(BrowseSort.revenueGrowth);
+    await viewModel.setRevenueGrowthFilter(RevenueGrowthFilter.growingTenYears);
+    final ranked = symbolsAfter(BrowseSort.revenueGrowth)
         .where((s) => const ['NVDA', 'AAPL', 'MSFT'].contains(s))
         .toList();
-    expect(ranked, ['NVDA', 'AAPL', 'MSFT']);
+    // Ranked over the decade, and filtered on it: Microsoft shrank from 500
+    // to 380 over those ten years, so it is not in the list at all.
+    expect(ranked, ['NVDA', 'AAPL']);
+    final nvidia = viewModel.results.firstWhere((c) => c.ticker == 'NVDA');
+    // 10 -> 300 over ten years is about 40.5% a year.
+    expect(viewModel.figureFor(nvidia), closeTo(40.5, 0.1));
+  });
+
+  test('the revenue filter narrows without changing the order', () async {
+    await viewModel.setRevenueGrowthFilter(RevenueGrowthFilter.growingOneYear);
+
+    // Microsoft shrank last year; Berkshire has no year before its latest.
+    final tickers = viewModel.results.map((c) => c.ticker);
+    expect(tickers, containsAll(<String>['AAPL', 'NVDA']));
+    expect(tickers, isNot(contains('MSFT')));
+    expect(tickers, isNot(contains('BRK-A')));
+    expect(viewModel.sort, BrowseSort.name);
+
+    await viewModel.setRevenueGrowthFilter(null);
+    expect(viewModel.results.map((c) => c.ticker), contains('MSFT'));
   });
 
   test('companies without the window are ranked last, not at zero', () async {
-    await viewModel.selectSort(BrowseSort.revenueTenYears);
+    await viewModel.selectSort(BrowseSort.revenueGrowth);
 
-    // Berkshire has one year on file, so a decade cannot be measured.
+    // Berkshire has one year on file, so not even a year's growth can be
+    // measured.
     final berkshire = viewModel.results.indexWhere((c) => c.ticker == 'BRK-A');
     final microsoft = viewModel.results.indexWhere((c) => c.ticker == 'MSFT');
     expect(berkshire, greaterThan(microsoft));
@@ -82,7 +103,7 @@ void main() {
   });
 
   test('shows a growth rate under a growth ordering', () async {
-    await viewModel.selectSort(BrowseSort.revenueOneYear);
+    await viewModel.selectSort(BrowseSort.revenueGrowth);
     expect(viewModel.showsGrowth, isTrue);
 
     final nvidia = viewModel.results.firstWhere((c) => c.ticker == 'NVDA');
@@ -90,7 +111,7 @@ void main() {
   });
 
   test('shows the latest revenue when ordered by name', () async {
-    await viewModel.selectSort(BrowseSort.revenueOneYear);
+    await viewModel.selectSort(BrowseSort.revenueGrowth);
     await viewModel.selectSort(BrowseSort.name);
 
     expect(viewModel.showsGrowth, isFalse);
@@ -99,7 +120,7 @@ void main() {
   });
 
   test('filtering and ranking apply together', () async {
-    await viewModel.selectSort(BrowseSort.revenueOneYear);
+    await viewModel.selectSort(BrowseSort.revenueGrowth);
     viewModel.setQuery('BRK');
 
     expect(viewModel.results.every((c) => c.ticker.startsWith('BRK')), isTrue);
