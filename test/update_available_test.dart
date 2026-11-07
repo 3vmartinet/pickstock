@@ -138,7 +138,7 @@ void main() {
 
     // It no longer shuts anything, so there is no cost left to warn about.
     expect(find.text('Refresh the database now?'), findsNothing);
-    expect(find.text('Updating data…'), findsOneWidget);
+    expect(find.textContaining(_loading), findsOneWidget);
     expect(ingest.loads, 1);
 
     ingest.finishLoad.complete();
@@ -197,3 +197,7 @@ void main() {
     },
   );
 }
+
+/// The update button while the archive loads: "Loading…", then "Loading 42%"
+/// once there is a size to put a figure on.
+final RegExp _loading = RegExp(r'^Loading( \d+%|…)$');

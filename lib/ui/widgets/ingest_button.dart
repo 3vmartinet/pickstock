@@ -190,20 +190,25 @@ class _Downloading extends StatelessWidget {
           // worth putting a figure on.
           fraction: viewModel.updateFraction,
           colour: _themeRepo.positive(context.theme),
-          trackColour: _themeRepo.positive(context.theme).withValues(
-            alpha: ThemeRepo.updateProgressTrack,
-          ),
+          trackColour: _themeRepo
+              .positive(context.theme)
+              .withValues(alpha: ThemeRepo.updateProgressTrack),
           child: _ActionButton(
-            // The figure goes in the tooltip, not the label: a label that
-            // changed a hundred times would jitter the app bar, and the bar
-            // underneath says as much at a glance.
             hint: percent == null
                 ? hint
                 : '$hint ${context.strings.updateDownloadedPercent(percent)}',
             leading: const Icon(LucideIcons.refreshCw)
                 .animate(onPlay: (controller) => controller.repeat())
                 .rotate(duration: ThemeRepo.updateSpinDuration),
-            label: context.strings.updateDownloading,
+            // The figure is in the label as well as the bar: the bar says
+            // roughly how far, the number says exactly, and a glance at the
+            // app bar should not need a hover to find out. One verb and a
+            // figure — "Fetching 42%" — so the button is narrower than the
+            // sentence it replaced, and the figure is set to hold its width.
+            label: percent == null
+                ? context.strings.updateDownloading
+                : context.strings.updateDownloadingPercent(percent),
+            reservesPercent: percent != null,
             // Kept inert: work is under way, and cancellation is the button beside it.
             onPressed: null,
           ),
@@ -301,9 +306,9 @@ class _Loading extends StatelessWidget {
     return EdgeProgress(
       fraction: viewModel.updateFraction,
       colour: _themeRepo.positive(context.theme),
-      trackColour: _themeRepo.positive(context.theme).withValues(
-        alpha: ThemeRepo.updateProgressTrack,
-      ),
+      trackColour: _themeRepo
+          .positive(context.theme)
+          .withValues(alpha: ThemeRepo.updateProgressTrack),
       child: _ActionButton(
         hint: percent == null
             ? hint
@@ -311,7 +316,11 @@ class _Loading extends StatelessWidget {
         leading: const Icon(LucideIcons.refreshCw)
             .animate(onPlay: (controller) => controller.repeat())
             .rotate(duration: ThemeRepo.updateSpinDuration),
-        label: context.strings.updateLoading,
+        // "Loading 42%", the download's own shape, for the same reasons.
+        label: percent == null
+            ? context.strings.updateLoading
+            : context.strings.updateLoadingPercent(percent),
+        reservesPercent: percent != null,
         onPressed: null,
       ),
     );
@@ -343,11 +352,19 @@ class _ActionButton extends StatelessWidget {
     required this.leading,
     required this.label,
     required this.onPressed,
+    this.reservesPercent = false,
   });
 
   final String hint;
   final Widget leading;
   final String label;
+
+  /// Whether [label] ends in a percentage that climbs while it is shown.
+  ///
+  /// Set in tabular figures and held to the width "100%" would take, so the
+  /// button — and everything beside it in the app bar — stays put as the
+  /// figure changes, rather than twitching sideways on every step.
+  final bool reservesPercent;
 
   /// `null` leaves the button inert, which is what a step already under way
   /// needs.
@@ -365,8 +382,49 @@ class _ActionButton extends StatelessWidget {
         enabled: true,
         onPressed: onPressed ?? () {},
         leading: leading,
-        child: Text(label),
+        child: reservesPercent ? _PercentLabel(label) : Text(label),
       ),
+    );
+  }
+}
+
+/// A label ending in a percentage, kept to one width as the figure climbs.
+///
+/// Laid out at the width the label would take with the figure at its widest,
+/// measured rather than guessed, so the button holds still whatever it
+/// currently reads. Tabular figures do the rest: every digit is the same
+/// width, so "8%" and "88%" differ by one digit's width and not by the shapes
+/// of the digits.
+class _PercentLabel extends StatelessWidget {
+  const _PercentLabel(this.label);
+
+  final String label;
+
+  static const TextStyle _figures = TextStyle(
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final widest = label.replaceFirst(
+      RegExp(r'\d+'),
+      ThemeRepo.updatePercentWidest,
+    );
+    final painter = TextPainter(
+      text: TextSpan(
+        text: widest,
+        style: DefaultTextStyle.of(context).style.merge(_figures),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+
+    return SizedBox(
+      width: width,
+      child: Text(label, style: _figures, maxLines: 1, softWrap: false),
     );
   }
 }

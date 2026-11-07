@@ -319,8 +319,14 @@ abstract class AppLocalizations {
   /// No description provided for @updateDownloading.
   ///
   /// In en, this message translates to:
-  /// **'Downloading update…'**
+  /// **'Fetching…'**
   String get updateDownloading;
+
+  /// No description provided for @updateDownloadingPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching {percent}%'**
+  String updateDownloadingPercent(int percent);
 
   /// No description provided for @updateDownloadingHint.
   ///
@@ -349,7 +355,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateCancelling.
   ///
   /// In en, this message translates to:
-  /// **'Stopping update…'**
+  /// **'Stopping…'**
   String get updateCancelling;
 
   /// No description provided for @updateCancellingHint.
@@ -367,8 +373,14 @@ abstract class AppLocalizations {
   /// No description provided for @updateLoading.
   ///
   /// In en, this message translates to:
-  /// **'Updating data…'**
+  /// **'Loading…'**
   String get updateLoading;
+
+  /// No description provided for @updateLoadingPercent.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading {percent}%'**
+  String updateLoadingPercent(int percent);
 
   /// No description provided for @updateLoadingHint.
   ///

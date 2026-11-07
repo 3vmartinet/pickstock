@@ -77,7 +77,7 @@ void main() {
 
     // The downloads touch no table, so there is no reason to lock the app for
     // the several minutes they take: only the app bar changes.
-    expect(find.text('Downloading update…'), findsOneWidget);
+    expect(find.textContaining(_fetching), findsOneWidget);
     expect(find.text('PickStock'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Preparing your data'), findsNothing);
@@ -102,7 +102,7 @@ void main() {
       tester
           .getRect(
             find.ancestor(
-              of: find.text('Downloading update…'),
+              of: find.textContaining(_fetching),
               matching: find.byType(PrimaryButton),
             ),
           )
@@ -132,7 +132,7 @@ void main() {
     expect(ingest.wasCancelled, isTrue);
     expect(ingest.wasDiscarded, isTrue);
     expect(find.text('Update available'), findsOneWidget);
-    expect(find.text('Downloading update…'), findsNothing);
+    expect(find.textContaining(_fetching), findsNothing);
     expect(find.byKey(updateCancelKey), findsNothing);
     // And the app was never in the way of any of it.
     expect(find.text('PickStock'), findsOneWidget);
@@ -148,7 +148,7 @@ void main() {
     await tester.tap(find.text('Update available'));
     await tester.pump();
     await tester.pump(_animationStart);
-    expect(find.text('Downloading update…'), findsOneWidget);
+    expect(find.textContaining(_fetching), findsOneWidget);
 
     // Nothing is completed here on purpose: this is the gap the real download
     // spends fetching and decompressing a 60 MB data set, reporting nothing.
@@ -158,8 +158,8 @@ void main() {
     await tester.tap(find.byKey(updateCancelKey));
     await tester.pump();
 
-    expect(find.text('Stopping update…'), findsOneWidget);
-    expect(find.text('Downloading update…'), findsNothing);
+    expect(find.text('Stopping…'), findsOneWidget);
+    expect(find.textContaining(_fetching), findsNothing);
     // And no second press on offer: there is nothing left for it to do.
     expect(find.byKey(updateCancelKey), findsNothing);
 
@@ -169,7 +169,7 @@ void main() {
     expect(ingest.wasCancelled, isTrue);
     expect(ingest.wasDiscarded, isTrue);
     expect(find.text('Update available'), findsOneWidget);
-    expect(find.text('Stopping update…'), findsNothing);
+    expect(find.text('Stopping…'), findsNothing);
   });
 
   testWidgets('waits to be told, then loads behind a working app', (
@@ -196,7 +196,7 @@ void main() {
     // And the app stays: the load fills copies of the tables and swaps them
     // in at the end, so there is never a moment with nothing to show.
     expect(ingest.loads, 1);
-    expect(find.text('Updating data…'), findsOneWidget);
+    expect(find.textContaining(_loading), findsOneWidget);
     expect(find.text('PickStock'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Preparing your data'), findsNothing);
@@ -224,7 +224,7 @@ void main() {
 
     expect(find.text('PickStock'), findsOneWidget);
     // The archive just loaded is the newest one, so the button goes away.
-    expect(find.text('Updating data…'), findsNothing);
+    expect(find.textContaining(_loading), findsNothing);
     expect(find.text('Update available'), findsNothing);
     expect(find.text('Finish update'), findsNothing);
   });
@@ -257,3 +257,10 @@ void main() {
     expect(find.text('Update failed'), findsNothing);
   });
 }
+
+/// The update button while the archive downloads: "Fetching…", then
+/// "Fetching 42%" once there is a size to put a figure on.
+final RegExp _fetching = RegExp(r'^Fetching( \d+%|…)$');
+
+/// The update button while the archive loads, in the same two shapes.
+final RegExp _loading = RegExp(r'^Loading( \d+%|…)$');

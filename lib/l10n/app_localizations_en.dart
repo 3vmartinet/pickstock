@@ -168,7 +168,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get updateDownloading => 'Downloading update…';
+  String get updateDownloading => 'Fetching…';
+
+  @override
+  String updateDownloadingPercent(int percent) {
+    return 'Fetching $percent%';
+  }
 
   @override
   String get updateDownloadingHint =>
@@ -187,7 +192,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stop the download and throw away what has come down. An archive is only usable whole, so there is nothing to resume — starting again starts from the beginning.';
 
   @override
-  String get updateCancelling => 'Stopping update…';
+  String get updateCancelling => 'Stopping…';
 
   @override
   String get updateCancellingHint =>
@@ -197,7 +202,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateReady => 'Finish update';
 
   @override
-  String get updateLoading => 'Updating data…';
+  String get updateLoading => 'Loading…';
+
+  @override
+  String updateLoadingPercent(int percent) {
+    return 'Loading $percent%';
+  }
 
   @override
   String get updateLoadingHint =>
