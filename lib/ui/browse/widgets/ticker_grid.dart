@@ -1,10 +1,17 @@
+import 'dart:async';
+
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
-import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
+import 'package:pickstock/ui/browse/framework_scores_view_model.dart';
+import 'package:pickstock/ui/browse/widgets/framework_gauge.dart';
+import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/responsive_extensions.dart';
 import 'package:pickstock/data/watchlist/watchlist.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
@@ -14,7 +21,6 @@ import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
-FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 
 /// The directory itself: ten thousand-odd symbols, laid out in as many columns
@@ -53,6 +59,13 @@ class _TickerGridState extends State<TickerGrid> {
     final count = context.select<BrowseViewModel, int>(
       (viewModel) => viewModel.resultCount,
     );
+    // A new filter takes companies away; whatever of them was waiting to be
+    // priced is dropped rather than spending the quote budget on tiles that
+    // are no longer there.
+    final results = context.select<BrowseViewModel, List<Company>>(
+      (viewModel) => viewModel.results,
+    );
+    context.read<ListValuationViewModel>().retainWithin(results);
     if (count == 0) return const _NoMatches();
 
     // The tile's shape depends on how many fit across, so the width has to be
@@ -125,9 +138,8 @@ class _TickerTile extends StatelessWidget {
           Navigator.of(context).pushNamed(AppRoute.company.path);
         }
       },
-      // Symbol over name on the left, ranked figure on the right: the figure
-      // is what the list is sorted by, so it lines up down the right edge for
-      // comparison rather than sitting under each name.
+      // Symbol over name on the left, the framework rating on the right, where
+      // it lines up down the right edge of a column of tiles for comparison.
       child: Row(
         spacing: ThemeRepo.spaceMedium,
         children: [
@@ -147,6 +159,7 @@ class _TickerTile extends StatelessWidget {
                           .semiBold()
                           .singleLine(),
                     ),
+                    _VerdictMark(company: company, isSelected: isSelected),
                     _WatchlistMarkers(cik: company.cik),
                   ],
                 ),
@@ -164,7 +177,7 @@ class _TickerTile extends StatelessWidget {
               ],
             ),
           ),
-          _Figure(company: company),
+          _FrameworkRating(company: company),
         ],
       ),
     );
@@ -196,6 +209,122 @@ class _TickerTile extends StatelessWidget {
 ///
 /// A tile is small, so this stops at a few of them: the point is to recognise
 /// a company you are already following while scanning, not to enumerate.
+/// The valuation verdict after the symbol, as the valuation tab carries it
+/// after its label: the same glyph, size and colour, and nothing at all until
+/// there is a price to judge against.
+///
+/// Asks for the company to be priced as the tile is built, which is what
+/// limits the pricing to the tiles actually on screen.
+///
+/// The selected tile follows the report beside it instead: the report has
+/// the company's own discount rate, where the list makes do with a cached one
+/// or the assumed one, and a tile disagreeing with the tab next to it would
+/// leave the reader wondering which to believe.
+class _VerdictMark extends StatelessWidget {
+  const _VerdictMark({required this.company, required this.isSelected});
+
+  final Company company;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final listValuation = context.read<ListValuationViewModel>();
+    listValuation.request(company);
+
+    final listed = context.select<ListValuationViewModel, ValuationVerdict?>(
+      (viewModel) => viewModel.verdictFor(company.cik),
+    );
+    final reported = context.select<SnapshotViewModel, ValuationVerdict?>(
+      (viewModel) => isSelected ? viewModel.valuation?.verdict : null,
+    );
+    // Kept by the list too, so the tile still says the same once another
+    // company is selected. Not from inside this build, which may not notify.
+    // An unknown verdict is the report short of a price, not a judgement, and
+    // would only hide the list's own.
+    if (reported != null &&
+        reported != ValuationVerdict.unknown &&
+        reported != listed) {
+      scheduleMicrotask(() => listValuation.adopt(company.cik, reported));
+    }
+    final verdict = reported ?? listed;
+    if (verdict == null) {
+      final isPending = context.select<ListValuationViewModel, bool>(
+        (viewModel) => viewModel.isPending(company.cik),
+      );
+      return isPending
+          ? _PendingVerdictMark(key: tilePendingKey(company.cik))
+          : const SizedBox.shrink();
+    }
+    if (verdict == ValuationVerdict.unknown) return const SizedBox.shrink();
+
+    return Icon(
+      key: tileVerdictKey(company.cik),
+      verdict.icon,
+      color: _themeRepo.forOutcome(context.theme, isGood: verdict.isGood),
+    ).iconXSmall();
+  }
+}
+
+/// The verdict mark on one company's tile.
+Key tileVerdictKey(String cik) => ValueKey('tileVerdict-$cik');
+
+/// The animated placeholder on a tile still waiting to be priced.
+Key tilePendingKey(String cik) => ValueKey('tilePending-$cik');
+
+/// A verdict not yet in: the arrow flipping between up and down, swept by a
+/// highlight from left to right — the way a working session's title shimmers
+/// in Claude Code.
+///
+/// Muted, and neither green nor red: it has not found anything, and a colour
+/// would read as an answer. The flip says which question is being asked —
+/// up or down — and the sweep says it is being asked now, which a still arrow
+/// in grey would not.
+///
+/// Held still where the system asks for less motion, as one muted arrow.
+class _PendingVerdictMark extends StatelessWidget {
+  const _PendingVerdictMark({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.theme.colorScheme;
+    final muted = scheme.mutedForeground;
+
+    Widget arrow(IconData icon) => Icon(icon, color: muted).iconXSmall();
+
+    if (MediaQuery.disableAnimationsOf(context)) {
+      return arrow(LucideIcons.trendingUp);
+    }
+
+    const flip = ThemeRepo.verdictPendingFlip;
+    return Animate(
+      onPlay: (controller) => controller.repeat(),
+      effects: [
+        // One cycle is both arrows: up for the first half, down for the
+        // second.
+        CustomEffect(
+          duration: flip * 2,
+          builder: (context, value, _) => arrow(
+            value < 0.5 ? LucideIcons.trendingUp : LucideIcons.trendingDown,
+          ),
+        ),
+        // A sweep across each arrow, level rather than at the default slant,
+        // in the text colour so it reads as light passing over the glyph.
+        ShimmerEffect(duration: flip, color: scheme.foreground, angle: 0),
+        ShimmerEffect(
+          delay: flip,
+          duration: flip,
+          color: scheme.foreground,
+          angle: 0,
+        ),
+      ],
+      child: arrow(LucideIcons.trendingUp),
+    );
+  }
+}
+
+/// The coloured dots for the lists a company is on, other than the starred
+/// one: the star sat badly beside the symbol and the rating, and is left off
+/// the tile for now. The report still shows it.
 class _WatchlistMarkers extends StatelessWidget {
   const _WatchlistMarkers({required this.cik});
 
@@ -203,9 +332,12 @@ class _WatchlistMarkers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lists = context.select<WatchlistViewModel, List<Watchlist>>(
-      (viewModel) => viewModel.listsFor(cik),
-    );
+    final lists = context
+        .select<WatchlistViewModel, List<Watchlist>>(
+          (viewModel) => viewModel.listsFor(cik),
+        )
+        .where((list) => !list.isDefault)
+        .toList();
     if (lists.isEmpty) return const SizedBox.shrink();
 
     return Row(
@@ -219,34 +351,24 @@ class _WatchlistMarkers extends StatelessWidget {
   }
 }
 
-/// The figure for whatever the list is ranked by: a growth rate, or the
-/// latest revenue when the ordering is alphabetical.
+/// The framework rating where the seven questions have been asked about the
+/// company, and nothing where they have not.
 ///
-/// The row has the space, and a name alone gives no reason to pick one company
-/// over another.
-class _Figure extends StatelessWidget {
-  const _Figure({required this.company});
+/// No ranked figure beside it: the sort still orders the list by one, but
+/// what a company made of the framework says more than a ratio any of them
+/// has.
+class _FrameworkRating extends StatelessWidget {
+  const _FrameworkRating({required this.company});
 
   final Company company;
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<BrowseViewModel>();
-    final figure = viewModel.figureFor(company);
-
-    if (figure == null) {
-      return Text(context.strings.browseNoFigure).muted().xSmall();
-    }
-
-    return Text(
-      viewModel.showsGrowth
-          ? _formatRepo.signedPercent(figure)
-          : _formatRepo.compactCurrency(figure),
-    ).mono().xSmall().singleLine(
-      color: viewModel.showsGrowth
-          ? _themeRepo.forOutcome(context.theme, isGood: figure >= 0)
-          : null,
+    final score = context.select<FrameworkScoresViewModel, FrameworkScore?>(
+      (viewModel) => viewModel.scoreFor(company.cik),
     );
+    if (score == null) return const SizedBox.shrink();
+    return FrameworkGauge(key: frameworkGaugeKey(company.cik), score: score);
   }
 }
 
@@ -266,26 +388,62 @@ class _NoMatches extends StatelessWidget {
     final listName = context.select<WatchlistViewModel, String?>(
       (viewModel) => viewModel.selected?.name,
     );
+    // Narrowed to a verdict, an empty list is either still being priced or
+    // priced and short of matches; neither is a failed search.
+    final byVerdict = context.select<BrowseViewModel, bool>(
+      (viewModel) =>
+          viewModel.verdictFilter != null &&
+          viewModel.verdictCandidates.isNotEmpty,
+    );
+    final isValuing = context.select<ListValuationViewModel, bool>(
+      (viewModel) => viewModel.sweepRemaining > 0,
+    );
+    if (byVerdict) {
+      return _EmptyMessage(
+        icon: isValuing ? LucideIcons.hourglass : LucideIcons.searchX,
+        title: isValuing
+            ? context.strings.verdictFilterWaitingTitle
+            : context.strings.verdictFilterNoneTitle,
+        body: isValuing
+            ? context.strings.verdictFilterWaitingBody
+            : context.strings.verdictFilterNoneBody,
+      );
+    }
 
+    return _EmptyMessage(
+      icon: emptyList ? LucideIcons.listX : LucideIcons.searchX,
+      title: emptyList
+          ? context.strings.watchlistNoMatchesTitle
+          : context.strings.browseEmptyTitle,
+      body: emptyList
+          ? context.strings.watchlistNoMatchesBody(listName ?? '')
+          : context.strings.browseEmptyBody(query),
+    );
+  }
+}
+
+class _EmptyMessage extends StatelessWidget {
+  const _EmptyMessage({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(ThemeRepo.spaceXXLarge),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: ThemeRepo.spaceSmall,
         children: [
-          Icon(emptyList ? LucideIcons.listX : LucideIcons.searchX)
-              .iconXLarge()
-              .iconMutedForeground(),
-          Text(
-            emptyList
-                ? context.strings.watchlistNoMatchesTitle
-                : context.strings.browseEmptyTitle,
-          ).h4().textCenter(),
-          Text(
-            emptyList
-                ? context.strings.watchlistNoMatchesBody(listName ?? '')
-                : context.strings.browseEmptyBody(query),
-          ).muted().textCenter(),
+          Icon(icon).iconXLarge().iconMutedForeground(),
+          Text(title).h4().textCenter(),
+          Text(body).muted().textCenter(),
         ],
       ),
     );

@@ -354,7 +354,7 @@ void main() {
     expect(find.textContaining('Open a company and add it to'), findsOneWidget);
   });
 
-  testWidgets('the starred list marks a tile with a star, others a dot', (
+  testWidgets('the starred list leaves a tile unmarked, others a dot', (
     tester,
   ) async {
     await openApple(tester);
@@ -364,14 +364,14 @@ void main() {
     Finder markerIn(String ticker) =>
         find.ancestor(of: find.text(ticker), matching: find.byType(Row)).first;
 
-    // Apple is in the starred list, which is the one the star on a report
-    // writes into — so its tile carries the same glyph that put it there.
+    // Apple is in the starred list, whose star is left off the tile for now:
+    // it sat badly beside the symbol and the rating.
     expect(
       find.descendant(
         of: markerIn('AAPL'),
         matching: find.byIcon(BootstrapIcons.starFill),
       ),
-      findsOneWidget,
+      findsNothing,
     );
     expect(
       find.descendant(

@@ -11,6 +11,7 @@ import 'package:pickstock/data/research/company_event.dart';
 import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/research/framework_question.dart';
+import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/quote/quote.dart';
@@ -473,6 +474,16 @@ class SnapshotViewModel extends ChangeNotifier {
       ?_frameworkAnswers[question]?.verdict,
   ]);
 
+  /// The answers so far as a score: what the tab's pie shows, the same as
+  /// the company's tile.
+  FrameworkScore get frameworkScore => FrameworkScore(
+    verdicts: {
+      for (final MapEntry(key: question, value: answer)
+          in _frameworkAnswers.entries)
+        question: answer.verdict,
+    },
+  );
+
   /// The questions answered no, in the framework's order: what the reader is
   /// told to move on because of.
   List<FrameworkQuestion> get frameworkNoes => [
@@ -789,6 +800,13 @@ class SnapshotViewModel extends ChangeNotifier {
         if (generation != _requestGeneration) return;
         final text = note?.text;
         if (note == null || text == null || text.isEmpty) continue;
+        // Saved before apologies were told apart from answers: shown as the
+        // short failure it was, not as two paragraphs of regret.
+        if (isNothingFound(text)) {
+          _insightFailures[insight] = ResearchFailure.nothingFound;
+          _insightStates[insight] = InsightState.failed;
+          continue;
+        }
         _insightAnswers[insight] = ResearchAnswer(
           text: text,
           sources: note.sources,
@@ -811,7 +829,10 @@ class SnapshotViewModel extends ChangeNotifier {
       notifyListeners();
       if (_settingsRepo.autoFetchBusinessDescription &&
           generation == _requestGeneration &&
-          !_insightAnswers.containsKey(CompanyInsight.business)) {
+          !_insightAnswers.containsKey(CompanyInsight.business) &&
+          // Already known to find nothing: asking again on every visit would
+          // spend searches to be told the same.
+          !_insightFailures.containsKey(CompanyInsight.business)) {
         unawaited(loadInsight(CompanyInsight.business));
       }
     } on Object catch (error) {
@@ -1185,6 +1206,10 @@ class SnapshotViewModel extends ChangeNotifier {
       // tab for each of them was the cost of starting every one on the
       // overview.
       _discountRate = null;
+      // Cleared before the figures appear: until this company's own price is
+      // read back, the last company's would value these figures, and its
+      // verdict would flash up on the tile and the valuation tab.
+      _quote = null;
       // Cleared, unlike the tab: last company's news says nothing about this
       // one, and it is a minute of work nobody asked for yet.
       _events = const [];

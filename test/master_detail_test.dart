@@ -180,7 +180,7 @@ void main() {
     expect(find.text('PickStock'), findsOneWidget);
   });
 
-  testWidgets('tiles are twice as wide as tall, with the figure on the right', (
+  testWidgets('tiles are twice as wide as tall, with no ranked figure', (
     tester,
   ) async {
     await openBrowser(tester, _wideSize);
@@ -191,14 +191,12 @@ void main() {
     final rect = tester.getRect(tile);
     expect(rect.width / rect.height, closeTo(2, 0.01));
 
-    // The ranked figure sits to the right of the symbol.
-    final symbol = tester.getRect(
-      find.descendant(of: tile, matching: find.text('AAPL')),
-    );
-    final figure = tester.getRect(
+    // The right of a tile is the framework gauge's, and empty without one:
+    // the figure the list is ranked by is not shown.
+    expect(
       find.descendant(of: tile, matching: find.textContaining(r'$')),
+      findsNothing,
     );
-    expect(figure.left, greaterThan(symbol.right));
   });
 
   testWidgets('a narrow window keeps one pane and navigates back', (

@@ -6,6 +6,7 @@ import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
+import 'package:pickstock/ui/browse/framework_scores_view_model.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/report/jobs_view_model.dart';
@@ -15,6 +16,7 @@ import 'package:pickstock/ui/settings/settings_view_model.dart';
 import 'package:pickstock/ui/settings/widgets/settings_dialog.dart';
 import 'package:pickstock/ui/watchlist/watchlist_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
@@ -42,6 +44,13 @@ class PickStockApp extends StatelessWidget {
         // Also above the router: a scan takes tens of minutes, and navigating
         // away from the list that started it must not abandon it.
         ChangeNotifierProvider(create: (_) => JobsViewModel()),
+        // Beside the list's own model rather than inside it: what a company is
+        // worth today has nothing to do with how the list is filtered, and the
+        // verdicts it has priced should survive a trip into a report.
+        ChangeNotifierProvider(create: (_) => ListValuationViewModel()),
+        // Read once for every company and refreshed by the research queue,
+        // rather than per tile.
+        ChangeNotifierProvider(create: (_) => FrameworkScoresViewModel()),
         // Owned by the locator rather than created here: the report models
         // reach it without a context, and it must outlive every screen that
         // puts a question into it.

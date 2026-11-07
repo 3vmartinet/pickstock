@@ -9,6 +9,7 @@ import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
+import 'package:pickstock/ui/browse/widgets/framework_gauge.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/ui/report/widgets/jobs_button.dart';
 import 'package:pickstock/ui/snapshot/widgets/framework/framework_question_card.dart';
@@ -128,7 +129,31 @@ void main() {
 
     expect(find.text('Move on'), findsOneWidget);
     expect(find.textContaining('Fails on Margins'), findsOneWidget);
+    // The tab says six of seven rather than a cross for the one it missed.
+    final mark = find.descendant(
+      of: find.byType(ReportTabs),
+      matching: find.byType(FrameworkGauge),
+    );
+    expect(mark, findsOneWidget);
+    expect(tester.widget<FrameworkGauge>(mark).score.satisfied, 6);
+    expect(
+      find.descendant(
+        of: find.byType(ReportTabs),
+        matching: find.byIcon(LucideIcons.circleX),
+      ),
+      findsNothing,
+    );
     expect(find.text('Operating margin fell from 30% to 24%'), findsOneWidget);
+  });
+
+  testWidgets('seven yeses put the outlined check on the tab', (tester) async {
+    await openFramework(tester);
+    await run(tester);
+
+    Finder inTabs(Finder matching) =>
+        find.descendant(of: find.byType(ReportTabs), matching: matching);
+    expect(inTabs(find.byIcon(LucideIcons.circleCheck)), findsOneWidget);
+    expect(inTabs(find.byType(FrameworkGauge)), findsNothing);
   });
 
   testWidgets('an unclear answer leaves it unsettled rather than failed', (
@@ -190,8 +215,9 @@ void main() {
       find.descendant(of: growth, matching: find.text("Model's reading")),
       findsOneWidget,
     );
+    // Every page read, listed in the open as the overview lists them.
     expect(
-      find.descendant(of: growth, matching: find.text('Read from (1)')),
+      find.descendant(of: growth, matching: find.text('Sources')),
       findsOneWidget,
     );
   });
@@ -237,7 +263,7 @@ void main() {
     // The next question would meet the same limit; the reader is told to come
     // back rather than shown seven answers written without reading.
     expect(research.screened, hasLength(1));
-    expect(find.textContaining('most likely rate limited'), findsWidgets);
+    expect(find.textContaining('Web search limit reached'), findsWidgets);
   });
 
   testWidgets('a limit with a wait says when to come back', (tester) async {
@@ -248,7 +274,7 @@ void main() {
     await openFramework(tester);
     await run(tester);
 
-    expect(find.textContaining('rate limited until about'), findsWidgets);
+    expect(find.textContaining('Web search limited until'), findsWidgets);
     expect(find.textContaining('a few minutes'), findsNothing);
   });
 
@@ -332,7 +358,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(queue.tasks, isEmpty);
+      // Opened, so no longer waiting to be looked at, and still listed as the
+      // way back to it.
+      expect(queue.tasks.single.isSeen, isTrue);
+      expect(queue.unseenCount, 0);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

@@ -1,10 +1,12 @@
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/ui/browse/widgets/framework_gauge.dart';
+import 'package:pickstock/data/research/framework_question.dart';
+import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/history_period.dart';
 import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/research/framework_layout.dart';
-import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
@@ -233,29 +235,39 @@ class _VerdictMark extends StatelessWidget {
   }
 }
 
-/// The framework's outcome, after its tab's label.
+/// The framework's score after its tab's label: the pie the company's tile
+/// carries, at the size of an icon.
 ///
-/// Only once it is decided either way — seven yeses or a no — for the reason
-/// the valuation's mark waits for a price: a tab saying "not settled" beside
-/// three others quietly getting on with it is noise.
+/// The share passed rather than the rule's verdict: a red cross for six of
+/// seven read as a failure, where the pie shows it as nearly all of it. The
+/// verdict itself — move on, or watchlist — is the first thing in the tab.
+///
+/// Nothing until a question has been answered, for the reason the
+/// valuation's mark waits for a price; the green outlined check, as before,
+/// once all seven have passed.
 class _FrameworkMark extends StatelessWidget {
   const _FrameworkMark();
 
   @override
   Widget build(BuildContext context) {
-    final outcome = context.select<SnapshotViewModel, FrameworkOutcome>(
-      (viewModel) => viewModel.frameworkOutcome,
+    final score = context.select<SnapshotViewModel, FrameworkScore>(
+      (viewModel) => viewModel.frameworkScore,
     );
-    final isGood = switch (outcome) {
-      FrameworkOutcome.watchlist => true,
-      FrameworkOutcome.moveOn => false,
-      _ => null,
-    };
-    if (isGood == null) return const SizedBox.shrink();
-    return Icon(
-      isGood ? LucideIcons.circleCheck : LucideIcons.circleX,
-      color: _themeRepo.forOutcome(context.theme, isGood: isGood),
-    ).iconXSmall();
+    if (score.answered == 0) return const SizedBox.shrink();
+    // All seven passed: the outlined check the tab always carried for it,
+    // which says "done" more plainly beside a label than a full disc does.
+    if (score.outcome == FrameworkOutcome.watchlist) {
+      return Icon(
+        LucideIcons.circleCheck,
+        color: _themeRepo.forOutcome(context.theme, isGood: true),
+      ).iconXSmall();
+    }
+    return FrameworkGauge(
+      score: score,
+      size: ThemeRepo.frameworkTabPieSize,
+      // The glyph is the icon, as the tabs' own glyphs are.
+      isIcon: true,
+    );
   }
 }
 

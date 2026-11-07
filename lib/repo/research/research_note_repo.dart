@@ -55,6 +55,12 @@ abstract interface class ResearchNoteRepo {
 
   /// Forgets it, which is what a reader asking for it again means.
   Future<void> clear(String cik, String kind);
+
+  /// The body of every note whose kind starts with [prefix], for every
+  /// company at once.
+  Future<List<({String cik, String kind, String? body})>> bodiesOfKind(
+    String prefix,
+  );
 }
 
 class LocalResearchNoteRepo implements ResearchNoteRepo {
@@ -137,6 +143,14 @@ class LocalResearchNoteRepo implements ResearchNoteRepo {
   @override
   Future<void> clear(String cik, String kind) =>
       _database.clearResearchNote(cik, kind);
+
+  @override
+  Future<List<({String cik, String kind, String? body})>> bodiesOfKind(
+    String prefix,
+  ) async => [
+    for (final row in await _database.researchNotesOfKind(prefix))
+      (cik: row.cik, kind: row.kind, body: row.body),
+  ];
 }
 
 /// Remembers nothing beyond the run, for the mock build and for tests with no
@@ -175,4 +189,14 @@ class MemoryResearchNoteRepo implements ResearchNoteRepo {
   @override
   Future<void> clear(String cik, String kind) async =>
       _notes.remove(_key(cik, kind));
+
+  @override
+  Future<List<({String cik, String kind, String? body})>> bodiesOfKind(
+    String prefix,
+  ) async => [
+    for (final MapEntry(:key, value: note) in _notes.entries)
+      if (key.split('/') case [final cik, final kind]
+          when kind.startsWith(prefix))
+        (cik: cik, kind: kind, body: note.text),
+  ];
 }
