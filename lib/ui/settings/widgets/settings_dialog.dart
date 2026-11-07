@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
 import 'package:pickstock/ui/settings/settings_view_model.dart';
+import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
 import 'package:pickstock/ui/widgets/app_dialog.dart';
 import 'package:pickstock/ui/widgets/hint_tooltip.dart';
 import 'package:provider/provider.dart';
@@ -290,10 +293,99 @@ class _ResearchSection extends StatelessWidget {
                 .setAutoFetchBusinessDescription(value);
           },
         ),
+        const _WebSearchRow(),
       ],
     );
   }
 }
+
+/// Which search the model reads the web through, and the way to the guide
+/// that takes its quota away.
+///
+/// Looks at the local server when the settings open, so what it says is what
+/// is true now rather than what was true when it was set up.
+class _WebSearchRow extends StatefulWidget {
+  const _WebSearchRow();
+
+  @override
+  State<_WebSearchRow> createState() => _WebSearchRowState();
+}
+
+class _WebSearchRowState extends State<_WebSearchRow> {
+  @override
+  void initState() {
+    super.initState();
+    final viewModel = context.read<SettingsViewModel>();
+    if (!viewModel.localSearchEnabled) return;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(viewModel.checkLocalSearch()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.strings;
+    final theme = context.theme;
+    final viewModel = context.watch<SettingsViewModel>();
+    final isLocal = viewModel.localSearchEnabled;
+
+    return Container(
+      padding: const EdgeInsets.all(ThemeRepo.spaceMedium),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.border),
+        borderRadius: theme.borderRadiusLg,
+      ),
+      child: Row(
+        spacing: ThemeRepo.spaceMedium,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: ThemeRepo.spaceXSmall,
+              children: [
+                Text(strings.settingsWebSearchLabel).small().medium(),
+                if (isLocal)
+                  LocalSearchStatusLine(
+                    status: viewModel.localSearchStatus,
+                    isChecking: viewModel.isCheckingLocalSearch,
+                  )
+                else
+                  Text(
+                    viewModel.hostedSearchAvailable
+                        ? strings.settingsWebSearchHosted
+                        : strings.settingsWebSearchNone,
+                    key: localSearchStatusKey,
+                  ).muted().xSmall(),
+              ],
+            ),
+          ),
+          if (isLocal)
+            Tooltip(
+              tooltip: HintTooltip(strings.settingsWebSearchSwitchHint).call,
+              child: Switch(
+                key: localSearchSwitchKey,
+                value: true,
+                onChanged: (value) => viewModel.setLocalSearchEnabled(value),
+              ),
+            )
+          else
+            OutlineButton(
+              key: searchSetupOpenKey,
+              size: ButtonSize.small,
+              onPressed: () => showSearchSetup(context),
+              child: Text(strings.searchSetupLink),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Opens the search setup guide from the settings.
+const Key searchSetupOpenKey = ValueKey('searchSetupOpen');
+
+/// Turns local search off from the settings.
+const Key localSearchSwitchKey = ValueKey('localSearchSwitch');
 
 /// Finds the auto-fetch business description row in a test.
 const Key autoFetchBusinessSwitchKey = ValueKey('autoFetchBusinessSwitch');

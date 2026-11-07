@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/repo/research/searxng_search_repo.dart';
 import 'package:pickstock/data/research/framework_layout.dart';
 import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
@@ -24,6 +25,8 @@ const String _frameworkLayoutKey = 'frameworkLayout';
 const String _frameworkVerticalCollapsedKey = 'frameworkVerticalCollapsed';
 const String _frameworkListStickyKey = 'frameworkListSticky';
 const String _autoFetchBusinessDescriptionKey = 'autoFetchBusinessDescription';
+const String _localSearchEnabledKey = 'localSearchEnabled';
+const String _localSearchUrlKey = 'localSearchUrl';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -110,6 +113,14 @@ abstract interface class SettingsRepo {
   /// when opening a company that does not already have one.
   bool get autoFetchBusinessDescription;
   Future<void> setAutoFetchBusinessDescription(bool value);
+
+  /// Whether searches go first to the reader's own SearXNG server.
+  bool get localSearchEnabled;
+  Future<void> setLocalSearchEnabled(bool value);
+
+  /// Where that server answers.
+  String get localSearchUrl;
+  Future<void> setLocalSearchUrl(String url);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -267,6 +278,25 @@ class LocalSettingsRepo implements SettingsRepo {
       ? _erase(_autoFetchBusinessDescriptionKey)
       : _write(_autoFetchBusinessDescriptionKey, 'false');
 
+  @override
+  bool get localSearchEnabled => _values[_localSearchEnabledKey] == 'true';
+
+  @override
+  Future<void> setLocalSearchEnabled(bool value) => value
+      ? _write(_localSearchEnabledKey, 'true')
+      : _erase(_localSearchEnabledKey);
+
+  @override
+  String get localSearchUrl => _values[_localSearchUrlKey] ?? defaultSearxngUrl;
+
+  @override
+  Future<void> setLocalSearchUrl(String url) {
+    final trimmed = url.trim();
+    return trimmed.isEmpty || trimmed == defaultSearxngUrl
+        ? _erase(_localSearchUrlKey)
+        : _write(_localSearchUrlKey, trimmed);
+  }
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -409,4 +439,21 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setAutoFetchBusinessDescription(bool value) async =>
       _autoFetchBusinessDescription = value;
+
+  bool _localSearchEnabled = false;
+  String _localSearchUrl = defaultSearxngUrl;
+
+  @override
+  bool get localSearchEnabled => _localSearchEnabled;
+
+  @override
+  Future<void> setLocalSearchEnabled(bool value) async =>
+      _localSearchEnabled = value;
+
+  @override
+  String get localSearchUrl => _localSearchUrl;
+
+  @override
+  Future<void> setLocalSearchUrl(String url) async =>
+      _localSearchUrl = url.trim().isEmpty ? defaultSearxngUrl : url.trim();
 }

@@ -82,6 +82,39 @@ const int _maximumToolRounds = 6;
 const Duration _chatTimeout = Duration(minutes: 4);
 const Duration _probeTimeout = Duration(seconds: 5);
 
+/// What the model is told to say, and only that, when it cannot find what it
+/// was asked about.
+const String nothingFoundMarker = 'NOTHING_FOUND';
+
+const String _nothingFoundInstruction =
+    'If your searches turn up no reliable information to answer with, reply '
+    'with only the word $nothingFoundMarker and nothing else. Never apologise '
+    'or explain that you could not find something.';
+
+/// How a model's apology opens, for the times it apologises anyway rather
+/// than saying [nothingFoundMarker] as told.
+final RegExp _apologyOpening = RegExp(
+  r"^(i am sorry|i'm sorry|i apologi[sz]e|sorry,|unfortunately,? i|"
+  r"i am unable|i'm unable|i was unable|i could not|i couldn't|"
+  r"i cannot find|i can't find|i did not find|i didn't find|"
+  r"i do not have (any )?(reliable |verified )?information|"
+  r"i don't have (any )?(reliable |verified )?information)",
+  caseSensitive: false,
+);
+
+/// Whether [text] is the model saying it found nothing rather than answering:
+/// the marker it was told to use, or an apology in its first words.
+///
+/// Only the opening is read. An answer that says halfway through that one
+/// figure could not be found is still an answer.
+bool isNothingFound(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return false;
+  if (trimmed.toUpperCase().startsWith(nothingFoundMarker)) return true;
+  final unquoted = trimmed.replaceFirst(RegExp(r'^[*_"#\s]+'), '');
+  return _apologyOpening.hasMatch(unquoted.replaceAll('’', "'"));
+}
+
 /// What the model came back with, and what it read to get there.
 class ResearchAnswer {
   const ResearchAnswer({required this.text, this.sources = const []});
@@ -107,9 +140,20 @@ enum ResearchFailure {
   /// The model cannot call tools, so it cannot search.
   modelCannotSearch,
 
-  /// The web search refused every request — rate limited, most often — so
-  /// a question that has to be read up on was not.
+  /// The web search refused every request for want of allowance, so a
+  /// question that has to be read up on was not.
   searchRefused,
+
+  /// Every search failed for some other reason — the reader's own search
+  /// server down or erring, most often — so a question that has to be read
+  /// up on was not. Kept apart from [searchRefused], which it is not: telling
+  /// someone with their own unlimited server that a limit was reached sent
+  /// them looking for a limit that was not there.
+  searchUnavailable,
+
+  /// The model searched and came back with nothing about the company — an
+  /// apology rather than an answer.
+  nothingFound,
 
   /// Reached, and unhappy.
   failed;
@@ -125,6 +169,9 @@ enum ResearchFailure {
     ResearchFailure.modelMissing ||
     ResearchFailure.modelCannotSearch => strings.eventsFailedNoModel,
     ResearchFailure.searchRefused => strings.researchFailedSearchRefused,
+    ResearchFailure.searchUnavailable =>
+      strings.researchFailedSearchUnavailable,
+    ResearchFailure.nothingFound => strings.researchFailedNothingFound,
     ResearchFailure.failed => strings.eventsFailedOther,
   };
 }
@@ -214,6 +261,7 @@ class OllamaRepo {
 
     final messages = <Map<String, Object?>>[
       if (context != null) {_roleKey: _systemRole, _contentKey: context},
+      {_roleKey: _systemRole, _contentKey: _nothingFoundInstruction},
       {_roleKey: _userRole, _contentKey: question},
     ];
     final sources = <SearchResult>[];
@@ -235,10 +283,15 @@ class OllamaRepo {
           mustSearch &&
           sources.isEmpty &&
           refusals.isNotEmpty) {
+        // A limit only where the search said so; anything else is a search
+        // that could not be had, which is a different thing to go and fix.
+        final isLimit = refusals.last.failure == SearchFailure.rateLimited;
         throw ResearchException(
-          ResearchFailure.searchRefused,
+          isLimit
+              ? ResearchFailure.searchRefused
+              : ResearchFailure.searchUnavailable,
           cause: refusals.last.failure,
-          retryAfter: refusals.last.retryAfter,
+          retryAfter: isLimit ? refusals.last.retryAfter : null,
         );
       }
 
@@ -257,10 +310,13 @@ class OllamaRepo {
       }
 
       if (calls.isEmpty) {
-        return ResearchAnswer(
-          text: (reply[_contentKey] as String? ?? '').trim(),
-          sources: sources,
-        );
+        final text = (reply[_contentKey] as String? ?? '').trim();
+        // An apology written down as the answer reads, on the report, as
+        // though it were one: two paragraphs where a line would do.
+        if (isNothingFound(text)) {
+          throw const ResearchException(ResearchFailure.nothingFound);
+        }
+        return ResearchAnswer(text: text, sources: sources);
       }
 
       // The assistant's turn goes back verbatim, tool calls included: without

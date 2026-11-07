@@ -655,7 +655,7 @@ abstract class AppLocalizations {
   /// No description provided for @insightSources.
   ///
   /// In en, this message translates to:
-  /// **'Read from'**
+  /// **'Sources'**
   String get insightSources;
 
   /// No description provided for @insightCaveat.
@@ -724,59 +724,71 @@ abstract class AppLocalizations {
   /// **'Nothing recent turned up.'**
   String get eventsEmpty;
 
-  /// No description provided for @eventsOpenHint.
-  ///
-  /// In en, this message translates to:
-  /// **'{caption} Opens {url} in your browser.'**
-  String eventsOpenHint(String caption, String url);
-
   /// No description provided for @eventsFailedNoKey.
   ///
   /// In en, this message translates to:
-  /// **'No Ollama key is built in, so there is nothing to search with. Copy env.example.json to env.json and paste one.'**
+  /// **'No web search set up'**
   String get eventsFailedNoKey;
 
   /// No description provided for @eventsFailedNoServer.
   ///
   /// In en, this message translates to:
-  /// **'Nothing is answering on this machine. Start Ollama and try again.'**
+  /// **'Ollama is not running'**
   String get eventsFailedNoServer;
 
   /// No description provided for @eventsFailedNoModel.
   ///
   /// In en, this message translates to:
-  /// **'Ollama is running but has not pulled the model this build asks for.'**
+  /// **'Model not installed in Ollama'**
   String get eventsFailedNoModel;
 
   /// No description provided for @researchFailedSearchRefusedUntil.
   ///
   /// In en, this message translates to:
-  /// **'The web search is rate limited until about {time}, so this was not read up on. Try again then.'**
+  /// **'Web search limited until {time}'**
   String researchFailedSearchRefusedUntil(String time);
+
+  /// No description provided for @researchFailedNothingFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing found on the web'**
+  String get researchFailedNothingFound;
 
   /// No description provided for @researchFailedSearchRefused.
   ///
   /// In en, this message translates to:
-  /// **'The web search refused every request — it is most likely rate limited — so this was not read up on. Try again in a few minutes.'**
+  /// **'Web search limit reached'**
   String get researchFailedSearchRefused;
+
+  /// No description provided for @researchFailedSearchUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Web search not reachable'**
+  String get researchFailedSearchUnavailable;
 
   /// No description provided for @eventsFailedOther.
   ///
   /// In en, this message translates to:
-  /// **'The search did not finish. Try again.'**
+  /// **'The model did not finish'**
   String get eventsFailedOther;
 
   /// No description provided for @researchTitle.
   ///
   /// In en, this message translates to:
-  /// **'Questions to the model'**
+  /// **'Background tasks'**
   String get researchTitle;
 
-  /// No description provided for @researchNote.
+  /// No description provided for @researchMarkAllReadHint.
   ///
   /// In en, this message translates to:
-  /// **'One at a time — a model on this machine cannot answer two at once.'**
-  String get researchNote;
+  /// **'Mark all as read'**
+  String get researchMarkAllReadHint;
+
+  /// No description provided for @researchClearFinishedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear finished and failed tasks'**
+  String get researchClearFinishedHint;
 
   /// No description provided for @researchNewsAction.
   ///
@@ -802,17 +814,23 @@ abstract class AppLocalizations {
   /// **'Ready — open it'**
   String get researchStatusReady;
 
-  /// No description provided for @researchStatusFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Did not finish — open it to see why'**
-  String get researchStatusFailed;
-
   /// No description provided for @researchCancelHint.
   ///
   /// In en, this message translates to:
   /// **'Drop this question. Nothing is kept, and the next one in the line starts.'**
   String get researchCancelHint;
+
+  /// No description provided for @researchDismissHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Take this off the list. The answer stays on the company\'s report.'**
+  String get researchDismissHint;
+
+  /// No description provided for @researchStatusOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened — open it again'**
+  String get researchStatusOpened;
 
   /// No description provided for @researchOpenHint.
   ///
@@ -1288,12 +1306,6 @@ abstract class AppLocalizations {
   /// **'Revenue ↑ {years} yrs running'**
   String revenueFilterRisingChip(int years);
 
-  /// No description provided for @browseNoFigure.
-  ///
-  /// In en, this message translates to:
-  /// **'—'**
-  String get browseNoFigure;
-
   /// No description provided for @browseFilterPlaceholder.
   ///
   /// In en, this message translates to:
@@ -1317,6 +1329,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing in EDGAR\'s directory matches \"{query}\".'**
   String browseEmptyBody(String query);
+
+  /// No description provided for @frameworkGaugeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'{satisfied} of {total} questions passed · {answered} answered'**
+  String frameworkGaugeTooltip(int satisfied, int total, int answered);
+
+  /// No description provided for @verdictFilterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by valuation'**
+  String get verdictFilterLabel;
+
+  /// No description provided for @verdictFilterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'{verdict} · press again to show all'**
+  String verdictFilterClear(String verdict);
+
+  /// No description provided for @browseValuingMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{valuing 1 more…} other{valuing {count} more…}}'**
+  String browseValuingMore(int count);
+
+  /// No description provided for @verdictFilterWaitingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches yet'**
+  String get verdictFilterWaitingTitle;
+
+  /// No description provided for @verdictFilterWaitingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Valuing the rest of the list. Companies appear here as their prices come in.'**
+  String get verdictFilterWaitingBody;
+
+  /// No description provided for @verdictFilterNoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get verdictFilterNoneTitle;
+
+  /// No description provided for @verdictFilterNoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No company in this list matches that valuation at current prices.'**
+  String get verdictFilterNoneBody;
 
   /// No description provided for @backToList.
   ///
@@ -1803,6 +1863,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Download failed. Retry from the app bar.'**
   String get settingsStatusFailed;
+
+  /// No description provided for @settingsWebSearchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Web search'**
+  String get settingsWebSearchLabel;
+
+  /// No description provided for @settingsWebSearchHosted.
+  ///
+  /// In en, this message translates to:
+  /// **'Hosted search, which has a usage limit.'**
+  String get settingsWebSearchHosted;
+
+  /// No description provided for @settingsWebSearchNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set up: the model cannot read the web.'**
+  String get settingsWebSearchNone;
+
+  /// No description provided for @settingsWebSearchSwitchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search on this Mac first. Off goes back to the hosted search.'**
+  String get settingsWebSearchSwitchHint;
+
+  /// No description provided for @searchSetupLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up unlimited search'**
+  String get searchSetupLink;
+
+  /// No description provided for @searchSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited web search'**
+  String get searchSetupTitle;
+
+  /// No description provided for @searchSetupIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'The hosted web search has a usage limit. A free search server (SearXNG) running on this Mac has none. It takes a few minutes, once.'**
+  String get searchSetupIntro;
+
+  /// No description provided for @searchSetupDockerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Install a container app'**
+  String get searchSetupDockerTitle;
+
+  /// No description provided for @searchSetupDockerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The search server runs in a container. Install Docker Desktop or OrbStack, open it, and wait until it says it is running. Skip this if you already have one.'**
+  String get searchSetupDockerBody;
+
+  /// No description provided for @searchSetupCommandTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the search server'**
+  String get searchSetupCommandTitle;
+
+  /// No description provided for @searchSetupCommandBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Terminal (Applications › Utilities), pick your shell, paste this command and press Return. The first run downloads the server, which takes a minute. It restarts on its own with your container app.'**
+  String get searchSetupCommandBody;
+
+  /// No description provided for @searchSetupCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy command'**
+  String get searchSetupCopy;
+
+  /// No description provided for @searchSetupCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get searchSetupCopied;
+
+  /// No description provided for @searchSetupConnectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get searchSetupConnectTitle;
+
+  /// No description provided for @searchSetupConnectBody.
+  ///
+  /// In en, this message translates to:
+  /// **'PickStock looks for the server every few seconds and switches to it once found.'**
+  String get searchSetupConnectBody;
+
+  /// No description provided for @searchSetupCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get searchSetupCheck;
+
+  /// No description provided for @searchSetupDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get searchSetupDone;
+
+  /// No description provided for @localSearchChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for the search server…'**
+  String get localSearchChecking;
+
+  /// No description provided for @localSearchConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected: searches run on this Mac'**
+  String get localSearchConnected;
+
+  /// No description provided for @localSearchNotRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Not running: start your container app'**
+  String get localSearchNotRunning;
+
+  /// No description provided for @localSearchJsonDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Found, but JSON is off: run the command again'**
+  String get localSearchJsonDisabled;
+
+  /// No description provided for @localSearchNotSearxng.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else answers at this address'**
+  String get localSearchNotSearxng;
 
   /// No description provided for @settingsResearchTitle.
   ///

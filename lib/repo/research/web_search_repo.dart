@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:pickstock/extensions/object_extensions.dart';
+import 'package:pickstock/repo/research/page_reader.dart';
 
 /// Supplied at build time with `--dart-define-from-file=env.json`, so the key
 /// never enters the repository. Empty by default, which leaves research off.
@@ -27,6 +28,10 @@ const int defaultSearchResults = 5;
 /// Long enough for a search that has to fetch several pages, short enough that
 /// a stalled request does not hold a model's tool call open indefinitely.
 const Duration _requestTimeout = Duration(seconds: 30);
+
+/// Less text than this from a page read here means it was built by script, or
+/// was a wall asking to prove the reader human, rather than the page itself.
+const int _shortestReadablePage = 300;
 
 /// One page the search turned up.
 class SearchResult {
@@ -108,11 +113,15 @@ abstract interface class WebSearchRepo {
 }
 
 class OllamaWebSearchRepo implements WebSearchRepo {
-  OllamaWebSearchRepo({http.Client? client, String? apiKey})
+  OllamaWebSearchRepo({http.Client? client, String? apiKey, PageReader? reader})
     : _client = client ?? http.Client(),
-      _apiKey = apiKey ?? ollamaApiKey;
+      _apiKey = apiKey ?? ollamaApiKey,
+      _reader = reader ?? PageReader(client: client);
 
   final http.Client _client;
+
+  /// Reads pages on this machine, so only searching spends the allowance.
+  final PageReader _reader;
 
   /// Held rather than read at each call so a test can supply its own without
   /// a build-time define.
@@ -145,6 +154,26 @@ class OllamaWebSearchRepo implements WebSearchRepo {
 
   @override
   Future<SearchResult> fetch(String url) async {
+    SearchResult? short;
+    try {
+      final page = await _reader.read(url);
+      if (page.content.length >= _shortestReadablePage) return page;
+      logWarning(() => 'Page read here came back nearly empty: $url');
+      short = page;
+    } on SearchException catch (error) {
+      logWarning(() => 'Page could not be read here: $error');
+      // Searching locally needs no key, and then there is nothing to fall
+      // back on: the failure here is the answer.
+      if (!isConfigured) rethrow;
+    }
+    // Without a key, a thin page is still better than none.
+    if (!isConfigured) return short!;
+    // Only a page this machine could not read goes to the hosted fetch, which
+    // renders what this cannot and gets past some sites that turn this away.
+    return _hostedFetch(url);
+  }
+
+  Future<SearchResult> _hostedFetch(String url) async {
     final payload = await _post(_fetchUrl, {_urlKey: url});
     return SearchResult(
       title: payload[_titleKey] as String? ?? '',

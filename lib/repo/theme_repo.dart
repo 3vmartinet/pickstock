@@ -123,6 +123,15 @@ class ThemeRepo {
   static const double inlineSpinnerSize = 14;
   static const double inlineSpinnerStroke = 2.0;
 
+  /// The share of its box a Lucide glyph is drawn in: twenty units of a
+  /// twenty-four unit grid, the rest a margin.
+  static const double lucideDrawnShare = 20 / 24;
+
+  /// The jobs button's spinner, which stands in for its glyph: the stroke of
+  /// the glyphs beside it, and the size to assume where no icon size is set.
+  static const double jobsSpinnerStroke = 2.0;
+  static const double jobsSpinnerFallbackSize = 24;
+
   /// The narrowest the eight-column history table can be before its figures
   /// start wrapping mid-number. Below this the report shows one card per
   /// fiscal year instead.
@@ -198,13 +207,48 @@ class ThemeRepo {
   /// The count on the job button's corner, when there is a count worth
   /// showing. A stadium rather than a circle: past nine it has two digits in
   /// it, and a fixed circle would either clip them or be too big for one.
-  static const double countBadgeHeight = 16;
-  static const double countBadgeMinWidth = 16;
-  static const double countBadgeOffset = -5;
-  static const double countBadgeFontSize = 10;
+  static const double countBadgeHeight = 20;
+  static const double countBadgeMinWidth = 20;
+  static const double countBadgeFontSize = 12;
+
+  /// The gap between the spinner's ring and the count's hollowed end, when
+  /// the count is slid in against it.
+  /// The solid line between two counts in the pill, and how far short of
+  /// its top and foot it stops.
+  static const double countSeparatorWidth = 1;
+  static const double countSeparatorInset = 4;
+
+  /// The share of its ink the spinner's track is drawn in, as shadcn draws
+  /// it, and which the counts are filled with.
+  static const double spinnerTrackShare = 0.2;
+
+  /// Where in the background tasks list the question being answered is
+  /// brought to as the list opens: its middle, so the waiting questions above
+  /// and the finished ones below both show around it.
+  static const double jobsRunningRowAlignment = 0.5;
+
+  static const double countRingGap = 5;
   static const EdgeInsets countBadgePadding = EdgeInsets.symmetric(
-    horizontal: spaceXSmall,
+    horizontal: 5,
   );
+
+  /// Inside each half of a pill holding two counts: roomier than one count's
+  /// badge, so the two halves read as two counts.
+  static const EdgeInsets countPillPadding = EdgeInsets.symmetric(
+    horizontal: 11,
+  );
+
+  /// The marks before each count in the pill: a check before the done, three
+  /// running dots before the under way, sized to sit with the digits.
+  static const double countMarkSize = 11;
+  static const double countMarkGap = 3;
+  static const double countDotSize = 3;
+  static const double countDotGap = 1.5;
+  static const double countDotDim = 0.6;
+
+  /// How high a running dot rises at the top of its wave.
+  static const double countDotLift = 2.5;
+  static const Duration countDotsCycle = Duration(milliseconds: 1100);
 
   /// The sliver of progress along the bottom edge of the download button, and
   /// how faint its unfilled track is. Thin enough to read as part of the
@@ -216,6 +260,60 @@ class ThemeRepo {
   /// behind the app. Slow enough to read as "still going" rather than as
   /// something urgently spinning.
   static const Duration updateSpinDuration = Duration(milliseconds: 1600);
+
+  /// How long a pending tile shows each arrow before flipping to the other,
+  /// and how long the highlight takes to sweep across it. One sweep per arrow,
+  /// so the flip lands as the light leaves rather than halfway across.
+  static const Duration verdictPendingFlip = Duration(milliseconds: 700);
+
+  /// The framework rating on a tile: a pie at the tile's right edge, as
+  /// tall as the symbol and the first line of the name.
+  static const double frameworkPieSize = 28;
+
+  /// The Framework glyph that stands for a full score, as a share of the
+  /// pie's box: about the size of a tile's other marks, not of the pie.
+  static const double frameworkPassedIconScale = 18 / 28;
+
+  /// How strongly the unearned part of an outlined pie is drawn, as a share
+  /// of the muted text colour: there, but behind the share earned.
+  static const double frameworkPieOutlineRestOpacity = 0.5;
+
+  /// Lucide's own geometry, for glyphs drawn here to sit among its icons: a
+  /// twenty-four unit grid, a circle of ten units, a stroke of two.
+  static const double lucideGrid = 24;
+  static const double lucideCircleRadius = 10;
+  static const double lucideStroke = 2;
+
+  /// The same pie after the Framework tab's label, at an icon's size.
+  static const double frameworkTabPieSize = 14;
+
+  /// Newspaper columns for a model's prose: no narrower than a comfortable
+  /// measure, no more than three across, at least a few lines each, and a
+  /// plain gutter between them — no rule, as a newspaper sets them.
+  static const double columnTextMinWidth = 300;
+  static const int columnTextMaxColumns = 3;
+  static const int columnTextMinLines = 3;
+  static const double columnTextGutter = 24;
+
+  /// Inside the tag that says an answer is a model's.
+  static const EdgeInsets modelCaveatPadding = EdgeInsets.symmetric(
+    horizontal: spaceSmall,
+    vertical: spaceXSmall,
+  );
+
+  /// The serif for prose read as an article, from the system's own fonts.
+  static const String serifFamily = 'Charter';
+  static const List<String> serifFallback = ['Georgia', 'Times New Roman'];
+  static const double serifSizeIncrease = 0;
+  static const double serifFallbackSize = 14;
+  static const double serifLineHeight = 1.45;
+
+  /// How strongly a link's address is drawn under its title in the tooltip.
+  static const double linkTooltipAddressOpacity = 0.75;
+
+  /// The widest a source link runs before its title is cut short, in a list
+  /// of them laid side by side.
+  static const double sourceLinkMaxWidth = 220;
 
   static const double filterFieldMaxWidth = 320;
 
@@ -288,6 +386,12 @@ class ThemeRepo {
   /// The settings dialog: about the width of a macOS settings window with a
   /// single pane, which sizes itself to its content rather than the screen.
   static const double settingsDialogWidth = 520;
+
+  /// The numbered disc beside each step of the search setup guide.
+  static const double searchSetupStepSize = 22;
+
+  /// How tall the setup command's box grows before it scrolls.
+  static const double searchSetupCommandMaxHeight = 120;
 
   /// The framework tab's scorecard: one numbered step per question.
   static const double frameworkStepSize = 32;
@@ -370,6 +474,33 @@ class ThemeRepo {
   Color caution(ThemeData theme) => theme.brightness == Brightness.dark
       ? Colors.orange.shade400
       : Colors.orange.shade600;
+
+  /// A colour for [score] out of [outOf], on a scale from [negative] at one
+  /// through [caution] to [positive] at [outOf].
+  ///
+  /// For a count of passes rather than a pass or a fail: six of seven is a
+  /// strong showing and should look like one, where a plain good-or-bad
+  /// colour would paint it as red as a nought. The steps are the same palette
+  /// and shades as the outcome colours, so the scale's ends are exactly them.
+  Color forScore(ThemeData theme, int score, {required int outOf}) {
+    final isDark = theme.brightness == Brightness.dark;
+    final scale = [
+      Colors.rose,
+      Colors.orange,
+      Colors.amber,
+      Colors.yellow,
+      Colors.lime,
+      Colors.green,
+      Colors.emerald,
+    ];
+    // From one rather than nought: a score of nought fills nothing to colour,
+    // so starting there would spend the scale's first step on no one.
+    final ratio = outOf <= 1
+        ? 1.0
+        : ((score - 1) / (outOf - 1)).clamp(0.0, 1.0);
+    final shades = scale[(ratio * (scale.length - 1)).round()];
+    return isDark ? shades.shade400 : shades.shade600;
+  }
 
   /// The first series on an evidence chart, and the only one on most.
   ///

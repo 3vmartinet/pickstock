@@ -412,7 +412,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Searching the web and reading what it finds. This takes about a minute.';
 
   @override
-  String get insightSources => 'Read from';
+  String get insightSources => 'Sources';
 
   @override
   String get insightCaveat =>
@@ -454,40 +454,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventsEmpty => 'Nothing recent turned up.';
 
   @override
-  String eventsOpenHint(String caption, String url) {
-    return '$caption Opens $url in your browser.';
-  }
+  String get eventsFailedNoKey => 'No web search set up';
 
   @override
-  String get eventsFailedNoKey =>
-      'No Ollama key is built in, so there is nothing to search with. Copy env.example.json to env.json and paste one.';
+  String get eventsFailedNoServer => 'Ollama is not running';
 
   @override
-  String get eventsFailedNoServer =>
-      'Nothing is answering on this machine. Start Ollama and try again.';
-
-  @override
-  String get eventsFailedNoModel =>
-      'Ollama is running but has not pulled the model this build asks for.';
+  String get eventsFailedNoModel => 'Model not installed in Ollama';
 
   @override
   String researchFailedSearchRefusedUntil(String time) {
-    return 'The web search is rate limited until about $time, so this was not read up on. Try again then.';
+    return 'Web search limited until $time';
   }
 
   @override
-  String get researchFailedSearchRefused =>
-      'The web search refused every request — it is most likely rate limited — so this was not read up on. Try again in a few minutes.';
+  String get researchFailedNothingFound => 'Nothing found on the web';
 
   @override
-  String get eventsFailedOther => 'The search did not finish. Try again.';
+  String get researchFailedSearchRefused => 'Web search limit reached';
 
   @override
-  String get researchTitle => 'Questions to the model';
+  String get researchFailedSearchUnavailable => 'Web search not reachable';
 
   @override
-  String get researchNote =>
-      'One at a time — a model on this machine cannot answer two at once.';
+  String get eventsFailedOther => 'The model did not finish';
+
+  @override
+  String get researchTitle => 'Background tasks';
+
+  @override
+  String get researchMarkAllReadHint => 'Mark all as read';
+
+  @override
+  String get researchClearFinishedHint => 'Clear finished and failed tasks';
 
   @override
   String get researchNewsAction => 'Read recent news';
@@ -502,11 +501,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get researchStatusReady => 'Ready — open it';
 
   @override
-  String get researchStatusFailed => 'Did not finish — open it to see why';
-
-  @override
   String get researchCancelHint =>
       'Drop this question. Nothing is kept, and the next one in the line starts.';
+
+  @override
+  String get researchDismissHint =>
+      'Take this off the list. The answer stays on the company\'s report.';
+
+  @override
+  String get researchStatusOpened => 'Opened — open it again';
 
   @override
   String researchOpenHint(String company) {
@@ -889,9 +892,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get browseNoFigure => '—';
-
-  @override
   String get browseFilterPlaceholder => 'Filter by symbol or company name';
 
   @override
@@ -917,6 +917,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String browseEmptyBody(String query) {
     return 'Nothing in EDGAR\'s directory matches \"$query\".';
   }
+
+  @override
+  String frameworkGaugeTooltip(int satisfied, int total, int answered) {
+    return '$satisfied of $total questions passed · $answered answered';
+  }
+
+  @override
+  String get verdictFilterLabel => 'Filter by valuation';
+
+  @override
+  String verdictFilterClear(String verdict) {
+    return '$verdict · press again to show all';
+  }
+
+  @override
+  String browseValuingMore(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'valuing $countString more…',
+      one: 'valuing 1 more…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get verdictFilterWaitingTitle => 'No matches yet';
+
+  @override
+  String get verdictFilterWaitingBody =>
+      'Valuing the rest of the list. Companies appear here as their prices come in.';
+
+  @override
+  String get verdictFilterNoneTitle => 'No matches';
+
+  @override
+  String get verdictFilterNoneBody =>
+      'No company in this list matches that valuation at current prices.';
 
   @override
   String get backToList => 'Back to the list';
@@ -1235,6 +1277,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsStatusFailed => 'Download failed. Retry from the app bar.';
+
+  @override
+  String get settingsWebSearchLabel => 'Web search';
+
+  @override
+  String get settingsWebSearchHosted =>
+      'Hosted search, which has a usage limit.';
+
+  @override
+  String get settingsWebSearchNone =>
+      'Not set up: the model cannot read the web.';
+
+  @override
+  String get settingsWebSearchSwitchHint =>
+      'Search on this Mac first. Off goes back to the hosted search.';
+
+  @override
+  String get searchSetupLink => 'Set up unlimited search';
+
+  @override
+  String get searchSetupTitle => 'Unlimited web search';
+
+  @override
+  String get searchSetupIntro =>
+      'The hosted web search has a usage limit. A free search server (SearXNG) running on this Mac has none. It takes a few minutes, once.';
+
+  @override
+  String get searchSetupDockerTitle => 'Install a container app';
+
+  @override
+  String get searchSetupDockerBody =>
+      'The search server runs in a container. Install Docker Desktop or OrbStack, open it, and wait until it says it is running. Skip this if you already have one.';
+
+  @override
+  String get searchSetupCommandTitle => 'Start the search server';
+
+  @override
+  String get searchSetupCommandBody =>
+      'Open Terminal (Applications › Utilities), pick your shell, paste this command and press Return. The first run downloads the server, which takes a minute. It restarts on its own with your container app.';
+
+  @override
+  String get searchSetupCopy => 'Copy command';
+
+  @override
+  String get searchSetupCopied => 'Copied';
+
+  @override
+  String get searchSetupConnectTitle => 'Connect';
+
+  @override
+  String get searchSetupConnectBody =>
+      'PickStock looks for the server every few seconds and switches to it once found.';
+
+  @override
+  String get searchSetupCheck => 'Check';
+
+  @override
+  String get searchSetupDone => 'Done';
+
+  @override
+  String get localSearchChecking => 'Looking for the search server…';
+
+  @override
+  String get localSearchConnected => 'Connected: searches run on this Mac';
+
+  @override
+  String get localSearchNotRunning => 'Not running: start your container app';
+
+  @override
+  String get localSearchJsonDisabled =>
+      'Found, but JSON is off: run the command again';
+
+  @override
+  String get localSearchNotSearxng => 'Something else answers at this address';
 
   @override
   String get settingsResearchTitle => 'Research';

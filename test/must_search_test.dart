@@ -50,6 +50,20 @@ class _RateLimitedSearch implements WebSearchRepo {
       throw SearchException(SearchFailure.rateLimited, retryAfter: wait);
 }
 
+/// A search whose server cannot be had: the reader's own, with Docker off.
+class _UnreachableSearch implements WebSearchRepo {
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<List<SearchResult>> search(String query, {int maxResults = 5}) =>
+      throw const SearchException(SearchFailure.unavailable);
+
+  @override
+  Future<SearchResult> fetch(String url) =>
+      throw const SearchException(SearchFailure.unavailable);
+}
+
 /// The model's turns, in order, and every request it was sent.
 class _ScriptedModel {
   _ScriptedModel(this.turns);
@@ -127,6 +141,24 @@ void main() {
           (error) => error.failure,
           'failure',
           ResearchFailure.searchRefused,
+        ),
+      ),
+    );
+  });
+
+  test('a search that could not be had is not called a limit', () async {
+    // A reader with their own unlimited server, stopped: telling them a limit
+    // was reached sent them looking for a limit that was not there.
+    final model = _ScriptedModel([_searches, _answersFromMemory]);
+    final repo = OllamaRepo(search: _UnreachableSearch(), client: model.client);
+
+    await expectLater(
+      repo.ask('Is Crocs growing?', mustSearch: true),
+      throwsA(
+        isA<ResearchException>().having(
+          (error) => error.failure,
+          'failure',
+          ResearchFailure.searchUnavailable,
         ),
       ),
     );

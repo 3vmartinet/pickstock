@@ -34,6 +34,7 @@ import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
 
 /// A small stand-in for SEC's directory, covering the shapes the app has to
@@ -414,6 +415,8 @@ Future<AppDatabase> registerTestDependencies({
   bool autoApplyUpdates = false,
   bool autoFetchBusinessDescription = false,
 }) async {
+  // Off unless a test asks for it: see [ListValuationViewModel.isEnabled].
+  ListValuationViewModel.isEnabled = false;
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
   if (withIngest) {
