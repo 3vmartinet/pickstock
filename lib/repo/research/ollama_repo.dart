@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:io';
@@ -82,6 +83,10 @@ const int _maximumToolRounds = 6;
 const Duration _chatTimeout = Duration(minutes: 4);
 const Duration _probeTimeout = Duration(seconds: 5);
 
+/// How long a one-word question may take before the model is called stuck:
+/// long enough to load a 12B model from cold, which is most of it.
+const Duration _readinessTimeout = Duration(minutes: 2);
+
 /// What the model is told to say, and only that, when it cannot find what it
 /// was asked about.
 const String nothingFoundMarker = 'NOTHING_FOUND';
@@ -134,6 +139,12 @@ enum ResearchFailure {
   /// Nothing listening on the local port.
   serverUnreachable,
 
+  /// The server took the question and never answered it: Ollama is up but
+  /// its model is stuck, which no amount of starting Ollama would fix and
+  /// restarting it does. Told apart from [serverUnreachable], which it was
+  /// once reported as, to a reader looking at Ollama plainly running.
+  modelStalled,
+
   /// The server is there but has not pulled the model.
   modelMissing,
 
@@ -166,6 +177,7 @@ enum ResearchFailure {
   String describe(AppLocalizations strings) => switch (this) {
     ResearchFailure.searchNotConfigured => strings.eventsFailedNoKey,
     ResearchFailure.serverUnreachable => strings.eventsFailedNoServer,
+    ResearchFailure.modelStalled => strings.researchFailedModelStalled,
     ResearchFailure.modelMissing ||
     ResearchFailure.modelCannotSearch => strings.eventsFailedNoModel,
     ResearchFailure.searchRefused => strings.researchFailedSearchRefused,
@@ -231,6 +243,36 @@ class OllamaRepo {
       );
     } on Object catch (error) {
       logInfo(() => 'No local model server: $error');
+      return false;
+    }
+  }
+
+  /// Whether the model answers at all, asked with a one-word question.
+  ///
+  /// Not [isAvailable]: a server whose model has stuck mid-answer still
+  /// lists the model and answers every status check, and only asking it
+  /// something shows it will not answer. What the queue asks before trying
+  /// again a question that stalled or could not reach the server.
+  Future<bool> isResponsive() async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$host$_chatPath'),
+            headers: {HttpHeaders.contentTypeHeader: ContentType.json.mimeType},
+            body: jsonEncode({
+              _modelKey: model,
+              _messagesKey: [
+                {_roleKey: _userRole, _contentKey: 'Reply OK.'},
+              ],
+              _streamKey: false,
+              _thinkKey: false,
+              _optionsKey: {'num_predict': 1},
+            }),
+          )
+          .timeout(_readinessTimeout);
+      return response.statusCode == HttpStatus.ok;
+    } on Object catch (error) {
+      logInfo(() => 'Local model not answering yet: $error');
       return false;
     }
   }
@@ -638,6 +680,10 @@ class OllamaRepo {
             }),
           )
           .timeout(_chatTimeout);
+    } on TimeoutException catch (error) {
+      // Reached, and kept waiting: a model mid-answer that stopped, not a
+      // server that is not there.
+      throw ResearchException(ResearchFailure.modelStalled, cause: error);
     } on Object catch (error) {
       throw ResearchException(ResearchFailure.serverUnreachable, cause: error);
     }

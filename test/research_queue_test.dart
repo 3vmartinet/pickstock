@@ -8,6 +8,7 @@ import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
+import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/ui/report/widgets/jobs_button.dart';
 import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
@@ -414,7 +415,7 @@ void main() {
     expect(GetIt.I.get<ResearchQueue>().tasks, isEmpty);
   });
 
-  testWidgets('a spent search allowance offers the way round it', (
+  testWidgets('a spent search allowance waits, and offers the way round it', (
     tester,
   ) async {
     research.failure = ResearchFailure.searchRefused;
@@ -423,31 +424,167 @@ void main() {
     await ask(tester, 'Describe the business');
     await pumpFrames(tester);
 
-    expect(find.text('Web search limit reached'), findsOneWidget);
+    // Held to try again, and the list says why and that it will.
+    await tester.tap(find.byType(JobsButton));
+    await pumpFrames(tester);
+    expect(
+      find.textContaining('Web search limit reached · tries again at'),
+      findsOneWidget,
+    );
     expect(find.byKey(searchSetupLinkKey), findsOneWidget);
 
     await tester.tap(find.byKey(searchSetupLinkKey));
     await pumpFrames(tester);
     expect(find.text('Unlimited web search'), findsOneWidget);
+
+    // Called off, so its wait goes with it.
+    final queue = GetIt.I.get<ResearchQueue>();
+    queue.remove(queue.tasks.single.id);
+    await pumpFrames(tester);
   });
 
   test('a failed question carries the reason it failed', () async {
     final queue = ResearchQueue();
     addTearDown(queue.dispose);
 
+    // Not one trying again would change: the model is not there to ask.
     queue.enqueue(
       cik: 'AAA',
       ticker: 'AAA',
       companyName: 'AAA',
       insight: CompanyInsight.business,
       work: (_) async =>
-          throw const ResearchException(ResearchFailure.searchRefused),
+          throw const ResearchException(ResearchFailure.modelMissing),
     );
     await pumpEventQueue();
 
     final task = queue.tasks.single;
     expect(task.isFailed, isTrue);
-    expect(task.failure, ResearchFailure.searchRefused);
+    expect(task.failure, ResearchFailure.modelMissing);
+  });
+
+  group('trying again', () {
+    const quick = ResearchRetryTiming(
+      modelPoll: Duration(milliseconds: 10),
+      failedPause: Duration(milliseconds: 10),
+      searchPause: Duration(milliseconds: 10),
+      searchRefusedPause: Duration(milliseconds: 10),
+    );
+
+    Future<void> settle() =>
+        Future<void>.delayed(const Duration(milliseconds: 200));
+
+    test('a stalled question waits for the model, then is answered', () async {
+      var responsive = false;
+      final queue = ResearchQueue(
+        isModelResponsive: () async => responsive,
+        timing: quick,
+      );
+      addTearDown(queue.dispose);
+      var tries = 0;
+      queue.enqueue(
+        cik: 'AAA',
+        ticker: 'AAA',
+        companyName: 'AAA',
+        insight: CompanyInsight.business,
+        work: (_) async {
+          tries++;
+          if (tries == 1) {
+            throw const ResearchException(ResearchFailure.modelStalled);
+          }
+        },
+      );
+      await settle();
+
+      // Held, not failed, and not asked again while the model is stuck.
+      expect(queue.tasks.single.isWaiting, isTrue);
+      expect(queue.tasks.single.failure, ResearchFailure.modelStalled);
+      expect(tries, 1);
+      // Still owed, so still counted on the button.
+      expect(queue.activeCount, 1);
+
+      responsive = true;
+      await settle();
+
+      expect(tries, 2);
+      expect(queue.tasks.single.state, ResearchTaskState.done);
+      expect(queue.tasks.single.failure, isNull);
+    });
+
+    test('the line waits behind a question held up', () async {
+      var responsive = false;
+      final queue = ResearchQueue(
+        isModelResponsive: () async => responsive,
+        timing: quick,
+      );
+      addTearDown(queue.dispose);
+      var stalled = true;
+      final order = <String>[];
+      for (final ticker in ['AAA', 'BBB']) {
+        queue.enqueue(
+          cik: ticker,
+          ticker: ticker,
+          companyName: ticker,
+          insight: CompanyInsight.business,
+          work: (_) async {
+            order.add(ticker);
+            if (stalled) {
+              throw const ResearchException(ResearchFailure.modelStalled);
+            }
+          },
+        );
+      }
+      await settle();
+      // What held up the first would hold up the second the same way.
+      expect(order, ['AAA']);
+
+      stalled = false;
+      responsive = true;
+      await settle();
+      expect(order, ['AAA', 'AAA', 'BBB']);
+    });
+
+    test('a question that keeps failing fails in the end', () async {
+      final queue = ResearchQueue(timing: quick);
+      addTearDown(queue.dispose);
+      var tries = 0;
+      queue.enqueue(
+        cik: 'AAA',
+        ticker: 'AAA',
+        companyName: 'AAA',
+        insight: CompanyInsight.business,
+        work: (_) async {
+          tries++;
+          throw const ResearchException(ResearchFailure.failed);
+        },
+      );
+      await settle();
+
+      expect(tries, ResearchRetryTiming.otherRetries + 1);
+      expect(queue.tasks.single.isFailed, isTrue);
+    });
+
+    test('a question waiting can still be called off', () async {
+      final queue = ResearchQueue(
+        isModelResponsive: () async => false,
+        timing: quick,
+      );
+      addTearDown(queue.dispose);
+      queue.enqueue(
+        cik: 'AAA',
+        ticker: 'AAA',
+        companyName: 'AAA',
+        insight: CompanyInsight.business,
+        work: (_) async =>
+            throw const ResearchException(ResearchFailure.serverUnreachable),
+      );
+      await settle();
+      expect(queue.tasks.single.isWaiting, isTrue);
+
+      queue.remove(queue.tasks.single.id);
+      await settle();
+      expect(queue.isEmpty, isTrue);
+    });
   });
 
   test('the toolbar marks all read and clears only what is finished', () async {

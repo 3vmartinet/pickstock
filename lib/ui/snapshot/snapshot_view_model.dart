@@ -151,7 +151,8 @@ class SnapshotViewModel extends ChangeNotifier {
   /// it: waiting and being answered are the queue's to say, and a second copy
   /// kept here would be the one that went stale.
   EventsState get eventsState => switch (_queuedState(eventsNoteKind)) {
-    ResearchTaskState.pending => EventsState.queued,
+    ResearchTaskState.pending ||
+    ResearchTaskState.waiting => EventsState.queued,
     ResearchTaskState.running => EventsState.loading,
     _ => _eventsState,
   };
@@ -299,7 +300,8 @@ class SnapshotViewModel extends ChangeNotifier {
   /// Where [insight] has got to, the queue's word first.
   InsightState insightState(CompanyInsight insight) =>
       switch (_queuedState(insight.name)) {
-        ResearchTaskState.pending => InsightState.queued,
+        ResearchTaskState.pending ||
+        ResearchTaskState.waiting => InsightState.queued,
         ResearchTaskState.running => InsightState.loading,
         _ => _insightStates[insight] ?? InsightState.idle,
       };
@@ -526,6 +528,9 @@ class SnapshotViewModel extends ChangeNotifier {
     final kind = frameworkKind(questions)!;
     questions.forEach(_frameworkFailures.remove);
 
+    // Held across tries, so a run the queue tries again after a stall picks
+    // up at the question it stopped on rather than asking the rest again.
+    final answered = <FrameworkQuestion>{};
     _queue.enqueue(
       cik: company.cik,
       ticker: company.ticker,
@@ -533,7 +538,7 @@ class SnapshotViewModel extends ChangeNotifier {
       insight: null,
       frameworkQuestions: questions,
       work: (isCancelled) =>
-          _screenCompany(company, questions, kind, isCancelled),
+          _screenCompany(company, questions, kind, answered, isCancelled),
     );
   }
 
@@ -563,6 +568,8 @@ class SnapshotViewModel extends ChangeNotifier {
         questions.forEach(_frameworkFailures.remove);
       }
 
+      // Held across tries; see [runFramework].
+      final answered = <FrameworkQuestion>{};
       _queue.enqueue(
         cik: company.cik,
         ticker: company.ticker,
@@ -570,7 +577,7 @@ class SnapshotViewModel extends ChangeNotifier {
         insight: null,
         frameworkQuestions: questions,
         work: (isCancelled) =>
-            _screenCompany(company, questions, kind, isCancelled),
+            _screenCompany(company, questions, kind, answered, isCancelled),
       );
       queuedCount++;
     }
@@ -581,6 +588,7 @@ class SnapshotViewModel extends ChangeNotifier {
     Company company,
     List<FrameworkQuestion> questions,
     String kind,
+    Set<FrameworkQuestion> answered,
     bool Function() isCancelled,
   ) async {
     FinancialSnapshot? currentSnapshot;
@@ -618,7 +626,7 @@ class SnapshotViewModel extends ChangeNotifier {
       snapshot: currentSnapshot,
       valuation: currentValuation,
     );
-    await _screen(company, prompts, questions, kind, isCancelled);
+    await _screen(company, prompts, questions, kind, answered, isCancelled);
   }
 
   /// Works through [questions] one after another, filing each answer as it
@@ -633,12 +641,19 @@ class SnapshotViewModel extends ChangeNotifier {
     FrameworkPrompts prompts,
     List<FrameworkQuestion> questions,
     String kind,
+    Set<FrameworkQuestion> answered,
     bool Function() isCancelled,
   ) async {
     Object? failure;
     for (var step = 0; step < questions.length; step++) {
       if (isCancelled()) return;
       final question = questions[step];
+      // Answered on an earlier try of this run: filed already, and asking it
+      // again would spend minutes of the model to say it a second time.
+      if (answered.contains(question)) {
+        _queue.setStepsDone(cik: company.cik, kind: kind, done: step + 1);
+        continue;
+      }
       try {
         final reading = await _researchRepo.screen(
           prompts,
@@ -652,6 +667,7 @@ class SnapshotViewModel extends ChangeNotifier {
           text: jsonEncode(reading.answer.toJson()),
           sources: reading.sources,
         );
+        answered.add(question);
         if (_isOnScreen(company)) {
           _frameworkAnswers[question] = reading.answer;
           _frameworkSources[question] = reading.sources;
@@ -673,12 +689,10 @@ class SnapshotViewModel extends ChangeNotifier {
           }
         }
         if (remaining.length > 1) {
-          // Marked done so the card says why rather than "queued" for ever.
-          _queue.setStepsDone(
-            cik: company.cik,
-            kind: kind,
-            done: questions.length,
-          );
+          // Only as far as it got: the queue tries the run again from here
+          // while the cards say "queued", and once it gives up the task is no
+          // longer owed, so the cards say why.
+          _queue.setStepsDone(cik: company.cik, kind: kind, done: step);
           rethrow;
         }
       } on Object catch (error) {

@@ -290,6 +290,13 @@ class FakeOllamaRepo extends OllamaRepo {
   @override
   Future<bool> get isAvailable async => true;
 
+  /// Whether the model answers a question that checks it does, which is what
+  /// the queue asks before trying again one that stalled.
+  bool responsive = true;
+
+  @override
+  Future<bool> isResponsive() async => responsive;
+
   @override
   Future<ResearchAnswer> ask(
     String question, {

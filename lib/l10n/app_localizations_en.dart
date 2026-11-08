@@ -460,6 +460,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventsFailedNoServer => 'Ollama is not running';
 
   @override
+  String get researchFailedModelStalled =>
+      'The model stopped responding — restart Ollama';
+
+  @override
+  String researchRetryWhenModelAnswers(String reason) {
+    return '$reason · tries again when the model answers';
+  }
+
+  @override
+  String researchRetryAt(String reason, String time) {
+    return '$reason · tries again at $time';
+  }
+
+  @override
   String get eventsFailedNoModel => 'Model not installed in Ollama';
 
   @override

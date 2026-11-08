@@ -901,7 +901,7 @@ class _ResearchSectionState extends State<_ResearchSection> {
               spacing: ThemeRepo.spaceXSmall,
               children: [
                 for (final task in tasks)
-                  task.state == ResearchTaskState.running
+                  task.isRunning || task.isWaiting
                       ? KeyedSubtree(
                           key: _running,
                           child: _ResearchRow(task: task),
@@ -1017,7 +1017,14 @@ class _ResearchRow extends StatelessWidget {
                   Text('${task.ticker} · ${_asked(task, strings)}')
                       .small()
                       .singleLine(),
-                  if (task.isFailed)
+                  if (task.isWaiting)
+                    // Why it stopped, and that it will try again by itself:
+                    // in the caution colour, as work held up rather than
+                    // failed.
+                    Text(_retrying(task, strings))
+                        .xSmall(color: _themeRepo.caution(context.theme))
+                        .singleLine()
+                  else if (task.isFailed)
                     Text(
                           (task.failure ?? ResearchFailure.failed).describe(
                             strings,
@@ -1082,6 +1089,16 @@ class _ResearchRow extends StatelessWidget {
         _ => strings.researchFrameworkAction,
       };
 
+  /// What a question waiting to be tried again is waiting out, and until
+  /// when.
+  static String _retrying(ResearchTask task, AppLocalizations strings) {
+    final reason = (task.failure ?? ResearchFailure.failed).describe(strings);
+    final at = task.retryAt;
+    return at == null
+        ? strings.researchRetryWhenModelAnswers(reason)
+        : strings.researchRetryAt(reason, _formatRepo.timeOrDate(at));
+  }
+
   static String _status(ResearchTask task, AppLocalizations strings) =>
       switch (task.state) {
         ResearchTaskState.pending => strings.researchStatusQueued,
@@ -1093,6 +1110,8 @@ class _ResearchRow extends StatelessWidget {
             task.frameworkQuestions.length,
           ),
         ResearchTaskState.running => strings.researchStatusRunning,
+        // Shown with its reason instead; see the row.
+        ResearchTaskState.waiting => '',
         ResearchTaskState.done when task.isSeen => strings.researchStatusOpened,
         ResearchTaskState.done => strings.researchStatusReady,
         // Shown in the failure's own words instead; see the row.
@@ -1127,6 +1146,11 @@ class _StateMark extends StatelessWidget {
           ),
         ),
       ),
+      // Held up, not failed: a retry glyph in the caution colour.
+      ResearchTaskState.waiting => Icon(
+        LucideIcons.rotateCw,
+        color: _themeRepo.caution(theme),
+      ).iconXSmall(),
       ResearchTaskState.done => Icon(
         LucideIcons.check,
         color: _themeRepo.forOutcome(theme, isGood: true),

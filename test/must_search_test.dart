@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -159,6 +160,47 @@ void main() {
           (error) => error.failure,
           'failure',
           ResearchFailure.searchUnavailable,
+        ),
+      ),
+    );
+  });
+
+  test('a model that never answers is said to have stalled, not to be '
+      'missing', () async {
+    // Ollama up and taking the question, its model stuck mid-answer: what the
+    // request's own time limit turns into.
+    final repo = OllamaRepo(
+      search: _OnePageSearch(),
+      client: MockClient((_) async => throw TimeoutException('no answer')),
+    );
+
+    await expectLater(
+      repo.ask('Is Crocs growing?'),
+      throwsA(
+        isA<ResearchException>().having(
+          (error) => error.failure,
+          'failure',
+          ResearchFailure.modelStalled,
+        ),
+      ),
+    );
+  });
+
+  test('a server that cannot be reached is said not to be running', () async {
+    final repo = OllamaRepo(
+      search: _OnePageSearch(),
+      client: MockClient(
+        (_) async => throw http.ClientException('Connection refused'),
+      ),
+    );
+
+    await expectLater(
+      repo.ask('Is Crocs growing?'),
+      throwsA(
+        isA<ResearchException>().having(
+          (error) => error.failure,
+          'failure',
+          ResearchFailure.serverUnreachable,
         ),
       ),
     );

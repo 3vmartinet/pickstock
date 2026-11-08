@@ -10,7 +10,17 @@ import 'package:pickstock/repo/research/ollama_repo.dart';
 /// the list exists to say what is still owed and a row saying "you stopped
 /// this" is owed nothing. A failed one stays, because the reason it failed is
 /// on the card it was asked from and the row is the way back to it.
-enum ResearchTaskState { pending, running, done, failed }
+enum ResearchTaskState {
+  pending,
+  running,
+
+  /// Stopped by something not the question's fault — the model stuck, the
+  /// server down, the search refusing — and to be tried again: once the model
+  /// answers again, or at [ResearchTask.retryAt].
+  waiting,
+  done,
+  failed,
+}
 
 /// One question put to the local model, waiting its turn or answered.
 ///
@@ -36,6 +46,8 @@ class ResearchTask extends Equatable {
     this.state = ResearchTaskState.pending,
     this.isSeen = false,
     this.failure,
+    this.retries = 0,
+    this.retryAt,
   });
 
   final int id;
@@ -71,8 +83,16 @@ class ResearchTask extends Equatable {
   /// among the ones already read.
   final bool isSeen;
 
-  /// Why it failed, where it did: what the row says in place of "ready".
+  /// Why it failed, where it did: what the row says in place of "ready". And
+  /// while it is waiting, what it is waiting out.
   final ResearchFailure? failure;
+
+  /// How many times it has been tried again.
+  final int retries;
+
+  /// When it is tried again, while it waits out a set time; `null` while it
+  /// waits for the model to answer, which has no time to it.
+  final DateTime? retryAt;
 
   bool get isFramework => frameworkQuestions.isNotEmpty;
 
@@ -104,9 +124,12 @@ class ResearchTask extends Equatable {
 
   bool get isRunning => state == ResearchTaskState.running;
 
+  bool get isWaiting => state == ResearchTaskState.waiting;
+
   /// Whether the model still owes an answer, which is what makes a row
-  /// cancellable rather than openable.
-  bool get isActive => isPending || isRunning;
+  /// cancellable rather than openable. One waiting to be tried again still
+  /// does: it will be answered.
+  bool get isActive => isPending || isRunning || isWaiting;
 
   /// Whether the model is done with it, answered or not.
   bool get isFinished => !isActive;
@@ -122,6 +145,9 @@ class ResearchTask extends Equatable {
     int? stepsDone,
     bool? isSeen,
     ResearchFailure? failure,
+    int? retries,
+    DateTime? retryAt,
+    bool clearsFailure = false,
   }) => ResearchTask(
     id: id,
     cik: cik,
@@ -132,7 +158,10 @@ class ResearchTask extends Equatable {
     stepsDone: stepsDone ?? this.stepsDone,
     state: state ?? this.state,
     isSeen: isSeen ?? this.isSeen,
-    failure: failure ?? this.failure,
+    failure: clearsFailure ? null : failure ?? this.failure,
+    retries: retries ?? this.retries,
+    // A time to retry at belongs to the one wait it was set for.
+    retryAt: retryAt,
   );
 
   @override
@@ -147,6 +176,8 @@ class ResearchTask extends Equatable {
     state,
     isSeen,
     failure,
+    retries,
+    retryAt,
   ];
 }
 

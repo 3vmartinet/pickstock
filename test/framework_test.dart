@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/data/research/framework_question.dart';
+import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
@@ -240,33 +241,60 @@ void main() {
     );
   });
 
-  testWidgets('a missing server fails every question at once, and says why', (
-    tester,
-  ) async {
-    research.failure = ResearchFailure.serverUnreachable;
+  ResearchTask frameworkTask() => GetIt.I
+      .get<ResearchQueue>()
+      .tasks
+      .singleWhere((task) => task.isFramework);
+
+  testWidgets('a stalled model holds the run, which finishes once the model '
+      'answers again', (tester) async {
+    research
+      ..failure = ResearchFailure.modelStalled
+      ..responsive = false;
     await openFramework(tester);
     await run(tester);
 
-    // Asked once, not seven times: every question after the first would
-    // wait out the same timeout to fail the same way.
+    // Asked once, not seven times: every question after the first would wait
+    // out the same timeout. Not failed, though: waiting for the model.
     expect(research.screened, hasLength(1));
-    expect(find.textContaining('Not answered:'), findsWidgets);
+    expect(frameworkTask().isWaiting, isTrue);
+    expect(frameworkTask().failure, ResearchFailure.modelStalled);
+    expect(find.textContaining('Not answered:'), findsNothing);
+
+    // Ollama restarted: the model answers, and the run picks up again on its
+    // own and finishes all seven.
+    research
+      ..failure = null
+      ..responsive = true;
+    await tester.pump(const ResearchRetryTiming().modelPoll);
+    await pumpFrames(tester, frames: 30);
+
+    expect(frameworkTask().state, ResearchTaskState.done);
+    expect(find.text('Watchlist candidate'), findsOneWidget);
   });
 
-  testWidgets('a rate-limited search stops the run and says so', (
-    tester,
-  ) async {
+  testWidgets('a rate-limited search waits, then tries again', (tester) async {
     research.failure = ResearchFailure.searchRefused;
     await openFramework(tester);
     await run(tester);
 
-    // The next question would meet the same limit; the reader is told to come
-    // back rather than shown seven answers written without reading.
+    // The next question would meet the same limit; the run waits it out
+    // rather than writing seven answers without reading.
     expect(research.screened, hasLength(1));
-    expect(find.textContaining('Web search limit reached'), findsWidgets);
+    final waiting = frameworkTask();
+    expect(waiting.isWaiting, isTrue);
+    expect(waiting.retryAt, isNotNull);
+
+    research.failure = null;
+    await tester.pump(const ResearchRetryTiming().searchRefusedPause);
+    await pumpFrames(tester, frames: 30);
+
+    expect(frameworkTask().state, ResearchTaskState.done);
   });
 
-  testWidgets('a limit with a wait says when to come back', (tester) async {
+  testWidgets('a limit with a wait is tried again when it says', (
+    tester,
+  ) async {
     // What Ollama's search answered the day this was written: two hours.
     research
       ..failure = ResearchFailure.searchRefused
@@ -274,8 +302,14 @@ void main() {
     await openFramework(tester);
     await run(tester);
 
-    expect(find.textContaining('Web search limited until'), findsWidgets);
-    expect(find.textContaining('a few minutes'), findsNothing);
+    final retryAt = frameworkTask().retryAt!;
+    expect(
+      retryAt.difference(DateTime.now()).inMinutes,
+      inInclusiveRange(118, 120),
+    );
+    // Called off, so the two-hour wait goes with it.
+    GetIt.I.get<ResearchQueue>().remove(frameworkTask().id);
+    await pumpFrames(tester);
   });
 
   testWidgets('without a key there is nothing to run, but the filings show', (

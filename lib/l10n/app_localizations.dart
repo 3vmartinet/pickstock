@@ -736,6 +736,24 @@ abstract class AppLocalizations {
   /// **'Ollama is not running'**
   String get eventsFailedNoServer;
 
+  /// No description provided for @researchFailedModelStalled.
+  ///
+  /// In en, this message translates to:
+  /// **'The model stopped responding — restart Ollama'**
+  String get researchFailedModelStalled;
+
+  /// No description provided for @researchRetryWhenModelAnswers.
+  ///
+  /// In en, this message translates to:
+  /// **'{reason} · tries again when the model answers'**
+  String researchRetryWhenModelAnswers(String reason);
+
+  /// No description provided for @researchRetryAt.
+  ///
+  /// In en, this message translates to:
+  /// **'{reason} · tries again at {time}'**
+  String researchRetryAt(String reason, String time);
+
   /// No description provided for @eventsFailedNoModel.
   ///
   /// In en, this message translates to:
