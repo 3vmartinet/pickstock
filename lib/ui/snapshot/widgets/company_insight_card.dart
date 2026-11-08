@@ -12,6 +12,7 @@ import 'package:pickstock/ui/widgets/note_age.dart';
 import 'package:pickstock/ui/widgets/source_link.dart';
 import 'package:provider/provider.dart';
 import 'package:pickstock/ui/widgets/column_text.dart';
+import 'package:pickstock/ui/widgets/column_text_placeholder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
@@ -77,6 +78,15 @@ class CompanyInsightCard extends StatelessWidget {
         ],
       ),
       content: switch (state) {
+        // The article being written, in the shape it will take: the columns
+        // stand where the prose will land, so nothing jumps when it does.
+        // Only while the model is at it — a queued question has nothing
+        // under way to show.
+        InsightState.loading when insight == CompanyInsight.business =>
+          const ColumnTextPlaceholder(
+            key: insightPlaceholderKey,
+            isSerif: true,
+          ),
         InsightState.idle || InsightState.queued || InsightState.loading =>
           Text(insight.getInvitation(context.strings)).muted().xSmall(),
         InsightState.failed => Column(
@@ -104,6 +114,9 @@ class CompanyInsightCard extends StatelessWidget {
     return isFresh ? JustFetched(child: alert) : alert;
   }
 }
+
+/// The placeholder standing in for the business described while it is read.
+const Key insightPlaceholderKey = ValueKey('insightPlaceholder');
 
 /// The press, sized to sit in an alert's trailing slot.
 class _Ask extends StatelessWidget {

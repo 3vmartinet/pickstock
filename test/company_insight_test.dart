@@ -19,6 +19,7 @@ import 'package:pickstock/ui/snapshot/widgets/napkin_math.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/source_pane.dart';
 import 'package:pickstock/ui/snapshot/widgets/valuation_grid.dart';
+import 'package:pickstock/ui/widgets/column_text_placeholder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/finders.dart';
@@ -200,6 +201,57 @@ void main() {
     await tester.pumpAndSettle();
     expect(findProse('Apple designs and sells'), findsOneWidget);
     expect(research.questions, hasLength(1));
+  });
+
+  testWidgets('sets the business out in columns while it is written', (
+    tester,
+  ) async {
+    research.finishAsk = Completer<void>();
+    await openApple(tester);
+
+    await tester.tap(find.text('Describe the business'));
+    await tester.pump();
+
+    // The article's shape stands where the invitation was, as columns across
+    // the wide report, and gives way to the prose itself.
+    expect(find.byKey(insightPlaceholderKey), findsOneWidget);
+    expect(find.textContaining('EDGAR publishes no description'), findsNothing);
+    final placeholder = tester.renderObject<RenderColumnTextPlaceholder>(
+      find
+          .descendant(
+            of: find.byKey(insightPlaceholderKey),
+            matching: find.byWidgetPredicate((widget) => true),
+          )
+          .last,
+    );
+    expect(placeholder.columnCount, greaterThan(1));
+    // Still moving: the highlight runs on until the answer lands.
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.hasRunningAnimations, isTrue);
+
+    research.finishAsk!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(insightPlaceholderKey), findsNothing);
+    expect(findProse('Apple designs and sells'), findsOneWidget);
+  });
+
+  testWidgets('a question on another tab keeps its invitation while read', (
+    tester,
+  ) async {
+    research.finishAsk = Completer<void>();
+    await openApple(tester);
+    await openReportTab(tester, ReportTab.valuation);
+    await enterPriceByHand(tester, '250');
+    await tester.ensureVisible(find.text('Check against the filing'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Check against the filing'));
+    await tester.pump();
+
+    // A note on figures, not an article: the reading button says enough.
+    expect(find.text('Reading…'), findsOneWidget);
+    expect(find.byKey(insightPlaceholderKey), findsNothing);
+    research.finishAsk!.complete();
+    await tester.pumpAndSettle();
   });
 
   testWidgets('names which part is missing when it cannot read', (

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 import 'package:pickstock/repo/theme_repo.dart';
+import 'package:pickstock/ui/widgets/column_text_placeholder.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
@@ -39,7 +40,7 @@ class ColumnText extends LeafRenderObjectWidget {
   @override
   RenderObject createRenderObject(BuildContext context) => RenderColumnText(
     text: text,
-    style: _style(context),
+    style: styleOf(context, isSerif: isSerif),
     scaler: MediaQuery.textScalerOf(context),
     direction: Directionality.of(context),
   );
@@ -48,14 +49,15 @@ class ColumnText extends LeafRenderObjectWidget {
   void updateRenderObject(BuildContext context, RenderColumnText renderObject) {
     renderObject
       ..text = text
-      ..style = _style(context)
+      ..style = styleOf(context, isSerif: isSerif)
       ..scaler = MediaQuery.textScalerOf(context)
       ..direction = Directionality.of(context);
   }
 
   /// The style the small text extension gives, spelt out, in the serif where
-  /// asked.
-  TextStyle _style(BuildContext context) {
+  /// asked. Shared with [ColumnTextPlaceholder], whose lines stand where
+  /// these will.
+  static TextStyle styleOf(BuildContext context, {required bool isSerif}) {
     final style = DefaultTextStyle.of(context).style
         .merge(context.theme.typography.small);
     if (!isSerif) return style;
@@ -149,10 +151,7 @@ class RenderColumnText extends RenderBox {
   _Setting _set(double width) {
     if (width.isFinite) {
       const gutter = ThemeRepo.columnTextGutter;
-      final most = math.min(
-        ThemeRepo.columnTextMaxColumns,
-        ((width + gutter) / (ThemeRepo.columnTextMinWidth + gutter)).floor(),
-      );
+      final most = columnCountFor(width);
       for (var count = most; count >= 2; count--) {
         final columnWidth = (width - gutter * (count - 1)) / count;
         final painter = _painter()..layout(maxWidth: columnWidth);
@@ -249,6 +248,20 @@ class RenderColumnText extends RenderBox {
     _setting?.dispose();
     super.dispose();
   }
+}
+
+/// The most columns [width] holds at a comfortable measure, before the text
+/// has its say on whether it fills them. One at the least.
+int columnCountFor(double width) {
+  if (!width.isFinite) return 1;
+  const gutter = ThemeRepo.columnTextGutter;
+  return math.max(
+    1,
+    math.min(
+      ThemeRepo.columnTextMaxColumns,
+      ((width + gutter) / (ThemeRepo.columnTextMinWidth + gutter)).floor(),
+    ),
+  );
 }
 
 /// The run of one layout a column shows, from the top of its first line to
