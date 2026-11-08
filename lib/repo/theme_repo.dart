@@ -232,6 +232,13 @@ class ThemeRepo {
     horizontal: 5,
   );
 
+  /// Inside the upside tag on a tile: snug, so the tag sits on the symbol's
+  /// line without making it taller.
+  static const EdgeInsets upsideTagPadding = EdgeInsets.symmetric(
+    horizontal: 4,
+  );
+  static const double upsideTagFontSize = 10;
+
   /// Inside each half of a pill holding two counts: roomier than one count's
   /// badge, so the two halves read as two counts.
   static const EdgeInsets countPillPadding = EdgeInsets.symmetric(

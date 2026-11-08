@@ -2,16 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/data/quote/quote.dart';
+import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/data/valuation/discount_rate.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/browse/widgets/ticker_grid.dart';
+import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'support/test_directory.dart';
@@ -281,6 +285,58 @@ void main() {
     expect(tester.widget<Icon>(mark).icon, ValuationVerdict.undervalued.icon);
     expect(quotes.requested, contains('AAPL'));
   });
+  testWidgets(
+    'under an upside ordering the tile tags the upside it is ranked by',
+    (tester) async {
+      tester.view
+        ..physicalSize = _wideSize
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(const PickStockApp());
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      final browse = tester
+          .element(find.byType(TickerGrid))
+          .read<BrowseViewModel>();
+
+      for (var turn = 0; turn < 24; turn++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        );
+        await tester.pump(const Duration(milliseconds: 1500));
+      }
+      expect(find.byKey(tileVerdictKey(_apple.cik)), findsOneWidget);
+      // Ordered by name, the tile carries the verdict alone.
+      expect(find.byKey(tileUpsideKey(_apple.cik)), findsNothing);
+
+      final upside = tester
+          .element(find.byType(TickerGrid))
+          .read<ListValuationViewModel>()
+          .upsideFor(_apple.cik)!;
+      final format = GetIt.I.get<FormatRepo>();
+
+      for (final (sort, percent) in [
+        (BrowseSort.upsideToLowDescending, upside.toLow!),
+        (BrowseSort.upsideToHighAscending, upside.toHigh!),
+      ]) {
+        await tester.runAsync(() => browse.selectSort(sort));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        final tag = find.byKey(tileUpsideKey(_apple.cik));
+        expect(tag, findsOneWidget);
+        expect(
+          find.descendant(
+            of: tag,
+            matching: find.text(format.signedPercent(percent)),
+          ),
+          findsOneWidget,
+        );
+      }
+    },
+  );
 }
 
 /// A company rate that is always [percent], as a fetched one would be.

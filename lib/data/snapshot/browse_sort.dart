@@ -10,18 +10,38 @@ import 'package:pickstock/l10n/app_localizations.dart';
 /// cannot filter. The window now comes from the revenue growth filter
 /// ([RevenueGrowthFilter]), and ranking by revenue growth ranks over that
 /// same window, so the figure in each row is the one the filter tested.
+///
+/// The upside orderings rank by how far the price is from one end of the
+/// company's fair-value band, which is only known once the list valuation has
+/// priced the company: those not yet priced, or that cannot be valued, sit at
+/// the end in either direction.
 enum BrowseSort {
   name(),
   revenueGrowth(metric: GrowthMetric.revenue),
-  freeCashFlowOneYear(metric: GrowthMetric.freeCashFlow);
+  freeCashFlowOneYear(metric: GrowthMetric.freeCashFlow),
+  upsideToLowDescending(upsideBound: FairValueBound.low, isDescending: true),
+  upsideToLowAscending(upsideBound: FairValueBound.low),
+  upsideToHighDescending(upsideBound: FairValueBound.high, isDescending: true),
+  upsideToHighAscending(upsideBound: FairValueBound.high);
 
-  const BrowseSort({this.metric});
+  const BrowseSort({this.metric, this.upsideBound, this.isDescending = false});
 
-  /// `null` for [BrowseSort.name], which ranks on the name itself.
+  /// The growth rate ranked by, or `null` for orderings that rank on
+  /// something else.
   final GrowthMetric? metric;
+
+  /// The end of the fair-value band whose upside is ranked by, or `null` for
+  /// orderings that do not rank by upside.
+  final FairValueBound? upsideBound;
+
+  /// Whether an upside ordering puts the largest upside first.
+  final bool isDescending;
 
   /// Whether rows are ranked by a growth rate rather than alphabetically.
   bool get ranksByGrowth => metric != null;
+
+  /// Whether rows are ranked by their upside to a bound of the fair range.
+  bool get ranksByUpside => upsideBound != null;
 
   /// The figure each row shows under this ordering: a growth rate, or the
   /// latest revenue when the list is alphabetical.
@@ -42,8 +62,15 @@ enum BrowseSort {
     BrowseSort.name => strings.sortByName,
     BrowseSort.revenueGrowth => strings.sortRevenueGrowth,
     BrowseSort.freeCashFlowOneYear => strings.sortFreeCashFlowOneYear,
+    BrowseSort.upsideToLowDescending => strings.sortUpsideToLowDescending,
+    BrowseSort.upsideToLowAscending => strings.sortUpsideToLowAscending,
+    BrowseSort.upsideToHighDescending => strings.sortUpsideToHighDescending,
+    BrowseSort.upsideToHighAscending => strings.sortUpsideToHighAscending,
   };
 }
+
+/// One end of a company's fair-value band.
+enum FairValueBound { low, high }
 
 /// Narrows the directory to companies whose revenue grew over a window.
 ///

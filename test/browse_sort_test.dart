@@ -1,7 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/browse_sort.dart';
+import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/valuation/valuation_upside.dart';
+import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 
 import 'support/test_directory.dart';
@@ -125,5 +129,72 @@ void main() {
 
     expect(viewModel.results.every((c) => c.ticker.startsWith('BRK')), isTrue);
     expect(viewModel.resultCount, 2);
+  });
+
+  group('upside orderings', () {
+    String cikOf(String ticker) =>
+        viewModel.results.firstWhere((c) => c.ticker == ticker).cik;
+
+    /// Hands the view model upsides for AAPL, NVDA and MSFT, as the list
+    /// valuation would once it had priced them. BRK-A and the rest stay
+    /// unpriced.
+    void price() {
+      final upsides = {
+        cikOf('AAPL'): const ValuationUpside(toLow: 10, toHigh: 60),
+        cikOf('NVDA'): const ValuationUpside(toLow: -40, toHigh: 90),
+        cikOf('MSFT'): const ValuationUpside(toLow: 30, toHigh: 40),
+      };
+      viewModel.applyVerdicts(
+        {for (final cik in upsides.keys) cik: ValuationVerdict.fairlyValued},
+        1,
+        upsides: upsides,
+      );
+    }
+
+    List<String> priced() => viewModel.results
+        .map((Company c) => c.ticker)
+        .where((s) => const ['NVDA', 'AAPL', 'MSFT'].contains(s))
+        .toList();
+
+    test('rank by upside to the low bound, both ways', () async {
+      await viewModel.selectSort(BrowseSort.upsideToLowDescending);
+      price();
+      expect(priced(), ['MSFT', 'AAPL', 'NVDA']);
+      expect(viewModel.upsideFor(viewModel.results.first), 30);
+
+      await viewModel.selectSort(BrowseSort.upsideToLowAscending);
+      expect(priced(), ['NVDA', 'AAPL', 'MSFT']);
+    });
+
+    test('rank by upside to the high bound, both ways', () async {
+      await viewModel.selectSort(BrowseSort.upsideToHighDescending);
+      price();
+      expect(priced(), ['NVDA', 'AAPL', 'MSFT']);
+
+      await viewModel.selectSort(BrowseSort.upsideToHighAscending);
+      expect(priced(), ['MSFT', 'AAPL', 'NVDA']);
+    });
+
+    test('put unpriced companies last in either direction', () async {
+      for (final sort in [
+        BrowseSort.upsideToLowDescending,
+        BrowseSort.upsideToLowAscending,
+      ]) {
+        await viewModel.selectSort(sort);
+        price();
+        final tickers = viewModel.results.map((c) => c.ticker).toList();
+        expect(tickers.take(3).toSet(), {'NVDA', 'AAPL', 'MSFT'});
+        // The unpriced rest keep their alphabetical order.
+        final rest = viewModel.results.skip(3).map((c) => c.name.toLowerCase());
+        expect(rest, orderedEquals(rest.toList()..sort()));
+      }
+    });
+
+    test('ask for the whole list to be priced, and are not kept', () async {
+      expect(viewModel.verdictCandidates, isEmpty);
+      await viewModel.selectSort(BrowseSort.upsideToHighDescending);
+      expect(viewModel.verdictCandidates, hasLength(viewModel.resultCount));
+      expect(GetIt.I.get<SettingsRepo>().browseSort, BrowseSort.name);
+    });
   });
 }

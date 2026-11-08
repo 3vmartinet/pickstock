@@ -727,6 +727,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortFreeCashFlowOneYear => 'Free cash flow growth, 1 year';
 
   @override
+  String get sortUpsideToLowDescending => 'Upside to fair low, largest first';
+
+  @override
+  String get sortUpsideToLowAscending => 'Upside to fair low, smallest first';
+
+  @override
+  String get sortUpsideToHighDescending => 'Upside to fair high, largest first';
+
+  @override
+  String get sortUpsideToHighAscending => 'Upside to fair high, smallest first';
+
+  @override
   String get sectorTechnology => 'Tech';
 
   @override

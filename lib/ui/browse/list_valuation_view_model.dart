@@ -6,6 +6,7 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
+import 'package:pickstock/data/valuation/valuation_upside.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
@@ -61,6 +62,10 @@ class ListValuationViewModel extends ChangeNotifier {
 
   final Map<String, ValuationVerdict> _verdicts = {};
 
+  /// How far each judged company's price is from either end of its band,
+  /// which is what the upside orderings rank by.
+  final Map<String, ValuationUpside> _upsides = {};
+
   /// When each company was last priced or looked at, this session. The stored
   /// fetch time covers earlier sessions; this covers companies with no price
   /// to store, so a symbol the provider does not cover is not asked about on
@@ -83,7 +88,7 @@ class ListValuationViewModel extends ChangeNotifier {
   /// every rebuild does not start the sweep over.
   List<Company>? _sweepSource;
 
-  /// Bumped whenever a verdict changes, so a listener can tell a new verdict
+  /// Bumped whenever a verdict or an upside changes, so a listener can tell a new verdict
   /// from any other notification without comparing every one of them.
   int _revision = 0;
   int get revision => _revision;
@@ -107,6 +112,12 @@ class ListValuationViewModel extends ChangeNotifier {
   /// Every verdict known, by CIK. A view, not a copy: read it again after
   /// [revision] moves rather than holding on to what it said.
   Map<String, ValuationVerdict> get verdicts => UnmodifiableMapView(_verdicts);
+
+  /// The upside for [cik], or `null` until it is known.
+  ValuationUpside? upsideFor(String cik) => _upsides[cik];
+
+  /// Every upside known, by CIK. A view, like [verdicts].
+  Map<String, ValuationUpside> get upsides => UnmodifiableMapView(_upsides);
 
   /// Whether tiles can be priced at all, which is what the verdict filter
   /// needs to be offered.
@@ -147,23 +158,21 @@ class ListValuationViewModel extends ChangeNotifier {
     unawaited(_work());
   }
 
-  /// Takes the report's [verdict] for [cik] as the tile's own.
+  /// Takes the report's [verdict] for [cik] as the tile's own, and its
+  /// [upside] with it when the report has one.
   ///
   /// The report judges with the company's own discount rate, where the list
   /// makes do with a cached or assumed one. Without this, a tile would show
   /// the report's verdict while selected and fall back to its own, possibly
   /// different, the moment another tile was picked.
-  void adopt(String cik, ValuationVerdict verdict) {
+  void adopt(String cik, ValuationVerdict verdict, {ValuationUpside? upside}) {
     if (_isDisposed) return;
     final now = DateTime.now();
     _reportedAt[cik] = now;
     // Nothing to price that the report has not just priced better.
     _lastAsked[cik] = now;
     _queue.removeWhere((company) => company.cik == cik);
-    if (_verdicts[cik] == verdict) return;
-    _verdicts[cik] = verdict;
-    _revision++;
-    notifyListeners();
+    _record(cik, verdict, upside ?? _upsides[cik]);
   }
 
   /// Prices every company in [candidates] that has no verdict yet, after
@@ -336,16 +345,27 @@ class ListValuationViewModel extends ChangeNotifier {
     if (reportedAt != null && !reportedAt.isBefore(startedAt)) {
       return !wasHeld;
     }
-    final verdict = Valuation(
+    final valuation = Valuation(
       snapshot: snapshot,
       pricePerShare: quote.pricePerShare,
       discountRatePercent: rate?.percent,
-    ).verdict;
-    if (_verdicts[company.cik] == verdict) return !wasHeld;
-    _verdicts[company.cik] = verdict;
+    );
+    _record(company.cik, valuation.verdict, ValuationUpside.of(valuation));
+    return !wasHeld;
+  }
+
+  /// Keeps [verdict] and [upside] for [cik], and tells listeners if either
+  /// changed.
+  void _record(String cik, ValuationVerdict verdict, ValuationUpside? upside) {
+    if (_verdicts[cik] == verdict && _upsides[cik] == upside) return;
+    _verdicts[cik] = verdict;
+    if (upside == null) {
+      _upsides.remove(cik);
+    } else {
+      _upsides[cik] = upside;
+    }
     _revision++;
     notifyListeners();
-    return !wasHeld;
   }
 
   void _notify() {

@@ -8,6 +8,7 @@ import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/snapshot/sic_industry.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
+import 'package:pickstock/data/valuation/valuation_upside.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
@@ -254,41 +255,96 @@ class BrowseViewModel extends ChangeNotifier {
 
   /// The verdicts known so far, by CIK, pushed in by [applyVerdicts].
   Map<String, ValuationVerdict> _verdicts = const {};
+
+  /// The upsides known so far, by CIK, pushed in with the verdicts.
+  Map<String, ValuationUpside> _upsides = const {};
   int _verdictRevision = -1;
 
-  /// Takes the list valuation's latest verdicts, which is what the verdict
-  /// filter tests against.
+  /// Takes the list valuation's latest verdicts and upsides, which is what
+  /// the verdict filter tests against and the upside orderings rank by.
   ///
   /// Pushed in for the same reason as [applyWatchlist]: the two view models
-  /// are siblings. Cheap when nothing changed, and with the filter off it
-  /// only remembers them.
-  void applyVerdicts(Map<String, ValuationVerdict> verdicts, int revision) {
+  /// are siblings. Cheap when nothing changed, and with neither the filter
+  /// nor an upside ordering in force it only remembers them.
+  void applyVerdicts(
+    Map<String, ValuationVerdict> verdicts,
+    int revision, {
+    Map<String, ValuationUpside> upsides = const {},
+  }) {
     if (revision == _verdictRevision) return;
     _verdictRevision = revision;
     _verdicts = verdicts;
-    if (_verdictFilter == null) return;
-    _applyVerdictFilter();
+    _upsides = upsides;
+    if (_verdictFilter == null && !_sort.ranksByUpside) return;
+    _rankByUpside();
     // Pushed in from a build, like the watchlist.
     scheduleMicrotask(notifyListeners);
   }
 
-  /// The list as every other filter leaves it, before the verdict filter.
+  /// The list as every other filter leaves it, before the verdict filter and
+  /// before any ranking by upside.
   List<Company> _unjudged = const [];
 
-  /// The companies the verdict filter is choosing among, for the list
-  /// valuation to price; empty with the filter off.
+  /// [_unjudged] in the chosen order: the same list unless an upside
+  /// ordering is in force.
+  List<Company> _ordered = const [];
+
+  /// The companies the list valuation should price ahead of their tiles
+  /// showing: those the verdict filter is choosing among, or those an upside
+  /// ordering is ranking. Empty with neither in force.
   ///
   /// The same list until another filter changes it, however many verdicts
   /// land, so whoever hands it on can tell a new list from the same one.
   List<Company> get verdictCandidates =>
-      _verdictFilter == null ? const [] : _unjudged;
+      _verdictFilter == null && !_sort.ranksByUpside ? const [] : _unjudged;
+
+  /// The upside [company] is ranked by under the current ordering, or `null`
+  /// when it is not known or the ordering is not by upside.
+  double? upsideFor(Company company) {
+    final upside = _upsides[company.cik];
+    return switch (_sort.upsideBound) {
+      null => null,
+      FairValueBound.low => upside?.toLow,
+      FairValueBound.high => upside?.toHigh,
+    };
+  }
+
+  /// Orders [_unjudged] by upside under an upside ordering, then applies the
+  /// verdict filter to the result.
+  ///
+  /// Companies with no upside to rank by sit at the end in either
+  /// direction, alphabetically as [_unjudged] already has them: an unpriced
+  /// company is not one with no upside, and ranking it at zero would place
+  /// it among the companies priced right at the bound.
+  void _rankByUpside() {
+    if (!_sort.ranksByUpside) {
+      _ordered = _unjudged;
+    } else {
+      final descending = _sort.isDescending;
+      final known = <Company>[];
+      final unknown = <Company>[];
+      for (final company in _unjudged) {
+        (upsideFor(company) == null ? unknown : known).add(company);
+      }
+      // A stable sort, so ties keep the alphabetical order they came in.
+      mergeSort(
+        known,
+        compare: (a, b) {
+          final order = upsideFor(a)!.compareTo(upsideFor(b)!);
+          return descending ? -order : order;
+        },
+      );
+      _ordered = [...known, ...unknown];
+    }
+    _applyVerdictFilter();
+  }
 
   void _applyVerdictFilter() {
     final verdict = _verdictFilter;
     _results = verdict == null
-        ? _unjudged
+        ? _ordered
         : [
-            for (final company in _unjudged)
+            for (final company in _ordered)
               if (_verdicts[company.cik] == verdict) company,
           ];
   }
@@ -321,7 +377,11 @@ class BrowseViewModel extends ChangeNotifier {
   Future<void> selectSort(BrowseSort sort) async {
     if (sort == _sort) return;
     _sort = sort;
-    unawaited(_settingsRepo.setBrowseSort(sort));
+    // An upside ordering is not kept across launches, for the reason the
+    // verdict filter is not: it has the list valuation price every company
+    // in the list, and a list opening already ranked by it would start
+    // spending the quote budget before anyone asked it to.
+    if (!sort.ranksByUpside) unawaited(_settingsRepo.setBrowseSort(sort));
     // The window changes with the ordering, so the samples do too.
     await _loadSamples();
   }
@@ -554,7 +614,7 @@ class BrowseViewModel extends ChangeNotifier {
       // Case-insensitive, so `abc Corp` and `ABC Corp` sit together.
       _unjudged = matches.toList()
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      _applyVerdictFilter();
+      _rankByUpside();
       return;
     }
 
@@ -571,7 +631,7 @@ class BrowseViewModel extends ChangeNotifier {
         if (right == null) return -1;
         return right.compareTo(left);
       });
-    _applyVerdictFilter();
+    _rankByUpside();
   }
 
   @override

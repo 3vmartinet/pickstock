@@ -1060,6 +1060,30 @@ abstract class AppLocalizations {
   /// **'Free cash flow growth, 1 year'**
   String get sortFreeCashFlowOneYear;
 
+  /// No description provided for @sortUpsideToLowDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Upside to fair low, largest first'**
+  String get sortUpsideToLowDescending;
+
+  /// No description provided for @sortUpsideToLowAscending.
+  ///
+  /// In en, this message translates to:
+  /// **'Upside to fair low, smallest first'**
+  String get sortUpsideToLowAscending;
+
+  /// No description provided for @sortUpsideToHighDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Upside to fair high, largest first'**
+  String get sortUpsideToHighDescending;
+
+  /// No description provided for @sortUpsideToHighAscending.
+  ///
+  /// In en, this message translates to:
+  /// **'Upside to fair high, smallest first'**
+  String get sortUpsideToHighAscending;
+
   /// No description provided for @sectorTechnology.
   ///
   /// In en, this message translates to:

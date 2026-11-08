@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/research/framework_score.dart';
+import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/valuation/valuation_upside.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
+import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
@@ -22,6 +25,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
+FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
 /// The directory itself: ten thousand-odd symbols, laid out in as many columns
 /// as the window allows.
@@ -308,7 +312,11 @@ class _VerdictMark extends StatelessWidget {
     if (reported != null &&
         reported != ValuationVerdict.unknown &&
         reported != listed) {
-      scheduleMicrotask(() => listValuation.adopt(company.cik, reported));
+      final valuation = context.read<SnapshotViewModel>().valuation;
+      final upside = valuation == null ? null : ValuationUpside.of(valuation);
+      scheduleMicrotask(
+        () => listValuation.adopt(company.cik, reported, upside: upside),
+      );
     }
     final verdict = reported ?? listed;
     if (verdict == null) {
@@ -321,11 +329,69 @@ class _VerdictMark extends StatelessWidget {
     }
     if (verdict == ValuationVerdict.unknown) return const SizedBox.shrink();
 
-    return Icon(
+    final icon = Icon(
       key: tileVerdictKey(company.cik),
       verdict.icon,
       color: _themeRepo.forOutcome(context.theme, isGood: verdict.isGood),
     ).iconXSmall();
+
+    // Under an upside ordering the tile says the figure it is ranked by, so
+    // the order down the column can be read off the tiles.
+    final bound = context.select<BrowseViewModel, FairValueBound?>(
+      (viewModel) => viewModel.sort.upsideBound,
+    );
+    if (bound == null) return icon;
+    final upside = context.select<ListValuationViewModel, double?>((viewModel) {
+      final upside = viewModel.upsideFor(company.cik);
+      return bound == FairValueBound.low ? upside?.toLow : upside?.toHigh;
+    });
+    if (upside == null) return icon;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      // Further from the icon than the icon is from the symbol, so the tag
+      // reads as its own mark rather than as part of the verdict.
+      spacing: ThemeRepo.spaceSmall,
+      children: [
+        icon,
+        _UpsideTag(key: tileUpsideKey(company.cik), percent: upside),
+      ],
+    );
+  }
+}
+
+/// The upside tag on one company's tile.
+Key tileUpsideKey(String cik) => ValueKey('tileUpside-$cik');
+
+/// How far the price is from the bound the list is ranked by, as a small
+/// tag beside the verdict: filled green where the bound is above the price,
+/// red where it is below, with the figure in the page's background colour so
+/// it reads as a mark rather than as one more line of text on the tile.
+class _UpsideTag extends StatelessWidget {
+  const _UpsideTag({super.key, required this.percent});
+
+  final double percent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _themeRepo.forOutcome(theme, isGood: percent > 0),
+        borderRadius: theme.borderRadiusSm,
+      ),
+      child: Padding(
+        padding: ThemeRepo.upsideTagPadding,
+        child: Text(
+          _formatRepo.signedPercent(percent),
+          style: TextStyle(
+            fontSize: ThemeRepo.upsideTagFontSize,
+            height: 1.2,
+            color: theme.colorScheme.background,
+          ),
+        ).mono().semiBold().singleLine(),
+      ),
+    );
   }
 }
 

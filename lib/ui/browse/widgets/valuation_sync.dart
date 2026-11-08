@@ -4,11 +4,13 @@ import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Keeps the verdict filter and the list valuation in step.
+/// Keeps the verdict filter, the upside orderings and the list valuation in
+/// step.
 ///
-/// Two ways: the verdicts go into the browse model, which filters by them,
-/// and the companies the filter is choosing among go into the list
-/// valuation, which prices the ones not yet judged. The two view models are
+/// Two ways: the verdicts and upsides go into the browse model, which
+/// filters and ranks by them, and the companies the filter is choosing among
+/// or the ordering is ranking go into the list valuation, which prices the
+/// ones not yet judged. The two view models are
 /// siblings, so this sits where both are visible, as the watchlist's sync
 /// does.
 class ValuationSync extends StatelessWidget {
@@ -24,7 +26,11 @@ class ValuationSync extends StatelessWidget {
     final revision = context.select<ListValuationViewModel, int>(
       (viewModel) => viewModel.revision,
     );
-    browse.applyVerdicts(listValuation.verdicts, revision);
+    browse.applyVerdicts(
+      listValuation.verdicts,
+      revision,
+      upsides: listValuation.upsides,
+    );
 
     final candidates = context.select<BrowseViewModel, List<Company>>(
       (viewModel) => viewModel.verdictCandidates,
