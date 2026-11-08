@@ -1372,18 +1372,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{valuing 1 more…} other{valuing {count} more…}}'**
   String browseValuingMore(int count);
 
-  /// No description provided for @verdictFilterWaitingTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No matches yet'**
-  String get verdictFilterWaitingTitle;
-
-  /// No description provided for @verdictFilterWaitingBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Valuing the rest of the list. Companies appear here as their prices come in.'**
-  String get verdictFilterWaitingBody;
-
   /// No description provided for @verdictFilterNoneTitle.
   ///
   /// In en, this message translates to:

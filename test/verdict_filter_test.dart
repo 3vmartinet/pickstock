@@ -139,10 +139,13 @@ void main() {
       expect(viewModel.sweepRemaining, 1);
       // Waiting in the sweep is not pending: there is no tile to animate.
       expect(viewModel.isPending(_nvidia.cik), isFalse);
+      expect(viewModel.isSweeping, isTrue);
 
       await until(
         () => viewModel.sweepRemaining == 0 && quotes.requested.length == 2,
       );
+      // Under way until the last of them has been priced, not just taken.
+      await until(() => !viewModel.isSweeping);
 
       expect(quotes.requested, ['AAPL', 'NVDA']);
       expect(viewModel.verdictFor(_apple.cik), ValuationVerdict.undervalued);
@@ -227,6 +230,8 @@ void main() {
       find.byKey(verdictFilterKey(ValuationVerdict.undervalued)),
     );
     await tester.pump();
+    // More matches may come in while the rest of the list is priced.
+    expect(find.byKey(tilePlaceholderKey(0)), findsOneWidget);
 
     // The database answers in real time and the mock filings on the fake
     // clock, so the two are let run turn about until the prices are in.
@@ -239,6 +244,8 @@ void main() {
 
     expect(inGrid('AAPL'), findsOneWidget);
     expect(inGrid('MSFT'), findsNothing);
+    // Priced through, so nothing more is coming.
+    expect(find.byKey(tilePlaceholderKey(0)), findsNothing);
 
     await tester.tap(
       find.byKey(verdictFilterKey(ValuationVerdict.undervalued)),

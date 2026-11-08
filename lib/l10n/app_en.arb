@@ -281,8 +281,6 @@
   "@verdictFilterClear": { "placeholders": { "verdict": { "type": "String" } } },
   "browseValuingMore": "{count, plural, =1{valuing 1 more…} other{valuing {count} more…}}",
   "@browseValuingMore": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
-  "verdictFilterWaitingTitle": "No matches yet",
-  "verdictFilterWaitingBody": "Valuing the rest of the list. Companies appear here as their prices come in.",
   "verdictFilterNoneTitle": "No matches",
   "verdictFilterNoneBody": "No company in this list matches that valuation at current prices.",
   "backToList": "Back to the list",

@@ -91,6 +91,9 @@ class ListValuationViewModel extends ChangeNotifier {
   /// The company being priced right now, if any.
   String? _inFlight;
 
+  /// Whether [_inFlight] was taken from the [sweep] rather than a tile.
+  bool _isInFlightFromSweep = false;
+
   bool _isWorking = false;
   bool _isDisposed = false;
 
@@ -111,6 +114,11 @@ class ListValuationViewModel extends ChangeNotifier {
 
   /// How many companies of the [sweep] are still to be looked at.
   int get sweepRemaining => _sweep.length - _sweepNext;
+
+  /// Whether the [sweep] is still under way: companies left to look at, or
+  /// the last of them being priced now. What the filtered list shows its
+  /// placeholder tiles for, since more matches may yet come in.
+  bool get isSweeping => sweepRemaining > 0 || _isInFlightFromSweep;
 
   /// Whether [cik] is waiting to be priced or being priced, which is what the
   /// tile animates while it has no verdict to show yet.
@@ -211,11 +219,13 @@ class ListValuationViewModel extends ChangeNotifier {
         _lastAsked[company.cik] = DateTime.now();
 
         _inFlight = company.cik;
+        _isInFlightFromSweep = fromSweep;
         final outcome = await _price(
           company,
           startedAt: _lastAsked[company.cik]!,
         );
         _inFlight = null;
+        _isInFlightFromSweep = false;
         if (_isDisposed) return;
         // Pending no longer, whether or not a verdict came of it — a symbol
         // with no price still has to stop animating.

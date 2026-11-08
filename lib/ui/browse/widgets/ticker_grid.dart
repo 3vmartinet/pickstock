@@ -66,7 +66,17 @@ class _TickerGridState extends State<TickerGrid> {
       (viewModel) => viewModel.results,
     );
     context.read<ListValuationViewModel>().retainWithin(results);
-    if (count == 0) return const _NoMatches();
+    // Narrowed to a verdict while the rest of the list is still being priced,
+    // the matches so far are not all there will be. Placeholder tiles after
+    // them say so, until the last of the candidates has been judged.
+    final isFilteredByVerdict = context.select<BrowseViewModel, bool>(
+      (viewModel) => viewModel.verdictFilter != null,
+    );
+    final isSweeping = context.select<ListValuationViewModel, bool>(
+      (viewModel) => viewModel.isSweeping,
+    );
+    final isValuing = isFilteredByVerdict && isSweeping;
+    if (count == 0 && !isValuing) return const _NoMatches();
 
     // The tile's shape depends on how many fit across, so the width has to be
     // known before the delegate is built.
@@ -79,6 +89,12 @@ class _TickerGridState extends State<TickerGrid> {
         // between two of them, not by the width alone.
         const stride = ThemeRepo.tickerTileMaxWidth + ThemeRepo.spaceSmall;
         final columns = (available / stride).ceil();
+        // Enough to finish the row the matches end on and fill a few more,
+        // so the list keeps its grid while it waits.
+        final placeholders = isValuing
+            ? (columns - count % columns) % columns +
+                  columns * ThemeRepo.tickerPlaceholderRows
+            : 0;
 
         return GridView.builder(
           controller: _controller,
@@ -91,8 +107,10 @@ class _TickerGridState extends State<TickerGrid> {
             crossAxisSpacing: ThemeRepo.spaceSmall,
             mainAxisSpacing: ThemeRepo.spaceSmall,
           ),
-          itemCount: count,
-          itemBuilder: (context, index) => _TickerTile(index),
+          itemCount: count + placeholders,
+          itemBuilder: (context, index) => index < count
+              ? _TickerTile(index)
+              : _PlaceholderTile(key: tilePlaceholderKey(index - count)),
         );
       },
     );
@@ -200,6 +218,52 @@ class _TickerTile extends StatelessWidget {
               )
             : value,
         child: tile,
+      ),
+    );
+  }
+}
+
+/// One of the placeholder tiles after a verdict-filtered list still being
+/// priced, by its position among them.
+Key tilePlaceholderKey(int index) => ValueKey('tilePlaceholder-$index');
+
+/// A tile-shaped stand-in for a match that may yet come in: the outline of a
+/// tile, with the symbol and name greyed out and shimmering, as the report
+/// does while it loads.
+///
+/// The outline stays out of the skeleton so the placeholder keeps the
+/// tile's edge; only what would be text shimmers.
+class _PlaceholderTile extends StatelessWidget {
+  const _PlaceholderTile({super.key});
+
+  /// Never legible, but it gives the bones their line lengths.
+  static const String _ticker = 'TICK';
+  static const String _name = 'Placeholder company name';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: theme.colorScheme.border),
+          borderRadius: theme.borderRadiusMd,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: ThemeRepo.spaceMedium,
+            vertical: ThemeRepo.spaceSmall,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: ThemeRepo.spaceXSmall,
+            children: [
+              const Text(_ticker).mono().small().semiBold().singleLine(),
+              const Text(_name, maxLines: 1).muted().xSmall(),
+            ],
+          ).asSkeleton(),
+        ),
       ),
     );
   }
@@ -388,25 +452,19 @@ class _NoMatches extends StatelessWidget {
     final listName = context.select<WatchlistViewModel, String?>(
       (viewModel) => viewModel.selected?.name,
     );
-    // Narrowed to a verdict, an empty list is either still being priced or
-    // priced and short of matches; neither is a failed search.
+    // Narrowed to a verdict and priced through, an empty list is short of
+    // matches, not a failed search. While it is still being priced the grid
+    // shows placeholder tiles instead of this.
     final byVerdict = context.select<BrowseViewModel, bool>(
       (viewModel) =>
           viewModel.verdictFilter != null &&
           viewModel.verdictCandidates.isNotEmpty,
     );
-    final isValuing = context.select<ListValuationViewModel, bool>(
-      (viewModel) => viewModel.sweepRemaining > 0,
-    );
     if (byVerdict) {
       return _EmptyMessage(
-        icon: isValuing ? LucideIcons.hourglass : LucideIcons.searchX,
-        title: isValuing
-            ? context.strings.verdictFilterWaitingTitle
-            : context.strings.verdictFilterNoneTitle,
-        body: isValuing
-            ? context.strings.verdictFilterWaitingBody
-            : context.strings.verdictFilterNoneBody,
+        icon: LucideIcons.searchX,
+        title: context.strings.verdictFilterNoneTitle,
+        body: context.strings.verdictFilterNoneBody,
       );
     }
 

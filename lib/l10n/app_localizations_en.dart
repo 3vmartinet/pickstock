@@ -961,13 +961,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get verdictFilterWaitingTitle => 'No matches yet';
-
-  @override
-  String get verdictFilterWaitingBody =>
-      'Valuing the rest of the list. Companies appear here as their prices come in.';
-
-  @override
   String get verdictFilterNoneTitle => 'No matches';
 
   @override

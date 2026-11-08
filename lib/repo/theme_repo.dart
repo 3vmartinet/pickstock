@@ -360,6 +360,10 @@ class ThemeRepo {
   /// finish.
   static const double tickerTileWideAspectRatio = 3;
 
+  /// Whole rows of placeholder tiles after a verdict-filtered list that is
+  /// still being priced, beyond whatever finishes the last row of matches.
+  static const int tickerPlaceholderRows = 2;
+
   static const int tickerNameMaxLines = 2;
 
   /// The app bar's vertical padding. Setting the gutter means setting both
