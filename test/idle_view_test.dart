@@ -63,8 +63,23 @@ void main() {
     // Each again in its own sector, in the filter's order: tech, then
     // finance, which holds Berkshire alone.
     expect(find.text('Largest by sector'), findsOneWidget);
-    expect(find.text('Tech'), findsWidgets);
-    expect(find.text('Finance'), findsWidgets);
+    // Tagged with their sector in the overall ranking only: three tech tags
+    // and one finance tag there, none in the sector rankings below, which
+    // would double them.
+    expect(
+      find.descendant(
+        of: find.byType(OutlineBadge),
+        matching: find.text('Tech'),
+      ),
+      findsNWidgets(3),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(OutlineBadge),
+        matching: find.text('Finance'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text(r'$4.45T'), findsNWidgets(2));
     expect(find.text(r'$1.08T'), findsNWidgets(2));
     // Berkshire trades only under share classes, so the first of them.

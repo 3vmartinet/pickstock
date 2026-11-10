@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -224,7 +225,9 @@ class _MarketLeaders extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: ThemeRepo.spaceSmall,
         children: [
-          _LeaderTable(leaders: leaders),
+          // Sectors tagged here only: the rankings below are each one sector
+          // already, and say so in their heading.
+          _LeaderTable(leaders: leaders, showsSector: true),
           if (newest != null)
             Text(
               context.strings.idleLeadersNote(_formatRepo.timeOrDate(newest)),
@@ -280,9 +283,12 @@ class _SectorLeaders extends StatelessWidget {
 /// A ranking in a bordered table, each row with a bar for its size against
 /// the first. Placeholder rows while [leaders] is still empty.
 class _LeaderTable extends StatelessWidget {
-  const _LeaderTable({required this.leaders});
+  const _LeaderTable({required this.leaders, this.showsSector = false});
 
   final List<MarketLeader> leaders;
+
+  /// Whether each row carries its company's sector as a tag.
+  final bool showsSector;
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +301,7 @@ class _LeaderTable extends StatelessWidget {
                 rank: index + 1,
                 leader: leader,
                 share: leader.marketCap / leaders.first.marketCap,
+                showsSector: showsSector,
               ),
           ];
 
@@ -324,6 +331,7 @@ class _LeaderRow extends StatelessWidget {
     required this.rank,
     required this.leader,
     required this.share,
+    required this.showsSector,
   });
 
   final int rank;
@@ -331,6 +339,8 @@ class _LeaderRow extends StatelessWidget {
 
   /// This company's market value as a fraction of the largest one's.
   final double share;
+
+  final bool showsSector;
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +365,20 @@ class _LeaderRow extends StatelessWidget {
                   .semiBold()
                   .singleLine(),
             ),
-            Expanded(child: Text(company.name).small().singleLine().ellipsis()),
+            Expanded(
+              child: Row(
+                spacing: ThemeRepo.spaceSmall,
+                children: [
+                  // The name gives way before the tag does: a cut name is
+                  // still recognisable beside its ticker, a cut tag is not.
+                  Flexible(
+                    child: Text(company.name).small().singleLine().ellipsis(),
+                  ),
+                  if (leader.sector case final sector? when showsSector)
+                    _SectorTag(sector),
+                ],
+              ),
+            ),
             if (constraints.maxWidth >= _barMinRowWidth) _ShareBar(share),
             SizedBox(
               width: _capWidth,
@@ -369,6 +392,21 @@ class _LeaderRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A company's sector, as the sector filter names and draws it.
+class _SectorTag extends StatelessWidget {
+  const _SectorTag(this.sector);
+
+  final SicSector sector;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlineBadge(
+      leading: Icon(sector.icon).iconXSmall(),
+      child: Text(sector.getLabel(context.strings)).singleLine(),
     );
   }
 }
