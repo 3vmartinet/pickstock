@@ -24,9 +24,6 @@ class ScriptedQuoteRepo implements QuoteRepo {
   Duration get timeUntilSlot => Duration.zero;
 
   @override
-  bool claimCall() => true;
-
-  @override
   void reserveForJob() => reserved = true;
 
   @override

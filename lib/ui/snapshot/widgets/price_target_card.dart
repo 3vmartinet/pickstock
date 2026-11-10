@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
-import 'package:pickstock/data/valuation/discount_rate.dart';
 import 'package:pickstock/data/valuation/growth_expectation.dart';
 import 'package:pickstock/data/valuation/price_case_extensions.dart';
 import 'package:pickstock/data/valuation/price_target.dart';
@@ -39,14 +38,7 @@ class PriceTargetCard extends StatelessWidget {
     );
     if (expectation == null || shares == null) return const SizedBox.shrink();
 
-    final rate = context.select<SnapshotViewModel, DiscountRate?>(
-      (viewModel) => viewModel.discountRate,
-    );
-    final targets = expectation.priceTargets(
-      shares,
-      discountRate:
-          (rate?.percent ?? CashFlowModel.defaultDiscountRate * 100) / 100,
-    );
+    final targets = expectation.priceTargets(shares);
     if (targets.isEmpty) return const SizedBox.shrink();
 
     final price = context.select<SnapshotViewModel, double?>(
@@ -68,14 +60,9 @@ class PriceTargetCard extends StatelessWidget {
                 _Target(target: target, price: price),
             ],
           ),
-          _RateLine(rate: rate),
+          const _RateLine(),
           const Divider(),
-          _Working(
-            expectation: expectation,
-            shares: shares,
-            targets: targets,
-            rate: rate,
-          ),
+          _Working(expectation: expectation, shares: shares, targets: targets),
         ],
       ),
     );
@@ -122,16 +109,13 @@ class _Working extends StatelessWidget {
     required this.expectation,
     required this.shares,
     required this.targets,
-    required this.rate,
   });
 
   final GrowthExpectation expectation;
   final double shares;
   final List<PriceTarget> targets;
-  final DiscountRate? rate;
 
-  double get _discountPercent =>
-      rate?.percent ?? CashFlowModel.defaultDiscountRate * 100;
+  double get _discountPercent => CashFlowModel.defaultDiscountRate * 100;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +166,7 @@ class _Working extends StatelessWidget {
           percent(CashFlowModel.terminalGrowth * 100),
           percent(_discountPercent),
           // Worked out rather than written into the copy, so the example
-          // still holds at whatever rate this company is discounted at.
+          // follows the rate if it is ever changed.
           _formatRepo.price(
             1 / math.pow(1 + _discountPercent / 100, CashFlowModel.horizon),
           ),
@@ -240,137 +224,46 @@ class _Step extends StatelessWidget {
   }
 }
 
-/// The rate the targets were discounted at, and where it came from.
+/// The rate the targets were discounted at, and why it is the one it is.
 ///
 /// A line, not a paragraph: the rate itself with an information mark beside
-/// it, and the arithmetic behind it only for a reader who asks. The rate is
-/// the most consequential number on the card and the one nobody wants a
-/// lecture about.
+/// it, and the reasoning only for a reader who asks. The rate is the most
+/// consequential number on the card and the one nobody wants a lecture about.
 class _RateLine extends StatelessWidget {
-  const _RateLine({required this.rate});
-
-  final DiscountRate? rate;
+  const _RateLine();
 
   @override
   Widget build(BuildContext context) {
     final strings = context.strings;
     final percent = _formatRepo.percent(
-      rate?.percent ?? CashFlowModel.defaultDiscountRate * 100,
+      CashFlowModel.defaultDiscountRate * 100,
     );
 
     return Tooltip(
-      tooltip: (_) => _RateBreakdown(rate: rate),
+      tooltip: (_) => TooltipContainer(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: ThemeRepo.tooltipMaxWidth,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            spacing: ThemeRepo.spaceSmall,
+            children: [
+              Text(strings.targetsRateWhat).xSmall(),
+              Text(strings.targetsRateAssumedWhy).muted().xSmall(),
+            ],
+          ),
+        ),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         spacing: ThemeRepo.spaceXSmall,
         children: [
-          Text(
-            rate == null
-                ? strings.targetsRateAssumed(percent)
-                : strings.targetsRateComputed(percent),
-          ).muted().xSmall(),
+          Text(strings.targetsRateAssumed(percent)).muted().xSmall(),
           const Icon(LucideIcons.info).iconXSmall().iconMutedForeground(),
         ],
       ),
-    );
-  }
-}
-
-/// The rate broken into its parts, as a small table rather than prose.
-class _RateBreakdown extends StatelessWidget {
-  const _RateBreakdown({required this.rate});
-
-  final DiscountRate? rate;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = context.strings;
-    final percent = _formatRepo.percent;
-    final held = rate;
-
-    return TooltipContainer(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: ThemeRepo.tooltipMaxWidth),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          spacing: ThemeRepo.spaceSmall,
-          children: [
-            Text(strings.targetsRateWhat).xSmall(),
-            if (held == null)
-              Text(strings.targetsRateAssumedWhy).muted().xSmall()
-            else ...[
-              const Divider(),
-              _RatePart(
-                label: strings.targetsRateRiskFree,
-                value: percent(held.riskFreePercent),
-                note: strings.targetsRateRiskFreeNote(
-                  _formatRepo.shortDate(held.asOf),
-                ),
-              ),
-              _RatePart(
-                label: strings.targetsRateBeta,
-                value: _formatRepo.ratio(held.beta),
-                note: strings.targetsRateBetaNote,
-              ),
-              _RatePart(
-                label: strings.targetsRatePremium,
-                value: percent(equityRiskPremium),
-                note: strings.targetsRatePremiumNote,
-              ),
-              const Divider(),
-              _RatePart(
-                label: strings.targetsRateTotal,
-                value: percent(held.percent),
-                emphasised: true,
-              ),
-              if (held.isCapped)
-                Text(strings.targetsRateCapped(percent(held.uncappedPercent)))
-                    .muted()
-                    .xSmall(),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One line of the breakdown: what it is, what it is worth, and — small and
-/// muted under it — what it means.
-class _RatePart extends StatelessWidget {
-  const _RatePart({
-    required this.label,
-    required this.value,
-    this.note,
-    this.emphasised = false,
-  });
-
-  final String label;
-  final String value;
-  final String? note;
-  final bool emphasised;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          spacing: ThemeRepo.spaceMedium,
-          children: [
-            Expanded(
-              child: emphasised
-                  ? Text(label).xSmall().semiBold()
-                  : Text(label).xSmall(),
-            ),
-            emphasised
-                ? Text(value).xSmall().semiBold()
-                : Text(value).mono().xSmall(),
-          ],
-        ),
-        if (note case final text?) Text(text).muted().xSmall(),
-      ],
     );
   }
 }

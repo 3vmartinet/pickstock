@@ -566,6 +566,13 @@ class AppDatabase extends _$AppDatabase {
       // are no use to anyone, and the archive it was reading is still staged.
       await dropShadowTables();
       await _discardPricesQuotedPerSymbol();
+      // Betas and the Treasury yield an earlier build kept for a required
+      // return built per company. Every company is valued at one fixed
+      // return now, so the rows are dead weight; cheap enough to run on
+      // every open rather than flag.
+      await customStatement(
+        "DELETE FROM settings WHERE key LIKE 'marketRates.%'",
+      );
     },
   );
 

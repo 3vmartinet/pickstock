@@ -23,8 +23,6 @@ import 'package:pickstock/repo/research/framework_prompts.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
-import 'package:pickstock/data/valuation/discount_rate.dart';
-import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -39,7 +37,6 @@ PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 OllamaRepo get _researchRepo => GetIt.I.get<OllamaRepo>();
 ResearchNoteRepo get _noteRepo => GetIt.I.get<ResearchNoteRepo>();
-MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
 ResearchQueue get _queue => GetIt.I.get<ResearchQueue>();
 SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 
@@ -968,28 +965,6 @@ class SnapshotViewModel extends ChangeNotifier {
   /// How many rows the history section shows.
   int get historyRowCount => historyRows.length;
 
-  DiscountRate? _discountRate;
-
-  /// The company's own required return, where both figures behind it could be
-  /// reached. `null` leaves the report on its assumed rate, which is what an
-  /// offline or keyless build gets.
-  ///
-  /// Fetched beside the figures rather than with them: it comes from two
-  /// providers that have nothing to do with EDGAR, and a report should appear
-  /// whether or not either answers.
-  DiscountRate? get discountRate => _discountRate;
-
-  Future<void> _loadDiscountRate(Company company, int generation) async {
-    // Under the common share's symbol, like the quote: a preferred share's
-    // beta is not the equity's.
-    final rate = await _marketRatesRepo.rateFor(
-      _directory.quoteSymbolFor(company),
-    );
-    if (generation != _requestGeneration) return;
-    _discountRate = rate;
-    notifyListeners();
-  }
-
   Quote? _quote;
 
   /// The price on screen and where it came from, or `null` while none is known.
@@ -1173,7 +1148,6 @@ class SnapshotViewModel extends ChangeNotifier {
       // after another with the same question in mind, and re-picking the same
       // tab for each of them was the cost of starting every one on the
       // overview.
-      _discountRate = null;
       // Cleared before the figures appear: until this company's own price is
       // read back, the last company's would value these figures, and its
       // verdict would flash up on the tile and the valuation tab.
@@ -1197,7 +1171,6 @@ class SnapshotViewModel extends ChangeNotifier {
       // screen: it cost a minute each to get and nothing about it has gone
       // stale in the time it took to open the company again.
       unawaited(_restoreNotes(snapshot.company.cik, generation));
-      unawaited(_loadDiscountRate(snapshot.company, generation));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {
       if (generation != _requestGeneration) return;

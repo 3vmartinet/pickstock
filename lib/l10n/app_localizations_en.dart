@@ -2358,13 +2358,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String targetsRateComputed(String rate) {
-    return 'Discounted at $rate, this company\'s own required return';
-  }
-
-  @override
   String targetsRateAssumed(String rate) {
-    return 'Discounted at $rate, assumed';
+    return 'Discounted at $rate, the same for every company';
   }
 
   @override
@@ -2372,38 +2367,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'What a buyer should want back each year for holding this share rather than a government bond.';
 
   @override
-  String get targetsRateRiskFree => 'Risk-free';
-
-  @override
-  String targetsRateRiskFreeNote(String date) {
-    return '10-year US Treasury, $date';
-  }
-
-  @override
-  String get targetsRateBeta => 'Beta';
-
-  @override
-  String get targetsRateBetaNote =>
-      'How much the share swings against the market. 1.0 is the market itself.';
-
-  @override
-  String get targetsRatePremium => 'Equity premium';
-
-  @override
-  String get targetsRatePremiumNote =>
-      'The extra wanted for holding shares at all. An estimate, the same for every company.';
-
-  @override
-  String get targetsRateTotal => 'Required return';
-
-  @override
-  String targetsRateCapped(String rate) {
-    return 'Held to $rate — beyond the band a borrowed beta says more than the company does.';
-  }
-
-  @override
   String get targetsRateAssumedWhy =>
-      'A reasonable return to want, not this company\'s own. Its cost of equity needs a Treasury yield and a beta, neither of which is in SEC filings — and neither could be reached.';
+      'The same for every company, on purpose. A return built from the share\'s own beta measures how its price has swung, not what the business is worth: the betas on file ran from 0.08 to 6.75 and decided the verdict more than the company did. Nine per cent is roughly what equities have returned over long stretches, and the band below shows what other returns would ask.';
 
   @override
   String get napkinCaveatTitle => 'Worth knowing';

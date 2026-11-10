@@ -247,9 +247,9 @@ directory shows each filer once, under the first symbol SEC lists that is not
 one of those. The price is stored per filer and multiplied by the common
 share count, so a tile or a search for `OPENW` asks for `OPEN`'s price:
 Opendoor's warrant, at 3.5 cents, once read as the company's share price and
-made it 32,000% undervalued. The beta is fetched under the same symbol. Quotes
-an earlier build stored under the wrong symbol are dropped once, the first
-time a build that does this opens the database; typed prices stay.
+made it 32,000% undervalued. Quotes an earlier build stored under the wrong
+symbol are dropped once, the first time a build that does this opens the
+database; typed prices stay.
 
 A fetched price is stored per company and reused for 15 minutes, so clicking
 between companies does not spend the budget and the report still opens with a
@@ -527,15 +527,8 @@ guessing: of 10,391 tickers only about 2,300 have a share count, revenue and a
 positive cash stream. The report says how many were skipped, so a short list is
 not mistaken for a thorough search.
 
-Each company is judged at its own required return, as the report judges it:
-the beta behind that rate is a call to the same provider as the quote, so a
-rate not already held is paced and charged against the same budget. Valued
-at the assumed 9% instead, one company in six with a beta on file came out
-with a different verdict in the report from the one the scan had saved.
-
-At 55 calls a minute an unfiltered run takes about **42 minutes** where the
-betas are held from earlier sessions, and up to twice that where they are
-not; a sector filter usually brings it under ten. While it runs it **holds the whole quote
+At 55 quotes a minute an unfiltered run takes about **42 minutes**; a sector
+filter usually brings it under ten. While it runs it **holds the whole quote
 budget** — opening a company shows "a report is using the quote allowance"
 beside the last stored price rather than competing for calls and making both
 slow. The remaining-time estimate comes from the rate actually achieved, not

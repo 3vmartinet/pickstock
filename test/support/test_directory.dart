@@ -15,7 +15,6 @@ import 'package:drift/native.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/format_repo.dart';
-import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
@@ -394,9 +393,6 @@ class FakeQuoteRepo implements QuoteRepo {
   Duration get timeUntilSlot => Duration.zero;
 
   @override
-  bool claimCall() => true;
-
-  @override
   void reserveForJob() {}
 
   @override
@@ -423,7 +419,6 @@ Future<AppDatabase> registerTestDependencies({
   ResearchNoteRepo? researchNoteRepo,
   QuoteRepo? quoteRepo,
   SettingsRepo? settingsRepo,
-  MarketRatesRepo? marketRatesRepo,
   bool autoDownloadUpdates = false,
   bool autoApplyUpdates = false,
   bool autoFetchBusinessDescription = false,
@@ -514,11 +509,6 @@ Future<AppDatabase> registerTestDependencies({
     // price is a round trip through drift and is worth exercising as one.
     ..registerLazySingleton<PriceRepo>(() => const LocalPriceRepo())
     ..registerSingleton<QuoteRepo>(quoteRepo ?? FakeQuoteRepo())
-    // No network in a test, and no rate: the report falls back to its
-    // assumed one, which is also what an offline build shows.
-    ..registerSingleton<MarketRatesRepo>(
-      marketRatesRepo ?? const UnavailableMarketRatesRepo(),
-    )
     // The real implementation against the in-memory database: a list is a
     // couple of tables and a cascade, all of which is worth exercising.
     ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)

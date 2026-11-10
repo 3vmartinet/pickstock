@@ -3552,16 +3552,10 @@ abstract class AppLocalizations {
     String bull,
   );
 
-  /// No description provided for @targetsRateComputed.
-  ///
-  /// In en, this message translates to:
-  /// **'Discounted at {rate}, this company\'s own required return'**
-  String targetsRateComputed(String rate);
-
   /// No description provided for @targetsRateAssumed.
   ///
   /// In en, this message translates to:
-  /// **'Discounted at {rate}, assumed'**
+  /// **'Discounted at {rate}, the same for every company'**
   String targetsRateAssumed(String rate);
 
   /// No description provided for @targetsRateWhat.
@@ -3570,58 +3564,10 @@ abstract class AppLocalizations {
   /// **'What a buyer should want back each year for holding this share rather than a government bond.'**
   String get targetsRateWhat;
 
-  /// No description provided for @targetsRateRiskFree.
-  ///
-  /// In en, this message translates to:
-  /// **'Risk-free'**
-  String get targetsRateRiskFree;
-
-  /// No description provided for @targetsRateRiskFreeNote.
-  ///
-  /// In en, this message translates to:
-  /// **'10-year US Treasury, {date}'**
-  String targetsRateRiskFreeNote(String date);
-
-  /// No description provided for @targetsRateBeta.
-  ///
-  /// In en, this message translates to:
-  /// **'Beta'**
-  String get targetsRateBeta;
-
-  /// No description provided for @targetsRateBetaNote.
-  ///
-  /// In en, this message translates to:
-  /// **'How much the share swings against the market. 1.0 is the market itself.'**
-  String get targetsRateBetaNote;
-
-  /// No description provided for @targetsRatePremium.
-  ///
-  /// In en, this message translates to:
-  /// **'Equity premium'**
-  String get targetsRatePremium;
-
-  /// No description provided for @targetsRatePremiumNote.
-  ///
-  /// In en, this message translates to:
-  /// **'The extra wanted for holding shares at all. An estimate, the same for every company.'**
-  String get targetsRatePremiumNote;
-
-  /// No description provided for @targetsRateTotal.
-  ///
-  /// In en, this message translates to:
-  /// **'Required return'**
-  String get targetsRateTotal;
-
-  /// No description provided for @targetsRateCapped.
-  ///
-  /// In en, this message translates to:
-  /// **'Held to {rate} — beyond the band a borrowed beta says more than the company does.'**
-  String targetsRateCapped(String rate);
-
   /// No description provided for @targetsRateAssumedWhy.
   ///
   /// In en, this message translates to:
-  /// **'A reasonable return to want, not this company\'s own. Its cost of equity needs a Treasury yield and a beta, neither of which is in SEC filings — and neither could be reached.'**
+  /// **'The same for every company, on purpose. A return built from the share\'s own beta measures how its price has swung, not what the business is worth: the betas on file ran from 0.08 to 6.75 and decided the verdict more than the company did. Nine per cent is roughly what equities have returned over long stretches, and the band below shows what other returns would ask.'**
   String get targetsRateAssumedWhy;
 
   /// No description provided for @napkinCaveatTitle.

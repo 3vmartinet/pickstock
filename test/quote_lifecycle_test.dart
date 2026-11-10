@@ -26,9 +26,6 @@ class SlowQuoteRepo implements QuoteRepo {
   Duration get timeUntilSlot => Duration.zero;
 
   @override
-  bool claimCall() => true;
-
-  @override
   void reserveForJob() {}
 
   @override
