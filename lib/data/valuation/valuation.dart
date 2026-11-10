@@ -144,6 +144,11 @@ class Valuation extends Equatable {
   /// earns. Real estate investment trusts are read the same way: their
   /// capital spending is the business. All of them say so rather than
   /// producing a band.
+  ///
+  /// Managed care — UnitedHealth, Centene, Humana — files under the insurers'
+  /// codes and stays out with them, deliberately: its cash flow runs on
+  /// premiums collected ahead of claims paid, which is float, and a year's
+  /// free cash flow says as little about it as a property insurer's does.
   final bool isCovered;
 
   /// Whether the figures below have been brought down to the parent's slice,
