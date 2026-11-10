@@ -139,7 +139,7 @@ void main() {
     expect(find.text('Price today'), findsOneWidget);
     expect(find.text('Market value'), findsOneWidget);
     // The multiples and the stream they are struck against are on the card.
-    expect(find.textContaining('free cash flow of \$98.8B'), findsOneWidget);
+    expect(find.textContaining('free cash flow of \$108B'), findsOneWidget);
     // And the supporting ratios are there to be argued with.
     expect(find.text('P/E'), findsOneWidget);
     expect(find.text('P/FCF'), findsOneWidget);

@@ -17,24 +17,44 @@ abstract final class CashFlowModel {
 
   /// The return an equity holder is assumed to want. This is the single most
   /// consequential assumption in the model — at 7% a company can look fairly
-  /// priced and at 11% badly overpriced — so the report shows the answer across
-  /// the whole band rather than asserting one.
+  /// priced and at 11% badly overpriced — so the expectations tab shows its
+  /// answer across the whole band rather than asserting one.
   static const List<double> discountRates = [0.07, 0.08, 0.09, 0.10, 0.11];
 
-  /// The rate used where a single figure is unavoidable.
+  /// The return every company is valued at.
+  ///
+  /// The same for all of them, on purpose. The band used to be struck at a
+  /// rate built from each company's own beta, and the beta did most of the
+  /// work: the betas on file ran from 0.08 to 6.75, and between the tenth
+  /// and ninetieth percentile alone a business going nowhere was worth 19
+  /// years of its cash or 7. A beta measures how a price has swung, not what
+  /// a business is worth, and a verdict that moved with it said more about
+  /// the share's last two years of trading than about the company. Nine per
+  /// cent is roughly what equities have returned over long stretches, and
+  /// is what a buyer can reasonably want of any of them.
   static const double defaultDiscountRate = 0.09;
 
-  /// No company compounds at a hypergrowth rate for a decade, so a rate read
-  /// off history is credited only this far when valuing forwards.
+  /// No company compounds fast for a decade, so a rate read off history is
+  /// credited only this far when valuing forwards.
   ///
-  /// Raised from 20% once the fade was doing the work it was meant to. The
-  /// cap and the fade were limiting the same thing twice: a start of 30%
-  /// fading to 2.5% compounds to 5.0x over the decade — 17% a year averaged,
-  /// not 30 — so 20% was cutting real bull cases off at the knee. Nextpower
-  /// grew 18, 20, 22, 30 and 31 per cent; capped at 20 its worst, typical and
-  /// best years all came out within a point and a half of each other, which
-  /// is not three cases.
-  static const double maximumCreditedGrowth = 0.30;
+  /// Fifteen per cent, where it was thirty: a start of 15% fading to 2.5%
+  /// still compounds to 2.3x over the decade, which is a good decade. At
+  /// thirty the cap held for one company in eight and bought them 44 to 62
+  /// years of their cash, and the ones it bought it for were the cyclical
+  /// peaks — Micron at the top of a memory cycle, the gas producers after a
+  /// price spike — which is exactly the growth a multiple must not pay for.
+  static const double maximumCreditedGrowth = 0.15;
+
+  /// How far below what the arithmetic gives the bottom of the band is
+  /// drawn: the margin for the stream, the growth, the rate or the share
+  /// count being wrong, which across ten thousand filers some always are.
+  static const double marginOfSafety = 0.30;
+
+  /// How many years of its cash flow a business can owe before the debt
+  /// starts coming off what the shares are worth. Up to this the lenders are
+  /// paid out of the stream, which is already after interest; beyond it the
+  /// lenders own the business and the shares are the remainder.
+  static const double carriedDebtYears = 3;
 
   /// How far either side of the required return the fair range is drawn.
   ///

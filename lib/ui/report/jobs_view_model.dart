@@ -8,8 +8,6 @@ import 'package:pickstock/data/report/valuation_report.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
-import 'package:pickstock/data/valuation/discount_rate.dart';
-import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/report/report_repo.dart';
@@ -20,7 +18,6 @@ SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
-MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
 ReportRepo get _reportRepo => GetIt.I.get<ReportRepo>();
 
 /// How often the running job republishes its progress.
@@ -218,17 +215,10 @@ class JobsViewModel extends ChangeNotifier {
       final symbol = _directory.quoteSymbolFor(company);
       final quote = await _pacedQuote(symbol);
       await _priceRepo.save(company.cik, quote);
-      final rate = await _pacedRate(symbol);
 
       final valuation = Valuation(
         snapshot: snapshot,
         pricePerShare: quote.pricePerShare,
-        // The company's own required return, as the report judges it. At the
-        // assumed rate instead, one company in six with a beta on file came
-        // out with a different verdict in the report from the one the scan
-        // had saved — undervalued in one and overvalued in the other for a
-        // tenth of those.
-        discountRatePercent: rate?.percent,
       );
       final low = valuation.fairValueLow;
       final high = valuation.fairValueHigh;
@@ -280,28 +270,6 @@ class JobsViewModel extends ChangeNotifier {
         }
       }
     }
-  }
-
-  /// The company's own discount rate, or `null` where none can be built.
-  ///
-  /// The beta behind it is a call to the same provider as the quote, so a
-  /// rate not already held is paced and charged like one: a run that asked
-  /// for sixty quotes and sixty betas a minute would be refused by the
-  /// provider for the second half of them.
-  Future<DiscountRate?> _pacedRate(String symbol) async {
-    if (!_marketRatesRepo.isConfigured) return null;
-    final held = _marketRatesRepo.cachedRateFor(symbol);
-    if (held != null) return held;
-    for (var attempt = 0; attempt <= _budgetRetries; attempt++) {
-      final wait = _quoteRepo.timeUntilSlot;
-      if (wait > Duration.zero) {
-        await Future<void>.delayed(wait + _budgetMargin);
-      }
-      if (_quoteRepo.claimCall()) return _marketRatesRepo.rateFor(symbol);
-    }
-    // Rather than hold the whole run for one company's beta: the assumed
-    // rate stands in, as it does in the report when the beta cannot be had.
-    return null;
   }
 
   Future<void> _loadReports() async {

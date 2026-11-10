@@ -597,13 +597,9 @@ class SnapshotViewModel extends ChangeNotifier {
         currentSnapshot = await _secRepo.fetchSnapshot(company.ticker);
         final storedQuote = await _priceRepo.priceFor(company.cik);
         if (storedQuote != null) {
-          final rate = await _marketRatesRepo.rateFor(
-            _directory.quoteSymbolFor(company),
-          );
           currentValuation = Valuation(
             snapshot: currentSnapshot,
             pricePerShare: storedQuote.pricePerShare,
-            discountRatePercent: rate?.percent,
           );
         }
       } catch (error) {
@@ -1031,14 +1027,7 @@ class SnapshotViewModel extends ChangeNotifier {
     final current = snapshot;
     final price = pricePerShare;
     if (current == null || price == null || price <= 0) return null;
-    return Valuation(
-      snapshot: current,
-      pricePerShare: price,
-      // The same return the expectations tab discounts at, so a
-      // multiple and a discounted cash flow cannot disagree about the
-      // same company.
-      discountRatePercent: _discountRate?.percent,
-    );
+    return Valuation(snapshot: current, pricePerShare: price);
   }
 
   /// What the entered price is asking of the company, set against what the

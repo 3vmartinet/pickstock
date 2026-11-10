@@ -1027,7 +1027,7 @@ abstract class AppLocalizations {
   /// No description provided for @reportSkippedNote.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =0{} =1{One company could not be valued and was skipped} other{{count} companies could not be valued and were skipped}} — no share count, no revenue, or no positive cash stream.'**
+  /// **'{count, plural, =0{} =1{One company could not be valued and was skipped} other{{count} companies could not be valued and were skipped}} — no share count, no revenue, no positive cash stream, or a bank, insurer or REIT, which these figures cannot value.'**
   String reportSkippedNote(int count);
 
   /// No description provided for @toggleTheme.
@@ -2830,10 +2830,16 @@ abstract class AppLocalizations {
   /// **'Cannot be valued'**
   String get verdictNotValuable;
 
+  /// No description provided for @verdictNotCovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Not covered'**
+  String get verdictNotCovered;
+
   /// No description provided for @detailUndervalued.
   ///
   /// In en, this message translates to:
-  /// **'The price is below the range these earnings support.'**
+  /// **'The price is more than a third below what these earnings are worth — the margin the shares have to clear before they are called cheap.'**
   String get detailUndervalued;
 
   /// No description provided for @detailFairlyValued.
@@ -2853,6 +2859,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.'**
   String get detailNotValuable;
+
+  /// No description provided for @detailNotCovered.
+  ///
+  /// In en, this message translates to:
+  /// **'A bank, insurer, lender or REIT. Its borrowing is its raw material and its cash flow swings with its balance sheet, so neither says what it earns — PickStock does not value it.'**
+  String get detailNotCovered;
 
   /// No description provided for @labelRangeLow.
   ///
@@ -2911,12 +2923,13 @@ abstract class AppLocalizations {
   /// No description provided for @valuationBasisLine.
   ///
   /// In en, this message translates to:
-  /// **'{low}× to {high}× {basis} of {amount}, over {shares} shares'**
+  /// **'{low}× to {high}× {basis} of {amount} — {years, plural, =1{the latest year} other{typical of the last {years} years}} — over {shares} shares'**
   String valuationBasisLine(
     String low,
     String high,
     String basis,
     String amount,
+    int years,
     String shares,
   );
 
@@ -2936,6 +2949,23 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{flat} years at {discount}, with nothing added for growth'**
   String valuationNoGrowthPremium(String flat, String discount);
+
+  /// No description provided for @valuationGrowthDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'{flat} years at {discount}, {fewer} fewer for shrinking {decline} a year per share'**
+  String valuationGrowthDiscount(
+    String flat,
+    String discount,
+    String fewer,
+    String decline,
+  );
+
+  /// No description provided for @valuationMarginLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Net cash added, debt beyond three years of cash taken off; the low end then cut by {margin} as a margin for error'**
+  String valuationMarginLine(String margin);
 
   /// No description provided for @basisFreeCashFlow.
   ///
@@ -2976,7 +3006,7 @@ abstract class AppLocalizations {
   /// No description provided for @expectationBasis.
   ///
   /// In en, this message translates to:
-  /// **'Discounting {amount} a year — this company\'s median free cash flow margin of {margin} on its latest revenue — over ten years, fading to 2.5%.'**
+  /// **'Discounting {amount} a year — this company\'s median free cash flow margin of {margin}, after stock pay, on its latest revenue — over ten years, fading to 2.5%.'**
   String expectationBasis(String amount, String margin);
 
   /// No description provided for @expectationNormalised.
@@ -3234,8 +3264,14 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep2Body.
   ///
   /// In en, this message translates to:
-  /// **'In one year the company took in {revenue} and, after every bill including new equipment, had {freeCashFlow} left over. That is one year\'s spare cash — what it earns annually, not a pile it has saved up.'**
+  /// **'In its latest year the company took in {revenue} and, after every bill including new equipment and the shares it paid its staff with, kept {freeCashFlow}. That is one year\'s spare cash — what it earns annually, not a pile it has saved up.'**
   String napkinStep2Body(String revenue, String freeCashFlow);
+
+  /// No description provided for @napkinStep2BodyTypical.
+  ///
+  /// In en, this message translates to:
+  /// **'In a typical year the company takes in {revenue} and, after every bill including new equipment and the shares it pays its staff with, keeps {freeCashFlow}. Typical means its middle year of the last {years} on that measure, applied to what it sells today — so one unusual year, a tax bill or a building spree, cannot set the price. It earns this annually; it is not a pile it has saved up.'**
+  String napkinStep2BodyTypical(String revenue, String freeCashFlow, int years);
 
   /// No description provided for @napkinStep3TitleDebt.
   ///
@@ -3258,8 +3294,26 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep3BodyCash.
   ///
   /// In en, this message translates to:
-  /// **'The company holds {netCash} more than it owes, so nothing is being siphoned off to lenders. The whole {freeCashFlow} above belongs to the owners.'**
+  /// **'The company holds {netCash} more than it owes, so nothing is being siphoned off to lenders. The whole {freeCashFlow} above belongs to the owners — and so does the {netCash}, which is added to what the company is worth below.'**
   String napkinStep3BodyCash(String netCash, String freeCashFlow);
+
+  /// No description provided for @napkinStep3TitleExcess.
+  ///
+  /// In en, this message translates to:
+  /// **'It owes more than it can carry'**
+  String get napkinStep3TitleExcess;
+
+  /// No description provided for @napkinStep3BodyExcess.
+  ///
+  /// In en, this message translates to:
+  /// **'The company owes {netDebt} more than it holds — {years} years of the {freeCashFlow} it keeps. Its lenders are paid first and that interest already came out of the cash above, so up to {carried} years\' worth is debt a business simply carries. The {excess} beyond that is the lenders\' claim on the business itself, and comes off what it is worth below.'**
+  String napkinStep3BodyExcess(
+    String netDebt,
+    String years,
+    String freeCashFlow,
+    String carried,
+    String excess,
+  );
 
   /// No description provided for @napkinStep4Title.
   ///
@@ -3288,7 +3342,7 @@ abstract class AppLocalizations {
   /// No description provided for @napkinStep5BodyGrowing.
   ///
   /// In en, this message translates to:
-  /// **'Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one grew {growth} in its middle year of the last {years} — the median, so one exceptional year cannot set the price. Next year\'s cash should be bigger than this year\'s, so it is worth more: {low} to {high} years, the range being what a point either side of {discount} does to the answer.'**
+  /// **'Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one grew {growth} per share in its middle year of the last {years} — the median, so one exceptional year cannot set the price, and per share, so revenue bought with newly printed shares does not count. Next year\'s cash should be bigger than this year\'s, so it is worth more: {low} to {high} years, the range being what a point either side of {discount} does to the answer.'**
   String napkinStep5BodyGrowing(
     String discount,
     String flat,
@@ -3298,50 +3352,104 @@ abstract class AppLocalizations {
     String high,
   );
 
+  /// No description provided for @napkinStep5BodyShrinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one shrank {decline} per share in its middle year of the last {years}, so next year\'s cash is expected to be smaller than this year\'s and it is worth less: {low} to {high} years, the range being what a point either side of {discount} does to the answer.'**
+  String napkinStep5BodyShrinking(
+    String discount,
+    String flat,
+    String decline,
+    String years,
+    String low,
+    String high,
+  );
+
   /// No description provided for @napkinStep6Title.
   ///
   /// In en, this message translates to:
-  /// **'So what is a share worth?'**
+  /// **'So what is the company worth?'**
   String get napkinStep6Title;
 
   /// No description provided for @napkinStep6Body.
   ///
   /// In en, this message translates to:
-  /// **'{low} to {high} years of {basis} is {valueLow} to {valueHigh} for the whole company. Divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.'**
+  /// **'{low} to {high} years of {basis} is {valueLow} to {valueHigh}.'**
   String napkinStep6Body(
     String low,
     String high,
     String basis,
     String valueLow,
     String valueHigh,
-    String shares,
-    String rangeLow,
-    String rangeHigh,
   );
+
+  /// No description provided for @napkinStep6PlusCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the {netCash} it holds: {equityLow} to {equityHigh} for the whole company.'**
+  String napkinStep6PlusCash(
+    String netCash,
+    String equityLow,
+    String equityHigh,
+  );
+
+  /// No description provided for @napkinStep6LessDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Take off the {excess} of debt beyond what it can carry: {equityLow} to {equityHigh} for the whole company.'**
+  String napkinStep6LessDebt(
+    String excess,
+    String equityLow,
+    String equityHigh,
+  );
+
+  /// No description provided for @napkinStep6AsIs.
+  ///
+  /// In en, this message translates to:
+  /// **'That is what the whole company is worth.'**
+  String get napkinStep6AsIs;
 
   /// No description provided for @napkinStep7Title.
   ///
   /// In en, this message translates to:
-  /// **'And the answer'**
+  /// **'So what is a share worth?'**
   String get napkinStep7Title;
 
-  /// No description provided for @napkinStep7BodyUnder.
+  /// No description provided for @napkinStep7Body.
   ///
   /// In en, this message translates to:
-  /// **'You are paying {price}, below the {rangeLow}–{rangeHigh} the earnings support. That is the cheap side.'**
-  String napkinStep7BodyUnder(String price, String rangeLow, String rangeHigh);
+  /// **'Divide by {shares} shares: {lowBefore} to {rangeHigh}. The bottom is then cut by {margin}, to {rangeLow}, in case any figure above is wrong — the stream, the growth, the return or the share count — and a price has to clear that before the shares are called cheap.'**
+  String napkinStep7Body(
+    String shares,
+    String lowBefore,
+    String rangeHigh,
+    String margin,
+    String rangeLow,
+  );
 
-  /// No description provided for @napkinStep7BodyFair.
+  /// No description provided for @napkinStep8Title.
+  ///
+  /// In en, this message translates to:
+  /// **'And the answer'**
+  String get napkinStep8Title;
+
+  /// No description provided for @napkinStep8BodyUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'You are paying {price}, below the {rangeLow}–{rangeHigh} the earnings support, margin and all. That is the cheap side.'**
+  String napkinStep8BodyUnder(String price, String rangeLow, String rangeHigh);
+
+  /// No description provided for @napkinStep8BodyFair.
   ///
   /// In en, this message translates to:
   /// **'You are paying {price}, inside the {rangeLow}–{rangeHigh} the earnings support. That is a normal price.'**
-  String napkinStep7BodyFair(String price, String rangeLow, String rangeHigh);
+  String napkinStep8BodyFair(String price, String rangeLow, String rangeHigh);
 
-  /// No description provided for @napkinStep7BodyOver.
+  /// No description provided for @napkinStep8BodyOver.
   ///
   /// In en, this message translates to:
   /// **'You are paying {price}, above the {rangeLow}–{rangeHigh} the earnings support. You are paying for growth that has not happened yet.'**
-  String napkinStep7BodyOver(String price, String rangeLow, String rangeHigh);
+  String napkinStep8BodyOver(String price, String rangeLow, String rangeHigh);
 
   /// No description provided for @targetsTitle.
   ///
@@ -3394,7 +3502,7 @@ abstract class AppLocalizations {
   /// No description provided for @targetsHowStep1Body.
   ///
   /// In en, this message translates to:
-  /// **'Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash, so the sum starts from {flow} — its own typical conversion, not one unusual year.'**
+  /// **'Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash after paying its staff in shares, so the sum starts from {flow} — its own typical conversion, not one unusual year.'**
   String targetsHowStep1Body(String revenue, String margin, String flow);
 
   /// No description provided for @targetsHowStep2Title.
@@ -3525,7 +3633,7 @@ abstract class AppLocalizations {
   /// No description provided for @napkinCaveatBuilding.
   ///
   /// In en, this message translates to:
-  /// **'It spent {ratio}× more on equipment than wore out, so last year\'s leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.'**
+  /// **'It spent {ratio}× more on equipment than wore out, so last year\'s leftover cash on its own would understate what the business normally makes. The typical-year figure above allows for it.'**
   String napkinCaveatBuilding(String ratio);
 
   /// No description provided for @napkinCaveatMargin.
@@ -3533,6 +3641,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Its profit margin is {points} points below its own ten-year normal, so the sales growth above is being won at a lower profit.'**
   String napkinCaveatMargin(String points);
+
+  /// No description provided for @napkinCaveatGrowthCapped.
+  ///
+  /// In en, this message translates to:
+  /// **'Its middle year grew {actual} per share, but no business compounds like that for a decade, so only {credited} a year is paid for.'**
+  String napkinCaveatGrowthCapped(String actual, String credited);
 
   /// No description provided for @napkinCaveatEarnings.
   ///
@@ -3621,7 +3735,7 @@ abstract class AppLocalizations {
   /// No description provided for @footnoteValuation.
   ///
   /// In en, this message translates to:
-  /// **'The fair range is a heuristic: {low}–{high} times the latest year\'s {basis}, widened for revenue growth. That cash flow is already after interest, so the debt is not subtracted a second time. It is a frame for the price, not a target.'**
+  /// **'The fair range is a heuristic: {low}–{high} times the {basis} the business typically keeps, at a 9% required return, paying for the growth each share has typically had. Net cash is added and debt beyond three years of cash flow taken off; the rest of the debt is already paid for out of the cash flow, which is after interest. The low end is a third below the arithmetic. It is a frame for the price, not a target.'**
   String footnoteValuation(String low, String high, String basis);
 
   /// No description provided for @footnoteNegatives.

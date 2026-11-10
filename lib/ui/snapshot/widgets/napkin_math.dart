@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/growth_expectation.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
@@ -97,25 +98,36 @@ List<_Step> _stepsFor(
 ) {
   final shares = valuation.sharesOutstanding;
   final marketCap = valuation.marketCap;
-  final enterpriseValue = valuation.enterpriseValue;
   final basis = valuation.basisAmount;
   final low = valuation.fairValueLow;
+  final lowBefore = valuation.fairValueLowBeforeMargin;
   final high = valuation.fairValueHigh;
+  final equityLow = valuation.equityValueAt(valuation.lowMultiple);
+  final equityHigh = valuation.equityValueAt(valuation.highMultiple);
   if (shares == null ||
       marketCap == null ||
-      enterpriseValue == null ||
       basis == null ||
       basis <= 0 ||
       low == null ||
-      high == null) {
+      lowBefore == null ||
+      high == null ||
+      equityLow == null ||
+      equityHigh == null) {
     return const [];
   }
 
   final netDebt = figures.netDebt ?? 0;
+  final excess = valuation.excessDebtDeducted;
+  final netCash = valuation.netCashAdded;
   final money = _formatRepo.compactCurrency;
   final count = _formatRepo.compactCount;
   final price = _formatRepo.price;
   final years = _formatRepo.ratio;
+  final percent = _formatRepo.percent;
+  final discount = percent(valuation.discountRatePercent);
+  final growth = valuation.creditedGrowthPercent;
+  final streamLow = basis * valuation.lowMultiple;
+  final streamHigh = basis * valuation.highMultiple;
 
   return [
     (
@@ -128,18 +140,34 @@ List<_Step> _stepsFor(
     ),
     (
       title: strings.napkinStep2Title,
-      body: strings.napkinStep2Body(
-        figures.revenue == null ? '—' : money(figures.revenue!),
-        money(basis),
-      ),
+      body: valuation.basisYears > 1
+          ? strings.napkinStep2BodyTypical(
+              figures.revenue == null ? '—' : money(figures.revenue!),
+              money(basis),
+              valuation.basisYears,
+            )
+          : strings.napkinStep2Body(
+              figures.revenue == null ? '—' : money(figures.revenue!),
+              money(basis),
+            ),
     ),
     (
-      title: netDebt >= 0
-          ? strings.napkinStep3TitleDebt
-          : strings.napkinStep3TitleCash,
-      body: netDebt >= 0
-          ? strings.napkinStep3BodyDebt(money(netDebt), money(basis))
-          : strings.napkinStep3BodyCash(money(netDebt.abs()), money(basis)),
+      title: netDebt < 0
+          ? strings.napkinStep3TitleCash
+          : excess > 0
+          ? strings.napkinStep3TitleExcess
+          : strings.napkinStep3TitleDebt,
+      body: netDebt < 0
+          ? strings.napkinStep3BodyCash(money(netCash), money(basis))
+          : excess > 0
+          ? strings.napkinStep3BodyExcess(
+              money(netDebt),
+              years(netDebt / basis),
+              money(basis),
+              years(CashFlowModel.carriedDebtYears),
+              money(excess),
+            )
+          : strings.napkinStep3BodyDebt(money(netDebt), money(basis)),
     ),
     (
       title: strings.napkinStep4Title,
@@ -151,47 +179,79 @@ List<_Step> _stepsFor(
     ),
     (
       title: strings.napkinStep5Title,
-      body: valuation.creditedGrowthPercent <= 0
-          ? strings.napkinStep5BodyFlat(
-              _formatRepo.percent(valuation.discountRatePercent),
+      body: growth > 0
+          ? strings.napkinStep5BodyGrowing(
+              discount,
               years(valuation.flatMultiple),
-            )
-          : strings.napkinStep5BodyGrowing(
-              _formatRepo.percent(valuation.discountRatePercent),
-              years(valuation.flatMultiple),
-              _formatRepo.percent(valuation.creditedGrowthPercent),
+              percent(growth),
               '${valuation.growthWindowYears}',
               years(valuation.lowMultiple),
               years(valuation.highMultiple),
+            )
+          : growth < 0
+          ? strings.napkinStep5BodyShrinking(
+              discount,
+              years(valuation.flatMultiple),
+              percent(-growth),
+              '${valuation.growthWindowYears}',
+              years(valuation.lowMultiple),
+              years(valuation.highMultiple),
+            )
+          : strings.napkinStep5BodyFlat(
+              discount,
+              years(valuation.flatMultiple),
             ),
     ),
     (
       title: strings.napkinStep6Title,
-      body: strings.napkinStep6Body(
-        years(valuation.lowMultiple),
-        years(valuation.highMultiple),
-        money(basis),
-        money(basis * valuation.lowMultiple),
-        money(basis * valuation.highMultiple),
-        count(shares),
-        price(low),
-        price(high),
-      ),
+      body: [
+        strings.napkinStep6Body(
+          years(valuation.lowMultiple),
+          years(valuation.highMultiple),
+          money(basis),
+          money(streamLow),
+          money(streamHigh),
+        ),
+        if (netCash > 0)
+          strings.napkinStep6PlusCash(
+            money(netCash),
+            money(equityLow),
+            money(equityHigh),
+          )
+        else if (excess > 0)
+          strings.napkinStep6LessDebt(
+            money(excess),
+            money(equityLow),
+            money(equityHigh),
+          )
+        else
+          strings.napkinStep6AsIs,
+      ].join(' '),
     ),
     (
       title: strings.napkinStep7Title,
+      body: strings.napkinStep7Body(
+        count(shares),
+        price(lowBefore),
+        price(high),
+        percent(CashFlowModel.marginOfSafety * 100),
+        price(low),
+      ),
+    ),
+    (
+      title: strings.napkinStep8Title,
       body: switch (valuation.verdict) {
-        ValuationVerdict.undervalued => strings.napkinStep7BodyUnder(
+        ValuationVerdict.undervalued => strings.napkinStep8BodyUnder(
           price(valuation.pricePerShare),
           price(low),
           price(high),
         ),
-        ValuationVerdict.overvalued => strings.napkinStep7BodyOver(
+        ValuationVerdict.overvalued => strings.napkinStep8BodyOver(
           price(valuation.pricePerShare),
           price(low),
           price(high),
         ),
-        _ => strings.napkinStep7BodyFair(
+        _ => strings.napkinStep8BodyFair(
           price(valuation.pricePerShare),
           price(low),
           price(high),
@@ -208,6 +268,7 @@ List<String> _caveatsFor(
   FiscalYearFigures figures,
   GrowthExpectation? expectation,
 ) {
+  final actualGrowth = valuation.growthPercent;
   return [
     // First, because every figure in the derivation is struck against the
     // share count: a market value built on the wrong one is wrong throughout,
@@ -225,9 +286,12 @@ List<String> _caveatsFor(
         strings.napkinCaveatShareCount,
     if (valuation.basis == ValuationBasis.earnings)
       strings.napkinCaveatEarnings,
-    // Said out loud because the figures above would otherwise not add up
-    // against the filing: the cash shown is a fraction of what the cash flow
-    // statement reports, and this is why.
+    if (actualGrowth != null &&
+        actualGrowth > CashFlowModel.maximumCreditedGrowth * 100)
+      strings.napkinCaveatGrowthCapped(
+        _formatRepo.percent(actualGrowth),
+        _formatRepo.percent(valuation.creditedGrowthPercent),
+      ),
     // Said where the arithmetic happens, because the figure above is not the
     // one the cash flow statement prints and a reader checking would find
     // them differ.

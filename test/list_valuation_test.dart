@@ -5,12 +5,8 @@ import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/browse_sort.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
-import 'package:pickstock/data/valuation/discount_rate.dart';
-import 'package:pickstock/data/valuation/valuation.dart';
-import 'package:pickstock/repo/sec/mock_sec_repo.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/format_repo.dart';
-import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
@@ -222,36 +218,6 @@ void main() {
     expect(viewModel.verdictFor(_apple.cik), ValuationVerdict.fairlyValued);
   });
 
-  test('judges on the company\'s own rate, as the report does', () async {
-    const rate = _FixedRate(20);
-    await database.close();
-    await GetIt.I.reset();
-    quotes = FakeQuoteRepo(isConfigured: true, price: 100);
-    database = await registerTestDependencies(
-      withFinancials: true,
-      quoteRepo: quotes,
-      marketRatesRepo: rate,
-    );
-    ListValuationViewModel.isEnabled = true;
-
-    // What the report would say, on the company's own rate — and, so the
-    // test means something, not what the assumed rate would say.
-    final snapshot = await const MockSecRepo().fetchSnapshot('AAPL');
-    Valuation at(double? percent) => Valuation(
-      snapshot: snapshot,
-      pricePerShare: 100,
-      discountRatePercent: percent,
-    );
-    final own = at(rate.cachedRateFor('AAPL')!.percent).verdict;
-    expect(own, isNot(at(null).verdict));
-
-    final viewModel = ListValuationViewModel();
-    addTearDown(viewModel.dispose);
-    viewModel.request(_apple);
-
-    expect(await verdictOf(viewModel), own);
-  });
-
   testWidgets('the tile carries the verdict once it is priced', (tester) async {
     tester.view
       ..physicalSize = _wideSize
@@ -336,25 +302,5 @@ void main() {
         );
       }
     },
-  );
-}
-
-/// A company rate that is always [percent], as a fetched one would be.
-class _FixedRate implements MarketRatesRepo {
-  const _FixedRate(this.percent);
-
-  final double percent;
-
-  @override
-  bool get isConfigured => true;
-
-  @override
-  Future<DiscountRate?> rateFor(String ticker) async => cachedRateFor(ticker);
-
-  @override
-  DiscountRate? cachedRateFor(String ticker) => DiscountRate(
-    riskFreePercent: percent - 5,
-    beta: 1,
-    asOf: DateTime.utc(2026),
   );
 }

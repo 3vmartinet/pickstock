@@ -9,7 +9,11 @@ enum ValuationVerdict {
   undervalued(icon: LucideIcons.trendingDown, isGood: true),
   fairlyValued(icon: LucideIcons.equal, isGood: null),
   overvalued(icon: LucideIcons.trendingUp, isGood: false),
-  unknown(icon: LucideIcons.circleHelp, isGood: null);
+  unknown(icon: LucideIcons.circleHelp, isGood: null),
+
+  /// A bank, insurer, lender or REIT, whose cash flow says nothing about
+  /// what it earns. Said plainly rather than producing a band.
+  notCovered(icon: LucideIcons.ban, isGood: null);
 
   const ValuationVerdict({required this.icon, required this.isGood});
 
@@ -24,6 +28,7 @@ enum ValuationVerdict {
     ValuationVerdict.fairlyValued => strings.verdictFairlyValued,
     ValuationVerdict.overvalued => strings.verdictOvervalued,
     ValuationVerdict.unknown => strings.verdictNotValuable,
+    ValuationVerdict.notCovered => strings.verdictNotCovered,
   };
 
   String getDetail(AppLocalizations strings) => switch (this) {
@@ -31,5 +36,6 @@ enum ValuationVerdict {
     ValuationVerdict.fairlyValued => strings.detailFairlyValued,
     ValuationVerdict.overvalued => strings.detailOvervalued,
     ValuationVerdict.unknown => strings.detailNotValuable,
+    ValuationVerdict.notCovered => strings.detailNotCovered,
   };
 }

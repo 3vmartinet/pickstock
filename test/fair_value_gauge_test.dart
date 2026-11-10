@@ -50,13 +50,13 @@ void main() {
     expect(find.text('Range low'), findsOneWidget);
     expect(find.text('Range high'), findsOneWidget);
     expect(find.text('Price today'), findsOneWidget);
-    expect(find.text('\$98.11'), findsOneWidget);
-    expect(find.text('\$134.29'), findsOneWidget);
+    expect(find.text('\$85.00'), findsOneWidget);
+    expect(find.text('\$167.16'), findsOneWidget);
     expect(find.text('\$250.00'), findsOneWidget);
     // Both bounds are below the price, so both readings are negative: this is
     // how far it would have to fall, per bound, with no midpoint invented.
-    expect(find.text('-60.8%'), findsOneWidget);
-    expect(find.text('-46.3%'), findsOneWidget);
+    expect(find.text('-66.0%'), findsOneWidget);
+    expect(find.text('-33.1%'), findsOneWidget);
   });
 
   testWidgets('puts the marker inside the band when the price is fair', (

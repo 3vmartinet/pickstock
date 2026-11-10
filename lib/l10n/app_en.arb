@@ -201,7 +201,7 @@
   "reportColumnUpside": "Upside to low",
   "reportColumnPrice": "Price",
   "reportColumnRange": "Fair range",
-  "reportSkippedNote": "{count, plural, =0{} =1{One company could not be valued and was skipped} other{{count} companies could not be valued and were skipped}} — no share count, no revenue, or no positive cash stream.",
+  "reportSkippedNote": "{count, plural, =0{} =1{One company could not be valued and was skipped} other{{count} companies could not be valued and were skipped}} — no share count, no revenue, no positive cash stream, or a bank, insurer or REIT, which these figures cannot value.",
   "@reportSkippedNote": { "placeholders": { "count": { "type": "int", "format": "decimalPattern" } } },
 
   "toggleTheme": "Toggle light / dark theme",
@@ -588,10 +588,12 @@
   "verdictFairlyValued": "Fairly valued",
   "verdictOvervalued": "Overvalued",
   "verdictNotValuable": "Cannot be valued",
-  "detailUndervalued": "The price is below the range these earnings support.",
+  "verdictNotCovered": "Not covered",
+  "detailUndervalued": "The price is more than a third below what these earnings are worth — the margin the shares have to clear before they are called cheap.",
   "detailFairlyValued": "The price sits inside the range these earnings support.",
   "detailOvervalued": "The price is above the range these earnings support.",
   "detailNotValuable": "The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.",
+  "detailNotCovered": "A bank, insurer, lender or REIT. Its borrowing is its raw material and its cash flow swings with its balance sheet, so neither says what it earns — PickStock does not value it.",
 
   "labelRangeLow": "Range low",
   "labelRangeHigh": "Range high",
@@ -602,13 +604,14 @@
   "labelMarketCap": "Market value",
   "labelEnterpriseValue": "Enterprise value",
   "labelEarningsPerShare": "Earnings per share",
-  "valuationBasisLine": "{low}× to {high}× {basis} of {amount}, over {shares} shares",
+  "valuationBasisLine": "{low}× to {high}× {basis} of {amount} — {years, plural, =1{the latest year} other{typical of the last {years} years}} — over {shares} shares",
   "@valuationBasisLine": {
     "placeholders": {
       "low": { "type": "String" },
       "high": { "type": "String" },
       "basis": { "type": "String" },
       "amount": { "type": "String" },
+      "years": { "type": "int" },
       "shares": { "type": "String" }
     }
   },
@@ -616,6 +619,10 @@
   "@valuationGrowthPremium": { "placeholders": { "flat": { "type": "String" }, "discount": { "type": "String" }, "premium": { "type": "String" }, "growth": { "type": "String" } } },
   "valuationNoGrowthPremium": "{flat} years at {discount}, with nothing added for growth",
   "@valuationNoGrowthPremium": { "placeholders": { "flat": { "type": "String" }, "discount": { "type": "String" } } },
+  "valuationGrowthDiscount": "{flat} years at {discount}, {fewer} fewer for shrinking {decline} a year per share",
+  "@valuationGrowthDiscount": { "placeholders": { "flat": { "type": "String" }, "discount": { "type": "String" }, "fewer": { "type": "String" }, "decline": { "type": "String" } } },
+  "valuationMarginLine": "Net cash added, debt beyond three years of cash taken off; the low end then cut by {margin} as a margin for error",
+  "@valuationMarginLine": { "placeholders": { "margin": { "type": "String" } } },
   "basisFreeCashFlow": "free cash flow",
   "basisEarnings": "net income",
 
@@ -625,7 +632,7 @@
   "@expectationDelivered": { "placeholders": { "years": { "type": "int" } } },
   "expectationPerYear": "{percent} a year",
   "@expectationPerYear": { "placeholders": { "percent": { "type": "String" } } },
-  "expectationBasis": "Discounting {amount} a year — this company's median free cash flow margin of {margin} on its latest revenue — over ten years, fading to 2.5%.",
+  "expectationBasis": "Discounting {amount} a year — this company's median free cash flow margin of {margin}, after stock pay, on its latest revenue — over ten years, fading to 2.5%.",
   "@expectationBasis": {
     "placeholders": {
       "amount": { "type": "String" },
@@ -698,11 +705,19 @@
   },
 
   "napkinStep2Title": "What you get for it",
-  "napkinStep2Body": "In one year the company took in {revenue} and, after every bill including new equipment, had {freeCashFlow} left over. That is one year's spare cash — what it earns annually, not a pile it has saved up.",
+  "napkinStep2Body": "In its latest year the company took in {revenue} and, after every bill including new equipment and the shares it paid its staff with, kept {freeCashFlow}. That is one year's spare cash — what it earns annually, not a pile it has saved up.",
   "@napkinStep2Body": {
     "placeholders": {
       "revenue": { "type": "String" },
       "freeCashFlow": { "type": "String" }
+    }
+  },
+  "napkinStep2BodyTypical": "In a typical year the company takes in {revenue} and, after every bill including new equipment and the shares it pays its staff with, keeps {freeCashFlow}. Typical means its middle year of the last {years} on that measure, applied to what it sells today — so one unusual year, a tax bill or a building spree, cannot set the price. It earns this annually; it is not a pile it has saved up.",
+  "@napkinStep2BodyTypical": {
+    "placeholders": {
+      "revenue": { "type": "String" },
+      "freeCashFlow": { "type": "String" },
+      "years": { "type": "int" }
     }
   },
 
@@ -715,7 +730,18 @@
       "freeCashFlow": { "type": "String" }
     }
   },
-  "napkinStep3BodyCash": "The company holds {netCash} more than it owes, so nothing is being siphoned off to lenders. The whole {freeCashFlow} above belongs to the owners.",
+  "napkinStep3BodyCash": "The company holds {netCash} more than it owes, so nothing is being siphoned off to lenders. The whole {freeCashFlow} above belongs to the owners — and so does the {netCash}, which is added to what the company is worth below.",
+  "napkinStep3TitleExcess": "It owes more than it can carry",
+  "napkinStep3BodyExcess": "The company owes {netDebt} more than it holds — {years} years of the {freeCashFlow} it keeps. Its lenders are paid first and that interest already came out of the cash above, so up to {carried} years' worth is debt a business simply carries. The {excess} beyond that is the lenders' claim on the business itself, and comes off what it is worth below.",
+  "@napkinStep3BodyExcess": {
+    "placeholders": {
+      "netDebt": { "type": "String" },
+      "years": { "type": "String" },
+      "freeCashFlow": { "type": "String" },
+      "carried": { "type": "String" },
+      "excess": { "type": "String" }
+    }
+  },
   "@napkinStep3BodyCash": {
     "placeholders": {
       "netCash": { "type": "String" },
@@ -736,7 +762,18 @@
   "napkinStep5Title": "How many years is fair?",
   "napkinStep5BodyFlat": "Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash — that is simply what those years add up to once each one is discounted. This one is not growing, so it gets no more than that.",
   "@napkinStep5BodyFlat": { "placeholders": { "discount": { "type": "String" }, "flat": { "type": "String" } } },
-  "napkinStep5BodyGrowing": "Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one grew {growth} in its middle year of the last {years} — the median, so one exceptional year cannot set the price. Next year's cash should be bigger than this year's, so it is worth more: {low} to {high} years, the range being what a point either side of {discount} does to the answer.",
+  "napkinStep5BodyGrowing": "Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one grew {growth} per share in its middle year of the last {years} — the median, so one exceptional year cannot set the price, and per share, so revenue bought with newly printed shares does not count. Next year's cash should be bigger than this year's, so it is worth more: {low} to {high} years, the range being what a point either side of {discount} does to the answer.",
+  "napkinStep5BodyShrinking": "Wanting {discount} a year back, a business going nowhere is worth about {flat} years of its cash. This one shrank {decline} per share in its middle year of the last {years}, so next year's cash is expected to be smaller than this year's and it is worth less: {low} to {high} years, the range being what a point either side of {discount} does to the answer.",
+  "@napkinStep5BodyShrinking": {
+    "placeholders": {
+      "discount": { "type": "String" },
+      "flat": { "type": "String" },
+      "decline": { "type": "String" },
+      "years": { "type": "String" },
+      "low": { "type": "String" },
+      "high": { "type": "String" }
+    }
+  },
   "@napkinStep5BodyGrowing": {
     "placeholders": {
       "discount": { "type": "String" },
@@ -748,40 +785,54 @@
     }
   },
 
-  "napkinStep6Title": "So what is a share worth?",
-  "napkinStep6Body": "{low} to {high} years of {basis} is {valueLow} to {valueHigh} for the whole company. Divide by {shares} shares, and one share is worth {rangeLow} to {rangeHigh}.",
+  "napkinStep6Title": "So what is the company worth?",
+  "napkinStep6Body": "{low} to {high} years of {basis} is {valueLow} to {valueHigh}.",
   "@napkinStep6Body": {
     "placeholders": {
       "low": { "type": "String" },
       "high": { "type": "String" },
       "basis": { "type": "String" },
       "valueLow": { "type": "String" },
-      "valueHigh": { "type": "String" },
+      "valueHigh": { "type": "String" }
+    }
+  },
+  "napkinStep6PlusCash": "Add the {netCash} it holds: {equityLow} to {equityHigh} for the whole company.",
+  "@napkinStep6PlusCash": { "placeholders": { "netCash": { "type": "String" }, "equityLow": { "type": "String" }, "equityHigh": { "type": "String" } } },
+  "napkinStep6LessDebt": "Take off the {excess} of debt beyond what it can carry: {equityLow} to {equityHigh} for the whole company.",
+  "@napkinStep6LessDebt": { "placeholders": { "excess": { "type": "String" }, "equityLow": { "type": "String" }, "equityHigh": { "type": "String" } } },
+  "napkinStep6AsIs": "That is what the whole company is worth.",
+
+  "napkinStep7Title": "So what is a share worth?",
+  "napkinStep7Body": "Divide by {shares} shares: {lowBefore} to {rangeHigh}. The bottom is then cut by {margin}, to {rangeLow}, in case any figure above is wrong — the stream, the growth, the return or the share count — and a price has to clear that before the shares are called cheap.",
+  "@napkinStep7Body": {
+    "placeholders": {
       "shares": { "type": "String" },
-      "rangeLow": { "type": "String" },
-      "rangeHigh": { "type": "String" }
+      "lowBefore": { "type": "String" },
+      "rangeHigh": { "type": "String" },
+      "margin": { "type": "String" },
+      "rangeLow": { "type": "String" }
     }
   },
 
-  "napkinStep7Title": "And the answer",
-  "napkinStep7BodyUnder": "You are paying {price}, below the {rangeLow}–{rangeHigh} the earnings support. That is the cheap side.",
-  "napkinStep7BodyFair": "You are paying {price}, inside the {rangeLow}–{rangeHigh} the earnings support. That is a normal price.",
-  "napkinStep7BodyOver": "You are paying {price}, above the {rangeLow}–{rangeHigh} the earnings support. You are paying for growth that has not happened yet.",
-  "@napkinStep7BodyUnder": {
+  "napkinStep8Title": "And the answer",
+  "napkinStep8BodyUnder": "You are paying {price}, below the {rangeLow}–{rangeHigh} the earnings support, margin and all. That is the cheap side.",
+  "napkinStep8BodyFair": "You are paying {price}, inside the {rangeLow}–{rangeHigh} the earnings support. That is a normal price.",
+  "napkinStep8BodyOver": "You are paying {price}, above the {rangeLow}–{rangeHigh} the earnings support. You are paying for growth that has not happened yet.",
+  "@napkinStep8BodyUnder": {
     "placeholders": {
       "price": { "type": "String" },
       "rangeLow": { "type": "String" },
       "rangeHigh": { "type": "String" }
     }
   },
-  "@napkinStep7BodyFair": {
+  "@napkinStep8BodyFair": {
     "placeholders": {
       "price": { "type": "String" },
       "rangeLow": { "type": "String" },
       "rangeHigh": { "type": "String" }
     }
   },
-  "@napkinStep7BodyOver": {
+  "@napkinStep8BodyOver": {
     "placeholders": {
       "price": { "type": "String" },
       "rangeLow": { "type": "String" },
@@ -799,7 +850,7 @@
   "@targetsAgainstPrice": { "placeholders": { "price": { "type": "String" } } },
   "targetsHowTitle": "How these are worked out",
   "targetsHowStep1Title": "A year of cash to start from",
-  "targetsHowStep1Body": "Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash, so the sum starts from {flow} — its own typical conversion, not one unusual year.",
+  "targetsHowStep1Body": "Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash after paying its staff in shares, so the sum starts from {flow} — its own typical conversion, not one unusual year.",
   "@targetsHowStep1Body": { "placeholders": { "revenue": { "type": "String" }, "margin": { "type": "String" }, "flow": { "type": "String" } } },
   "targetsHowStep2Title": "Three rates it has actually managed",
   "targetsHowStep2Body": "Its revenue grew {rates} in the {years} years on file. Its worst year gives the bear case at {bear}, its middle year the neutral at {neutral}, and its best year the bull at {bull}. Nothing here is forecast — these are years it has already had.",
@@ -827,10 +878,12 @@
   "@targetsRateCapped": { "placeholders": { "rate": { "type": "String" } } },
   "targetsRateAssumedWhy": "A reasonable return to want, not this company's own. Its cost of equity needs a Treasury yield and a beta, neither of which is in SEC filings — and neither could be reached.",
   "napkinCaveatTitle": "Worth knowing",
-  "napkinCaveatBuilding": "It spent {ratio}× more on equipment than wore out, so last year's leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.",
+  "napkinCaveatBuilding": "It spent {ratio}× more on equipment than wore out, so last year's leftover cash on its own would understate what the business normally makes. The typical-year figure above allows for it.",
   "@napkinCaveatBuilding": { "placeholders": { "ratio": { "type": "String" } } },
   "napkinCaveatMargin": "Its profit margin is {points} points below its own ten-year normal, so the sales growth above is being won at a lower profit.",
   "@napkinCaveatMargin": { "placeholders": { "points": { "type": "String" } } },
+  "napkinCaveatGrowthCapped": "Its middle year grew {actual} per share, but no business compounds like that for a decade, so only {credited} a year is paid for.",
+  "@napkinCaveatGrowthCapped": { "placeholders": { "actual": { "type": "String" }, "credited": { "type": "String" } } },
   "napkinCaveatEarnings": "It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.",
   "napkinCaveatOutsideOwners": "Only {share} of this business belongs to the listed shares; the rest is held by owners outside the company. The cash above is the whole group's brought down to that share, because the share count beside it counts the listed shares alone.",
   "@napkinCaveatOutsideOwners": { "placeholders": { "share": { "type": "String" } } },
@@ -850,7 +903,7 @@
   "hintPriceToSales": "Market value over revenue. The fallback when a company has no profit to divide by, and worth little on its own.",
 
 
-  "footnoteValuation": "The fair range is a heuristic: {low}–{high} times the latest year's {basis}, widened for revenue growth. That cash flow is already after interest, so the debt is not subtracted a second time. It is a frame for the price, not a target.",
+  "footnoteValuation": "The fair range is a heuristic: {low}–{high} times the {basis} the business typically keeps, at a 9% required return, paying for the growth each share has typically had. Net cash is added and debt beyond three years of cash flow taken off; the rest of the debt is already paid for out of the cash flow, which is after interest. The low end is a third below the arithmetic. It is a frame for the price, not a target.",
   "@footnoteValuation": {
     "placeholders": {
       "low": { "type": "String" },

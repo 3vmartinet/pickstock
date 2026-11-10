@@ -57,11 +57,12 @@ void main() {
       find.textContaining('buying every share costs \$3.71T'),
       findsOneWidget,
     );
-    // Said to be one year's earnings, not a pile: Apple's annual free cash
-    // flow of $98.8B is a decimal away from its $98.7B of total debt, and
-    // "kept" read as money set aside rather than money made.
-    expect(find.textContaining('had \$98.8B left over'), findsOneWidget);
-    expect(find.textContaining("one year's spare cash"), findsOneWidget);
+    // The typical year rather than the last one: Apple's three years on the
+    // fixture convert 26%, 27.8% and 23.7% of revenue, and the middle one
+    // applied to FY2025's revenue is $108.1B against the $98.8B it reported.
+    expect(find.textContaining('keeps \$108B'), findsOneWidget);
+    expect(find.textContaining('middle year of the last 3'), findsOneWidget);
+    expect(find.textContaining('not a pile it has saved up'), findsOneWidget);
     // Apple owes more than it holds, and the step says why that is already
     // reflected in the cash figure rather than subtracted from it again.
     expect(
@@ -72,6 +73,7 @@ void main() {
       find.textContaining('owes \$44B more than it holds'),
       findsOneWidget,
     );
+    expect(find.text('It owes more than it can carry'), findsNothing);
     // The no-growth multiple is stated rather than asserted: at the 9.0% a
     // buyer is assumed to want, a flat business is worth 14.1 years of its
     // cash, and the range either side is what a point of that return does.
@@ -79,16 +81,21 @@ void main() {
       find.textContaining('worth about 14.1 years of its cash'),
       findsOneWidget,
     );
+    // Growth is per share: 4.7% and 9.4% over Apple's two changes, whose
+    // middle is 7.0%, where plain revenue grew 2.0% and 6.4%.
+    expect(find.textContaining('grew 7.0% per share'), findsOneWidget);
     // Step five states the range; step six restates it on the way to a
     // price, so the phrase either side pins which one this is.
     expect(
-      find.textContaining('worth more: 14.7 to 20.2 years'),
+      find.textContaining('worth more: 16.7 to 22.9 years'),
       findsOneWidget,
     );
     expect(
-      find.textContaining('one share is worth \$98.11 to \$134.29'),
+      find.textContaining('Divide by 14.8B shares: \$121.43 to \$167.16'),
       findsOneWidget,
     );
+    // The margin of safety, stated with the figure it produces.
+    expect(find.textContaining('cut by 30.0%, to \$85.00'), findsOneWidget);
     expect(
       find.textContaining('You are paying \$250.00, above the'),
       findsOneWidget,

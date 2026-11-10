@@ -452,6 +452,8 @@ class FrameworkPrompts {
     ValuationVerdict.fairlyValued => 'fairly valued',
     ValuationVerdict.overvalued => 'overvalued',
     ValuationVerdict.unknown => 'impossible to value',
+    ValuationVerdict.notCovered =>
+      'not something PickStock values: a bank, insurer or REIT',
   };
 
   static String _day(DateTime day) =>

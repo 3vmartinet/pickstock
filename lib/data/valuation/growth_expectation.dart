@@ -5,6 +5,7 @@ import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
+import 'package:pickstock/data/valuation/normalised_cash_flow.dart';
 import 'package:pickstock/data/valuation/price_target.dart';
 
 /// How the growth a price requires compares with the growth a company has
@@ -65,15 +66,17 @@ class GrowthExpectation extends Equatable {
   /// Builds the comparison, or `null` where the company cannot support one.
   static GrowthExpectation? of(FinancialSnapshot snapshot, double marketCap) {
     if (marketCap <= 0) return null;
-    final normalised = _normalisedCashFlow(snapshot);
-    if (normalised == null) return null;
+    final normalised = NormalisedCashFlow.of(snapshot);
+    if (normalised == null || normalised.flow <= 0) return null;
+    final cashMargin = normalised.marginPercent;
+    if (cashMargin == null) return null;
 
     final record = _delivered(snapshot);
     final margin = _marginTrend(snapshot);
     return GrowthExpectation._(
       normalisedCashFlow: normalised.flow,
-      medianCashFlowMargin: normalised.margin,
-      reportedCashFlow: snapshot.latest.freeCashFlow,
+      medianCashFlowMargin: cashMargin,
+      reportedCashFlow: normalised.reported,
       marketCap: marketCap,
       deliveredGrowthPercent: record?.growth,
       deliveredOverYears: record?.years,
@@ -84,19 +87,15 @@ class GrowthExpectation extends Equatable {
   }
 
   /// The cash flow the model discounts: this company's own typical cash
-  /// conversion applied to what it sells today.
-  ///
-  /// A single year is a poor base. Microsoft spent 63% of its operating cash
-  /// flow on capital projects in FY2026 and Coca-Cola paid a one-off tax
-  /// deposit in 2025, which halved each company's reported free cash flow
-  /// without changing what the business ordinarily throws off.
+  /// conversion, after stock pay, applied to what it sells today. The same
+  /// stream the fair-value band is struck on — see [NormalisedCashFlow].
   final double normalisedCashFlow;
 
   /// The median free cash flow margin the normalised figure is built from.
   final double medianCashFlowMargin;
 
-  /// The latest year as filed, kept so the report can show what was normalised
-  /// away.
+  /// The latest year as filed, after stock pay, kept so the report can show
+  /// what was normalised away.
   final double? reportedCashFlow;
 
   final double marketCap;
@@ -287,33 +286,6 @@ class GrowthExpectation extends Equatable {
       return ExpectationVerdict.belowRecord;
     }
     return ExpectationVerdict.inLineWithRecord;
-  }
-
-  /// The median free cash flow margin over the last decade, applied to the
-  /// latest year's revenue.
-  static ({double flow, double margin})? _normalisedCashFlow(
-    FinancialSnapshot snapshot,
-  ) {
-    final revenue = snapshot.latest.revenue;
-    if (revenue == null || revenue <= 0) return null;
-
-    final window = snapshot.years.length > CashFlowModel.horizon
-        ? snapshot.years.sublist(snapshot.years.length - CashFlowModel.horizon)
-        : snapshot.years;
-    final margins = <double>[
-      for (final year in window)
-        if (year.revenue != null &&
-            year.revenue! > 0 &&
-            year.freeCashFlow != null)
-          year.freeCashFlow! / year.revenue!,
-    ]..sort();
-    if (margins.isEmpty) return null;
-
-    // The median, not the mean: one disastrous year should not drag the base
-    // down for a decade, nor one exceptional year hold it up.
-    final margin = margins[margins.length ~/ 2];
-    final flow = margin * revenue;
-    return flow <= 0 ? null : (flow: flow, margin: margin * 100);
   }
 
   /// The latest operating margin, and how far it sits from its own median

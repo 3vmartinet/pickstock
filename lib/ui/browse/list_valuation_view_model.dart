@@ -9,7 +9,6 @@ import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_upside.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
-import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
@@ -19,7 +18,6 @@ SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
-MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
 
 /// How long a company's price is left alone after it was last asked for.
 ///
@@ -48,10 +46,7 @@ const int _maxQueued = 60;
 ///
 /// The same verdict the valuation tab shows, from the same arithmetic: the
 /// filed figures and a share price. The price is the stored one while it is
-/// fresh, and a new quote once it is older than [listPriceGuard]. The discount
-/// rate is the company's own only if it is already held — fetching it is a
-/// second request per company — and the assumed rate otherwise, as the bulk
-/// scan does; the selected tile follows the report, which has the real one.
+/// fresh, and a new quote once it is older than [listPriceGuard].
 ///
 /// Newest request first: the tiles on screen now are the ones the reader is
 /// looking at, and a tile scrolled past a minute ago can wait or be dropped.
@@ -299,12 +294,7 @@ class ListValuationViewModel extends ChangeNotifier {
         }
       }
 
-      if (quote != null) {
-        final askedForRate = await _judge(company, quote, startedAt: startedAt);
-        // The company's rate cost a request of its own: pause for it as for
-        // a quote, so the two together stay inside the same allowance.
-        if (askedForRate) outcome = _Outcome.quoted;
-      }
+      if (quote != null) await _judge(company, quote, startedAt: startedAt);
       return outcome;
     } on SecException {
       return _Outcome.fromStore;
@@ -326,39 +316,21 @@ class ListValuationViewModel extends ChangeNotifier {
         DateTime.now().difference(fetchedAt) < listPriceGuard;
   }
 
-  /// Judges [company] at [quote], on the same rate the report would use, and
-  /// says whether that rate had to be asked for.
-  ///
-  /// The company's own rate rather than the assumed one: judged on the
-  /// assumed rate, a tile disagreed with the report the moment it was
-  /// opened, and changed its mark when the report fetched the real one. The
-  /// rate is kept between launches, so it is asked for about once a week per
-  /// company, not on every pricing.
-  Future<bool> _judge(
+  /// Judges [company] at [quote], exactly as the report would.
+  Future<void> _judge(
     Company company,
     Quote quote, {
     required DateTime startedAt,
   }) async {
     final snapshot = await _secRepo.fetchSnapshot(company.ticker);
-    if (_isDisposed) return false;
-    // Nothing is asked for where no rate can be built, nor where it is held.
-    final symbol = _directory.quoteSymbolFor(company);
-    final wasHeld =
-        !_marketRatesRepo.isConfigured ||
-        _marketRatesRepo.cachedRateFor(symbol) != null;
-    final rate = await _marketRatesRepo.rateFor(symbol);
-    if (_isDisposed) return !wasHeld;
+    if (_isDisposed) return;
     final reportedAt = _reportedAt[company.cik];
-    if (reportedAt != null && !reportedAt.isBefore(startedAt)) {
-      return !wasHeld;
-    }
+    if (reportedAt != null && !reportedAt.isBefore(startedAt)) return;
     final valuation = Valuation(
       snapshot: snapshot,
       pricePerShare: quote.pricePerShare,
-      discountRatePercent: rate?.percent,
     );
     _record(company.cik, valuation.verdict, ValuationUpside.of(valuation));
-    return !wasHeld;
   }
 
   /// Keeps [verdict] and [upside] for [cik], and tells listeners if either

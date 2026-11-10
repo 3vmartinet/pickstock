@@ -696,7 +696,7 @@ class AppLocalizationsEn extends AppLocalizations {
       one: 'One company could not be valued and was skipped',
       zero: '',
     );
-    return '$_temp0 — no share count, no revenue, or no positive cash stream.';
+    return '$_temp0 — no share count, no revenue, no positive cash stream, or a bank, insurer or REIT, which these figures cannot value.';
   }
 
   @override
@@ -1850,8 +1850,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verdictNotValuable => 'Cannot be valued';
 
   @override
+  String get verdictNotCovered => 'Not covered';
+
+  @override
   String get detailUndervalued =>
-      'The price is below the range these earnings support.';
+      'The price is more than a third below what these earnings are worth — the margin the shares have to clear before they are called cheap.';
 
   @override
   String get detailFairlyValued =>
@@ -1864,6 +1867,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get detailNotValuable =>
       'The company reports neither a profit nor free cash flow, so there is nothing to strike a multiple against.';
+
+  @override
+  String get detailNotCovered =>
+      'A bank, insurer, lender or REIT. Its borrowing is its raw material and its cash flow swings with its balance sheet, so neither says what it earns — PickStock does not value it.';
 
   @override
   String get labelRangeLow => 'Range low';
@@ -1899,9 +1906,16 @@ class AppLocalizationsEn extends AppLocalizations {
     String high,
     String basis,
     String amount,
+    int years,
     String shares,
   ) {
-    return '$low× to $high× $basis of $amount, over $shares shares';
+    String _temp0 = intl.Intl.pluralLogic(
+      years,
+      locale: localeName,
+      other: 'typical of the last $years years',
+      one: 'the latest year',
+    );
+    return '$low× to $high× $basis of $amount — $_temp0 — over $shares shares';
   }
 
   @override
@@ -1917,6 +1931,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String valuationNoGrowthPremium(String flat, String discount) {
     return '$flat years at $discount, with nothing added for growth';
+  }
+
+  @override
+  String valuationGrowthDiscount(
+    String flat,
+    String discount,
+    String fewer,
+    String decline,
+  ) {
+    return '$flat years at $discount, $fewer fewer for shrinking $decline a year per share';
+  }
+
+  @override
+  String valuationMarginLine(String margin) {
+    return 'Net cash added, debt beyond three years of cash taken off; the low end then cut by $margin as a margin for error';
   }
 
   @override
@@ -1943,7 +1972,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String expectationBasis(String amount, String margin) {
-    return 'Discounting $amount a year — this company\'s median free cash flow margin of $margin on its latest revenue — over ten years, fading to 2.5%.';
+    return 'Discounting $amount a year — this company\'s median free cash flow margin of $margin, after stock pay, on its latest revenue — over ten years, fading to 2.5%.';
   }
 
   @override
@@ -2110,7 +2139,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String napkinStep2Body(String revenue, String freeCashFlow) {
-    return 'In one year the company took in $revenue and, after every bill including new equipment, had $freeCashFlow left over. That is one year\'s spare cash — what it earns annually, not a pile it has saved up.';
+    return 'In its latest year the company took in $revenue and, after every bill including new equipment and the shares it paid its staff with, kept $freeCashFlow. That is one year\'s spare cash — what it earns annually, not a pile it has saved up.';
+  }
+
+  @override
+  String napkinStep2BodyTypical(
+    String revenue,
+    String freeCashFlow,
+    int years,
+  ) {
+    return 'In a typical year the company takes in $revenue and, after every bill including new equipment and the shares it pays its staff with, keeps $freeCashFlow. Typical means its middle year of the last $years on that measure, applied to what it sells today — so one unusual year, a tax bill or a building spree, cannot set the price. It earns this annually; it is not a pile it has saved up.';
   }
 
   @override
@@ -2127,7 +2165,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String napkinStep3BodyCash(String netCash, String freeCashFlow) {
-    return 'The company holds $netCash more than it owes, so nothing is being siphoned off to lenders. The whole $freeCashFlow above belongs to the owners.';
+    return 'The company holds $netCash more than it owes, so nothing is being siphoned off to lenders. The whole $freeCashFlow above belongs to the owners — and so does the $netCash, which is added to what the company is worth below.';
+  }
+
+  @override
+  String get napkinStep3TitleExcess => 'It owes more than it can carry';
+
+  @override
+  String napkinStep3BodyExcess(
+    String netDebt,
+    String years,
+    String freeCashFlow,
+    String carried,
+    String excess,
+  ) {
+    return 'The company owes $netDebt more than it holds — $years years of the $freeCashFlow it keeps. Its lenders are paid first and that interest already came out of the cash above, so up to $carried years\' worth is debt a business simply carries. The $excess beyond that is the lenders\' claim on the business itself, and comes off what it is worth below.';
   }
 
   @override
@@ -2155,11 +2207,23 @@ class AppLocalizationsEn extends AppLocalizations {
     String low,
     String high,
   ) {
-    return 'Wanting $discount a year back, a business going nowhere is worth about $flat years of its cash. This one grew $growth in its middle year of the last $years — the median, so one exceptional year cannot set the price. Next year\'s cash should be bigger than this year\'s, so it is worth more: $low to $high years, the range being what a point either side of $discount does to the answer.';
+    return 'Wanting $discount a year back, a business going nowhere is worth about $flat years of its cash. This one grew $growth per share in its middle year of the last $years — the median, so one exceptional year cannot set the price, and per share, so revenue bought with newly printed shares does not count. Next year\'s cash should be bigger than this year\'s, so it is worth more: $low to $high years, the range being what a point either side of $discount does to the answer.';
   }
 
   @override
-  String get napkinStep6Title => 'So what is a share worth?';
+  String napkinStep5BodyShrinking(
+    String discount,
+    String flat,
+    String decline,
+    String years,
+    String low,
+    String high,
+  ) {
+    return 'Wanting $discount a year back, a business going nowhere is worth about $flat years of its cash. This one shrank $decline per share in its middle year of the last $years, so next year\'s cash is expected to be smaller than this year\'s and it is worth less: $low to $high years, the range being what a point either side of $discount does to the answer.';
+  }
+
+  @override
+  String get napkinStep6Title => 'So what is the company worth?';
 
   @override
   String napkinStep6Body(
@@ -2168,28 +2232,60 @@ class AppLocalizationsEn extends AppLocalizations {
     String basis,
     String valueLow,
     String valueHigh,
-    String shares,
-    String rangeLow,
-    String rangeHigh,
   ) {
-    return '$low to $high years of $basis is $valueLow to $valueHigh for the whole company. Divide by $shares shares, and one share is worth $rangeLow to $rangeHigh.';
+    return '$low to $high years of $basis is $valueLow to $valueHigh.';
   }
 
   @override
-  String get napkinStep7Title => 'And the answer';
-
-  @override
-  String napkinStep7BodyUnder(String price, String rangeLow, String rangeHigh) {
-    return 'You are paying $price, below the $rangeLow–$rangeHigh the earnings support. That is the cheap side.';
+  String napkinStep6PlusCash(
+    String netCash,
+    String equityLow,
+    String equityHigh,
+  ) {
+    return 'Add the $netCash it holds: $equityLow to $equityHigh for the whole company.';
   }
 
   @override
-  String napkinStep7BodyFair(String price, String rangeLow, String rangeHigh) {
+  String napkinStep6LessDebt(
+    String excess,
+    String equityLow,
+    String equityHigh,
+  ) {
+    return 'Take off the $excess of debt beyond what it can carry: $equityLow to $equityHigh for the whole company.';
+  }
+
+  @override
+  String get napkinStep6AsIs => 'That is what the whole company is worth.';
+
+  @override
+  String get napkinStep7Title => 'So what is a share worth?';
+
+  @override
+  String napkinStep7Body(
+    String shares,
+    String lowBefore,
+    String rangeHigh,
+    String margin,
+    String rangeLow,
+  ) {
+    return 'Divide by $shares shares: $lowBefore to $rangeHigh. The bottom is then cut by $margin, to $rangeLow, in case any figure above is wrong — the stream, the growth, the return or the share count — and a price has to clear that before the shares are called cheap.';
+  }
+
+  @override
+  String get napkinStep8Title => 'And the answer';
+
+  @override
+  String napkinStep8BodyUnder(String price, String rangeLow, String rangeHigh) {
+    return 'You are paying $price, below the $rangeLow–$rangeHigh the earnings support, margin and all. That is the cheap side.';
+  }
+
+  @override
+  String napkinStep8BodyFair(String price, String rangeLow, String rangeHigh) {
     return 'You are paying $price, inside the $rangeLow–$rangeHigh the earnings support. That is a normal price.';
   }
 
   @override
-  String napkinStep7BodyOver(String price, String rangeLow, String rangeHigh) {
+  String napkinStep8BodyOver(String price, String rangeLow, String rangeHigh) {
     return 'You are paying $price, above the $rangeLow–$rangeHigh the earnings support. You are paying for growth that has not happened yet.';
   }
 
@@ -2223,7 +2319,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String targetsHowStep1Body(String revenue, String margin, String flow) {
-    return 'Its last year sold $revenue. Over the years on file it has turned $margin of what it sells into spare cash, so the sum starts from $flow — its own typical conversion, not one unusual year.';
+    return 'Its last year sold $revenue. Over the years on file it has turned $margin of what it sells into spare cash after paying its staff in shares, so the sum starts from $flow — its own typical conversion, not one unusual year.';
   }
 
   @override
@@ -2314,12 +2410,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String napkinCaveatBuilding(String ratio) {
-    return 'It spent $ratio× more on equipment than wore out, so last year\'s leftover cash understates what the business normally makes. The section below uses a smoothed figure instead.';
+    return 'It spent $ratio× more on equipment than wore out, so last year\'s leftover cash on its own would understate what the business normally makes. The typical-year figure above allows for it.';
   }
 
   @override
   String napkinCaveatMargin(String points) {
     return 'Its profit margin is $points points below its own ten-year normal, so the sales growth above is being won at a lower profit.';
+  }
+
+  @override
+  String napkinCaveatGrowthCapped(String actual, String credited) {
+    return 'Its middle year grew $actual per share, but no business compounds like that for a decade, so only $credited a year is paid for.';
   }
 
   @override
@@ -2377,7 +2478,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String footnoteValuation(String low, String high, String basis) {
-    return 'The fair range is a heuristic: $low–$high times the latest year\'s $basis, widened for revenue growth. That cash flow is already after interest, so the debt is not subtracted a second time. It is a frame for the price, not a target.';
+    return 'The fair range is a heuristic: $low–$high times the $basis the business typically keeps, at a 9% required return, paying for the growth each share has typically had. Net cash is added and debt beyond three years of cash flow taken off; the rest of the debt is already paid for out of the cash flow, which is after interest. The low end is a third below the arithmetic. It is a frame for the price, not a target.';
   }
 
   @override

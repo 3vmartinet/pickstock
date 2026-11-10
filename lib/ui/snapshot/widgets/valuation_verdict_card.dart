@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
@@ -58,7 +59,8 @@ class ValuationVerdictCard extends StatelessWidget {
               ),
             ],
           ),
-          if (verdict != ValuationVerdict.unknown) ...[
+          if (verdict != ValuationVerdict.unknown &&
+              verdict != ValuationVerdict.notCovered) ...[
             const Divider(),
             const FairValueGauge(),
             const _WorkingsLines(),
@@ -122,6 +124,7 @@ class _WorkingsLines extends StatelessWidget {
             _formatRepo.ratio(valuation.highMultiple),
             basis.getLabel(context.strings),
             _formatRepo.compactCurrency(stream),
+            valuation.basisYears,
             _formatRepo.compactCount(shares),
           ),
         ).muted().xSmall(),
@@ -135,10 +138,24 @@ class _WorkingsLines extends StatelessWidget {
                   ),
                   _formatRepo.percent(growth),
                 )
+              : growth < 0
+              ? context.strings.valuationGrowthDiscount(
+                  _formatRepo.ratio(valuation.flatMultiple),
+                  _formatRepo.percent(valuation.discountRatePercent),
+                  _formatRepo.ratio(
+                    valuation.flatMultiple - valuation.centralMultiple,
+                  ),
+                  _formatRepo.percent(-growth),
+                )
               : context.strings.valuationNoGrowthPremium(
                   _formatRepo.ratio(valuation.flatMultiple),
                   _formatRepo.percent(valuation.discountRatePercent),
                 ),
+        ).muted().xSmall(),
+        Text(
+          context.strings.valuationMarginLine(
+            _formatRepo.percent(CashFlowModel.marginOfSafety * 100),
+          ),
         ).muted().xSmall(),
       ],
     );

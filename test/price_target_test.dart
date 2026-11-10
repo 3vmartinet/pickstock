@@ -101,14 +101,18 @@ void main() {
       final targets = adobe.priceTargets(_shares);
       expect(targets[0].growthPercent, closeTo(10.2, 0.2));
       expect(targets[1].growthPercent, closeTo(10.8, 0.2));
-      // Its best year was 22.7%, which is inside the cap and so stands as
-      // filed — where the upper quartile gave 11.5 and no bull case at all.
-      expect(targets[2].growthPercent, closeTo(22.7, 0.2));
+      // Its best year was 22.7%, which is more than a decade of it would
+      // credibly deliver, so the bull case is held to the ceiling — still
+      // well clear of the 11.5 the upper quartile gave.
+      expect(
+        targets[2].growthPercent,
+        closeTo(CashFlowModel.maximumCreditedGrowth * 100, 0.01),
+      );
 
       // A range worth reading, rather than three ways of saying one number.
       expect(
         targets[2].valuePerShare - targets[0].valuePerShare,
-        greaterThan(targets[1].valuePerShare * 0.5),
+        greaterThan(targets[1].valuePerShare * 0.2),
       );
     });
 

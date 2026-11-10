@@ -2,36 +2,33 @@ import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
+import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
+import 'package:pickstock/data/valuation/normalised_cash_flow.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 
-/// How many years of revenue history the growth premium looks back over.
+/// How many years of history the growth the multiple pays for looks back over.
 const int _growthWindowYears = 5;
 
-/// The multiple is no longer a rule of thumb with a growth premium bolted on.
-///
-/// Twelve to eighteen times earnings, plus six tenths of a turn per point of
-/// growth, priced Nextpower at 28 years of its cash while the discounted cash
-/// flow on the tab beside it — at the 14.7% its own beta asks for — said 18.
-/// Two models, one company, two answers, and no way for a reader to know
-/// which to believe. The multiple now comes out of that same model, so there
-/// is only one.
-///
-/// The old range was not wrong so much as unstated: at 9% and no growth the
-/// model returns 14.1 years, which is the middle of it. What it could not do
-/// was move with the return a particular company has to earn.
+/// Real estate investment trusts, which file under this industry code. Their
+/// capital spending is their business, so free cash flow says nothing about
+/// what they earn; they are read like the banks.
+const int _reitSic = 6798;
 
 /// A share price judged against what the filings say the business earns.
 ///
-/// Every figure here comes from the latest fiscal year on file plus the price
-/// the user supplies; nothing is forecast. The verdict is a heuristic and says
-/// so — it exists to frame the price, not to replace reading the filings.
+/// The band is one discounted cash flow, run on the cash the business
+/// ordinarily keeps for its owners, at a fixed required return, paying for
+/// the growth each share has typically had. The balance sheet is added or
+/// taken off, and the low end carries a margin for all of it being wrong.
+/// Every input is on the card; the verdict is a heuristic and says so — it
+/// exists to frame the price, not to replace reading the filings.
 class Valuation extends Equatable {
   factory Valuation({
     required FinancialSnapshot snapshot,
     required double pricePerShare,
-    double? discountRatePercent,
   }) {
     final latest = snapshot.latest;
     // The cover-page count is the current one; the annual diluted average is
@@ -40,6 +37,7 @@ class Valuation extends Equatable {
     final outstanding =
         snapshot.company.sharesOutstanding ?? latest.dilutedShares;
     final diluted = latest.dilutedShares ?? snapshot.company.sharesOutstanding;
+    final rates = _growthRates(snapshot);
 
     return Valuation._(
       pricePerShare: pricePerShare,
@@ -51,15 +49,15 @@ class Valuation extends Equatable {
       netIncome: latest.netIncome,
       operatingIncome: latest.operatingIncome,
       freeCashFlow: latest.freeCashFlow,
+      normalisedCashFlow: NormalisedCashFlow.of(snapshot),
       shareBasedCompensation: latest.shareBasedCompensation,
       parentStake: latest.parentStake,
       revenue: latest.revenue,
       netDebt: latest.netDebt,
       fiscalYear: latest.fiscalYear,
-      revenueGrowthPercent: _revenueGrowthPercent(snapshot),
-      discountRatePercent:
-          discountRatePercent ?? CashFlowModel.defaultDiscountRate * 100,
-      windowYears: _growthRates(snapshot).length,
+      growthPercent: _median(rates),
+      windowYears: rates.length,
+      isCovered: _isCovered(snapshot.company.sic),
     );
   }
 
@@ -72,15 +70,16 @@ class Valuation extends Equatable {
     required this.netIncome,
     required this.operatingIncome,
     required this.freeCashFlow,
+    required this.normalisedCashFlow,
     required this.shareBasedCompensation,
     required this.parentStake,
     required this.revenue,
     required this.netDebt,
     required this.fiscalYear,
-    required this.revenueGrowthPercent,
-    required this.discountRatePercent,
-    required this._windowYears,
-  });
+    required this.growthPercent,
+    required int windowYears,
+    required this.isCovered,
+  }) : _windowYears = windowYears; // ignore: prefer_initializing_formals
 
   final double pricePerShare;
 
@@ -113,7 +112,13 @@ class Valuation extends Equatable {
   /// on what the earnings basis may credit.
   final double? operatingIncome;
 
+  /// The latest year's free cash flow as filed, before stock pay. What the
+  /// ratio grid quotes; the band is struck on [normalisedCashFlow].
   final double? freeCashFlow;
+
+  /// The cash the business ordinarily keeps for its owners, read across its
+  /// years, or `null` where the filings carry no cash flow at all.
+  final NormalisedCashFlow? normalisedCashFlow;
 
   /// What the year's staff were paid in shares rather than money.
   final double? shareBasedCompensation;
@@ -129,29 +134,21 @@ class Valuation extends Equatable {
   /// not divisible by one another until the first is brought down to this.
   final double parentStake;
 
+  /// Whether this kind of company can be valued on its cash flow at all.
+  ///
+  /// Banks, insurers, brokers and lenders are not: their borrowing is their
+  /// raw material, their "operating cash flow" swings with deposits and
+  /// trading books, and the debt the parser reads is the business itself.
+  /// JPMorgan reported operating cash flow of -$148B for FY2025 and Bank of
+  /// America +$13B, and neither figure says anything about what either bank
+  /// earns. Real estate investment trusts are read the same way: their
+  /// capital spending is the business. All of them say so rather than
+  /// producing a band.
+  final bool isCovered;
+
   /// Whether the figures below have been brought down to the parent's slice,
   /// so the worked example can say that they were.
   bool get hasOutsideOwners => parentStake < 1;
-
-  /// Free cash flow less what the staff were paid in shares.
-  ///
-  /// The cash flow statement adds stock pay back because none of it left the
-  /// building, which is true and beside the point: those shares were printed,
-  /// and every existing holder owns a little less because of it. The band
-  /// below values the whole equity and then divides by today's share count, so
-  /// without this nobody is charged for the shares tomorrow's count will
-  /// carry — and Alphabet's $73.3B of spare cash values a company that in fact
-  /// generated $48.3B for its owners.
-  ///
-  /// Subtracted where the filer reports it, which is nearly three quarters of
-  /// them; left alone where it does not, since a company that tags no stock
-  /// pay is usually one that hands out none.
-  double? get _freeCashFlowAfterStockPay {
-    final cash = freeCashFlow;
-    if (cash == null) return null;
-    final stock = shareBasedCompensation;
-    return stock == null ? cash : cash - stock;
-  }
 
   /// How much of the spare cash went out in shares, as a percentage — the
   /// figure the worked example states so the subtraction is not a surprise.
@@ -165,8 +162,8 @@ class Valuation extends Equatable {
   /// Whether stock pay is doing anything here, so the report can say it is.
   bool get hasStockPay => (shareBasedCompensation ?? 0) > 0;
 
-  /// Free cash flow, less the part of it that belongs to owners outside the
-  /// listed company.
+  /// The normalised cash flow, less the part of it that belongs to owners
+  /// outside the listed company.
   ///
   /// The cash the filing reports is the whole group's, and only this much of
   /// it reaches the shares. MarketWise generated $45.6M in FY2025 against 2.4M
@@ -174,21 +171,23 @@ class Valuation extends Equatable {
   /// profit went to its Class B unitholders and the shares' own claim was
   /// $1.64.
   double? get freeCashFlowToShareholders {
-    final cash = _freeCashFlowAfterStockPay;
+    final cash = normalisedCashFlow?.flow;
     return cash == null ? null : cash * parentStake;
   }
 
   /// The fiscal year every figure above is taken from.
   final int fiscalYear;
 
-  /// Annualised revenue growth over the window the band's premium uses.
-  final double? revenueGrowthPercent;
-
-  /// The return a buyer is assumed to want, which is what turns a stream
-  /// of cash into a number of years' worth of it.
-  final double discountRatePercent;
+  /// Typical growth of revenue per share over the window, in percentage
+  /// points, before the band's floor and ceiling: what the company has
+  /// actually done, so the worked example can say what was credited and why.
+  final double? growthPercent;
 
   final int _windowYears;
+
+  /// The return a buyer is assumed to want, in percent. The same for every
+  /// company, on purpose: see [CashFlowModel.defaultDiscountRate].
+  double get discountRatePercent => CashFlowModel.defaultDiscountRate * 100;
 
   /// Price times shares: what the market says the equity is worth.
   double? get marketCap {
@@ -254,7 +253,7 @@ class Valuation extends Equatable {
   /// Under one is the classic Lynch reading of cheap.
   double? get growthAdjustedRatio {
     final ratio = priceEarningsRatio;
-    final growth = revenueGrowthPercent;
+    final growth = growthPercent;
     if (ratio == null || growth == null || growth <= 0) return null;
     return ratio / growth;
   }
@@ -275,6 +274,13 @@ class Valuation extends Equatable {
     ValuationBasis.freeCashFlow => freeCashFlowToShareholders,
     ValuationBasis.earnings => _earningsFromOperations,
     null => null,
+  };
+
+  /// How many years the stream was read over: one where it is the year as
+  /// filed, which is what the earnings basis always is.
+  int get basisYears => switch (basis) {
+    ValuationBasis.freeCashFlow => normalisedCashFlow?.yearsRead ?? 1,
+    _ => 1,
   };
 
   /// Profit, but no more of it than the business itself produced.
@@ -303,9 +309,15 @@ class Valuation extends Equatable {
     return math.min(profit, operating * parentStake);
   }
 
-  /// Growth credited to the multiple, in percentage points.
-  double get creditedGrowthPercent => math.min(
-    math.max(revenueGrowthPercent ?? 0, 0),
+  /// Growth credited to the multiple, in percentage points: the typical
+  /// per-share growth, held between the model's floor and ceiling.
+  ///
+  /// Negative where the business is shrinking. A company whose sales per
+  /// share fall 5% a year is not worth what a flat one is, and the old floor
+  /// at zero valued AT&T, Verizon and Comcast as if their decline had
+  /// stopped — which is how all three screened as deeply undervalued.
+  double get creditedGrowthPercent => (growthPercent ?? 0).clamp(
+    CashFlowModel.minimumCreditedGrowth * 100,
     CashFlowModel.maximumCreditedGrowth * 100,
   );
 
@@ -337,22 +349,77 @@ class Valuation extends Equatable {
     discountRate: _discountRate - CashFlowModel.discountRateBand,
   );
 
-  double get _discountRate => discountRatePercent / 100;
+  double get _discountRate => CashFlowModel.defaultDiscountRate;
+
+  /// Cash the company holds beyond what it owes, added to what the stream is
+  /// worth: it is the owners' as surely as next year's cash is. Zero for a
+  /// company owing more than it holds, or saying nothing about either.
+  double get netCashAdded {
+    final net = netDebt;
+    return net == null || net >= 0 ? 0 : -net;
+  }
+
+  /// Debt beyond what the cash flow can carry, taken off what the stream is
+  /// worth.
+  ///
+  /// Not all of the debt: the stream is already after interest, so a
+  /// multiple of it is already what the shares are worth with the lenders
+  /// paid, and subtracting the principal as well would charge for the same
+  /// debt twice. But a company owing twenty years of its cash flow is not
+  /// worth a multiple of that cash flow either — the lenders own it. So the
+  /// first [CashFlowModel.carriedDebtYears] years' worth is the debt a
+  /// business carries, and only what lies beyond that comes off.
+  double get excessDebtDeducted {
+    final net = netDebt;
+    final stream = basisAmount;
+    if (net == null || net <= 0 || stream == null || stream <= 0) return 0;
+    return math.max(0, net - CashFlowModel.carriedDebtYears * stream);
+  }
+
+  /// Whether the balance sheet moved the answer at all, so the worked example
+  /// can say which way.
+  bool get hasBalanceSheetAdjustment =>
+      netCashAdded > 0 || excessDebtDeducted > 0;
+
+  /// What the whole equity is worth at [multiple] years of the stream, with
+  /// the balance sheet counted, or `null` where there is no stream.
+  double? equityValueAt(double multiple) {
+    final stream = basisAmount;
+    if (stream == null || !isCovered) return null;
+    return math.max(0, stream * multiple + netCashAdded - excessDebtDeducted);
+  }
 
   /// The bottom of the fair range, per share.
-  double? get fairValueLow => _fairValueAt(lowMultiple);
-
-  /// The top of the fair range, per share.
-  double? get fairValueHigh => _fairValueAt(highMultiple);
-
-  double? _fairValueAt(double multiple) {
-    final stream = basisAmount;
+  ///
+  /// A third below what the arithmetic gives: the margin for the stream, the
+  /// growth, the rate or the share count being wrong, which across ten
+  /// thousand filers some of them always are. A price has to clear it before
+  /// the company is called cheap. Without it, a band a point of return wide
+  /// called a third of the directory undervalued, and a third of those by
+  /// more than 100%.
+  double? get fairValueLow {
+    final value = equityValueAt(lowMultiple);
     final shares = sharesOutstanding;
-    if (stream == null || shares == null || shares <= 0) return null;
-    // No net-debt adjustment: the stream is already after interest, so it is
-    // what reaches the shareholders and a multiple of it is what their shares
-    // are worth. Subtracting the debt on top would charge for it twice.
-    return stream * multiple / shares;
+    if (value == null || shares == null || shares <= 0) return null;
+    return value * (1 - CashFlowModel.marginOfSafety) / shares;
+  }
+
+  /// The top of the fair range, per share: what the arithmetic gives at the
+  /// generous end of the return, with no margin taken.
+  double? get fairValueHigh {
+    final value = equityValueAt(highMultiple);
+    final shares = sharesOutstanding;
+    if (value == null || shares == null || shares <= 0) return null;
+    return value / shares;
+  }
+
+  /// The bottom of the band before the margin of safety is taken, per share,
+  /// so the worked example can show both.
+  double? get fairValueLowBeforeMargin {
+    final value = equityValueAt(lowMultiple);
+    final shares = sharesOutstanding;
+    if (value == null || shares == null || shares <= 0) return null;
+    return value / shares;
   }
 
   /// How far the price would have to move to reach [target], as a percentage.
@@ -373,6 +440,7 @@ class Valuation extends Equatable {
   double? get percentToHigh => percentTo(fairValueHigh);
 
   ValuationVerdict get verdict {
+    if (!isCovered) return ValuationVerdict.notCovered;
     final low = fairValueLow;
     final high = fairValueHigh;
     if (low == null || high == null) return ValuationVerdict.unknown;
@@ -381,48 +449,63 @@ class Valuation extends Equatable {
     return ValuationVerdict.fairlyValued;
   }
 
-  /// The growth the multiple is allowed to pay for: the company's middle
-  /// year, not its average one.
-  ///
-  /// A median over the window rather than the rate from one end of it to the
-  /// other. Zoom is why. Its revenue went from $2.65B to $4.87B over five
-  /// years, which annualises to 12.9% — but all of that is the tail of one
-  /// pandemic year, and its last four years grew 7.1%, 3.1%, 3.1% and 4.4%.
-  /// On the annualised rate it earned nearly eight extra turns of multiple
-  /// for growth it has not had since 2022, on a report whose own overview
-  /// said 4.4% at the top of the page. Its middle year is 4.4%.
-  ///
-  /// A median rather than the latest year, which would be just as blind the
-  /// other way: one flat year in a long climb would price the climb away.
-  /// The middle year survives an exceptional year at either end, which is
-  /// what a multiple is supposed to be paid on.
-  static double? _revenueGrowthPercent(FinancialSnapshot snapshot) {
-    final rates = _growthRates(snapshot);
-    if (rates.isEmpty) return null;
-    final middle = rates.length ~/ 2;
-    return rates.length.isOdd
-        ? rates[middle]
-        : (rates[middle - 1] + rates[middle]) / 2;
-  }
-
   /// How many year-on-year changes the median was taken over, so the worked
   /// example can say what "typical" was measured across.
   int get growthWindowYears => _windowYears;
 
-  /// The year-on-year changes inside the window, in order, smallest first.
+  /// The year-on-year changes in revenue per share inside the window, in
+  /// order, smallest first.
   ///
-  /// Read off each year's own growth, which is the figure the report prints
-  /// beside its revenue — so the worked example and the overview above it
-  /// cannot state different rates for the same company.
+  /// Per share, because the shares are what is being valued. Revenue bought
+  /// with newly printed shares is not growth to the holder of an old one:
+  /// Realty Income grew revenue 26% a year and its share count 20%, and on
+  /// revenue alone it earned nearly ten extra turns of multiple for growth
+  /// its owners never saw. Where a year has no share count, the plain
+  /// revenue change stands in.
+  ///
+  /// A median rather than the rate from one end of the window to the other.
+  /// Zoom is why: $2.65B to $4.87B over five years annualises to 12.9%, all
+  /// of it the tail of one pandemic year, while its last four years grew
+  /// 7.1%, 3.1%, 3.1% and 4.4%. Its middle year is 4.4%. And a median rather
+  /// than the latest year, which would be just as blind the other way: one
+  /// flat year in a long climb would price the climb away.
   static List<double> _growthRates(FinancialSnapshot snapshot) {
     final years = snapshot.years;
     if (years.length < 2) return const [];
     final window = math.min(_growthWindowYears, years.length - 1);
     return [
-      for (final year in years.skip(years.length - window))
-        ?year.revenueGrowthPercent,
+      for (var i = years.length - window; i < years.length; i++)
+        ?_perShareGrowth(years[i], years[i - 1]),
     ]..sort();
   }
+
+  static double? _perShareGrowth(
+    FiscalYearFigures year,
+    FiscalYearFigures before,
+  ) {
+    final sales = year.revenue;
+    final priorSales = year.priorRevenue ?? before.revenue;
+    final shares = year.dilutedShares;
+    final priorShares = before.dilutedShares;
+    if (sales == null || priorSales == null || priorSales <= 0) return null;
+    if (shares == null || priorShares == null || shares <= 0) {
+      return (sales - priorSales) / priorSales * 100;
+    }
+    final perShare = sales / shares;
+    final priorPerShare = priorSales / priorShares;
+    return (perShare - priorPerShare) / priorPerShare * 100;
+  }
+
+  static double? _median(List<double> sorted) {
+    if (sorted.isEmpty) return null;
+    final middle = sorted.length ~/ 2;
+    return sorted.length.isOdd
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  static bool _isCovered(int? sic) =>
+      sic != _reitSic && SicSector.of(sic) != SicSector.financials;
 
   @override
   List<Object?> get props => [
@@ -434,13 +517,14 @@ class Valuation extends Equatable {
     netIncome,
     operatingIncome,
     freeCashFlow,
+    normalisedCashFlow?.flow,
     shareBasedCompensation,
     parentStake,
     revenue,
     netDebt,
     fiscalYear,
-    revenueGrowthPercent,
-    discountRatePercent,
+    growthPercent,
     _windowYears,
+    isCovered,
   ];
 }

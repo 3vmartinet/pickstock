@@ -161,8 +161,8 @@ void main() {
 
       // A quarter of the spare cash was printed shares, so the band is a
       // quarter lower: the whole point of reading it.
-      expect(before.freeCashFlowToShareholders, 90 * _billion);
-      expect(after.freeCashFlowToShareholders, 65 * _billion);
+      expect(before.freeCashFlowToShareholders, closeTo(90 * _billion, 1));
+      expect(after.freeCashFlowToShareholders, closeTo(65 * _billion, 1));
       expect(after.fairValueLow, lessThan(before.fairValueLow!));
       expect(
         after.fairValueLow! / before.fairValueLow!,

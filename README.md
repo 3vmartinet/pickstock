@@ -271,8 +271,24 @@ Everything else comes out of the filings:
 | Market value | price × shares outstanding (`dei:EntityCommonStockSharesOutstanding` from the newest filing's cover, falling back to `us-gaap:CommonStockSharesOutstanding`) |
 | Enterprise value | market value + net debt: what an acquirer pays for the whole business, reported as context rather than used in the band |
 | Earnings per share | net income ÷ diluted weighted-average shares, the divisor the company itself reports against |
-| Fair range | 12× to 18× the latest year's free cash flow — net income where there is no usable cash flow — over the share count |
-| Growth premium | +0.6 of a turn per point of annualised revenue growth, capped at 25 points, so a fast grower is not called expensive for growing and a 300% year is not extrapolated for a decade |
+| Stream | The median free cash flow margin after stock pay over up to ten years, applied to the latest revenue — net income where there is no positive cash stream — brought down to the listed shares' stake in the group |
+| Multiple | One discounted cash flow, run on a unit of that stream at a fixed 9% required return, a point either side of it for the band, paying for the typical growth of revenue *per share* over the last five changes, held between −10% and +15% |
+| Balance sheet | Net cash is added; debt beyond three years of the stream is taken off. The rest of the debt is already paid for out of a cash flow that is after interest |
+| Margin of safety | The low end of the band is a third below the arithmetic. A price has to clear that before the company is called undervalued |
+| Not covered | Banks, insurers, lenders, brokers and REITs: their cash flow says nothing about what they earn, and the report says so rather than producing a band |
+
+Each of those is the correction to a way the band was wrong against the
+directory, measured on five hundred priced companies. One year of cash flow
+valued Coca-Cola at $19–26 after a one-off tax deposit. A rate built from each
+company's beta — the betas on file ran from 0.08 to 6.75 — moved a flat
+business between 7 and 19 years of its cash and decided the verdict more than
+the company did. Revenue growth credited up to 30% bought Micron 44 years of a
+cyclical peak, and growth bought with printed shares paid Realty Income for
+dilution. A floor at zero growth and no balance sheet made AT&T, Verizon and
+Comcast the cheapest large companies in America. A band a point of return wide
+called a third of the directory undervalued and a third of those by more than
+100%. And a bank's operating cash flow is a number about its deposits, not its
+earnings — JPMorgan's was −$148B.
 
 The band is drawn to scale with the price marked on it, and each bound carries
 its own distance from the price — `Range low $93.67, +134.2%` beside `Range
@@ -285,8 +301,8 @@ the same order as the marks above them.
 The verdict is where the price falls: below the range is **undervalued**, inside
 it **fairly valued**, above it **overvalued**. A company that reports neither a
 profit nor free cash flow **cannot be valued** and says so rather than producing
-a number; one whose debts exceed the range's own valuation of it bottoms out at
-zero.
+a number; one whose excess debt exceeds the range's own valuation of it bottoms
+out at zero; a bank, insurer or REIT is **not covered**.
 
 This is a heuristic, and the report shows its working on purpose — the
 multiples, the stream they are struck against and the premium are all on the
@@ -553,20 +569,27 @@ its own mutations keeps the report, the tiles and the filter in step — and the
 streams brought a real cost: drift defers stream updates with `Timer.run`, which
 left a pending timer at the end of every widget test.
 
-### Why the band does not subtract debt
+### Why the band subtracts only some of the debt
 
 Free cash flow here is operating cash flow less capital spending, and US filers
 put interest paid in the **operating** section — so it is already net of what
 the lenders take. It is the shareholders' cash, and a multiple of it is what
 their shares are worth.
 
-Subtracting net debt from that would charge for the same debt twice: once
-through the interest already deducted from the cash flow, and again as a lump
-off the total. The band did exactly that until a reader asked why step 4 divided
-enterprise value by free cash flow — the same mismatch, since an enterprise
-value belongs to lenders and shareholders together while that cash flow belongs
-only to the shareholders. Both are now measured against the **market value**,
-which is the matching half.
+Subtracting all the net debt from that would charge for the same debt twice:
+once through the interest already deducted from the cash flow, and again as a
+lump off the total. The band did exactly that until a reader asked why step 4
+divided enterprise value by free cash flow — the same mismatch, since an
+enterprise value belongs to lenders and shareholders together while that cash
+flow belongs only to the shareholders. Both are now measured against the
+**market value**, which is the matching half.
+
+But subtracting none of it was wrong the other way. A company owing twenty
+years of its cash flow is not worth a multiple of that cash flow: the lenders
+own it, and the shares are what is left. So debt up to **three years** of the
+stream is read as debt a business carries, paid for out of the stream, and
+only what lies beyond comes off what the shares are worth. Net cash is added
+in full, since it is the owners' as surely as next year's cash is.
 
 The ratio grid quotes **P/FCF** rather than EV/FCF for the same reason.
 Enterprise value is still shown, because what an acquirer would pay is worth
@@ -578,10 +601,11 @@ ingest does not collect.
 ### The worked example
 
 Beside the verdict, the whole calculation is spelled out in the order it
-happens: what buying every share costs, what the company kept last year, what
-debt comes with it, how many years of cash that price is, how many years is
-fair, and what that makes one share worth. Every step carries the company's own
-figures, so it can be checked rather than trusted.
+happens: what buying every share costs, what the company keeps in a typical
+year, what debt or cash comes with it, how many years of cash that price is,
+how many years is fair, what that makes the company worth, what that makes one
+share worth once the margin is taken, and the answer. Every step carries the
+company's own figures, so it can be checked rather than trusted.
 
 Figures in the prose are set in the foreground weight while the words around
 them stay muted, so the numbers can be found without reading the sentence.

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/company.dart';
@@ -49,6 +51,26 @@ FinancialSnapshot _snapshot({
   );
 }
 
+extension on FinancialSnapshot {
+  /// The same filer with every revenue line removed, as a filer that tags
+  /// none of the revenue concepts arrives.
+  FinancialSnapshot copyWithoutRevenue() => FinancialSnapshot(
+    company: company,
+    years: [
+      for (final year in years)
+        FiscalYearFigures(
+          fiscalYear: year.fiscalYear,
+          netIncome: year.netIncome,
+          operatingCashFlow: year.operatingCashFlow,
+          capitalExpenditure: year.capitalExpenditure,
+          totalDebt: year.totalDebt,
+          cash: year.cash,
+          dilutedShares: year.dilutedShares,
+        ),
+    ],
+  );
+}
+
 void main() {
   group('a business the listed shares only part own', () {
     /// MarketWise's FY2025, as filed. It holds a slice of the operating
@@ -95,10 +117,12 @@ void main() {
         closeTo(4.0 * _million, 0.1 * _million),
       );
 
-      // Around $20 rather than the $229 the group's whole cash flow over the
+      // Around $9 rather than the $229 the group's whole cash flow over the
       // parent's share count produced — a twenty-fold upside on a year revenue
-      // fell a fifth.
-      expect(valuation.fairValueLow, closeTo(20, 1));
+      // fell a fifth. The fifth is paid for too: a shrinking business earns
+      // fewer years of its cash, not the flat multiple.
+      expect(valuation.creditedGrowthPercent, closeTo(-10, 0.01));
+      expect(valuation.fairValueLow, closeTo(9, 1));
       expect(valuation.percentToLow, lessThan(150));
     });
 
@@ -254,7 +278,7 @@ void main() {
       // is the tail of one pandemic year. The report's own overview says
       // 4.4% at the top of the page, and the worked example below it used to
       // say 12.9% — the same company, growing at two different rates.
-      expect(valuation.revenueGrowthPercent, closeTo(4.4, 0.1));
+      expect(valuation.growthPercent, closeTo(4.4, 0.1));
       expect(valuation.creditedGrowthPercent, closeTo(4.4, 0.1));
       expect(valuation.growthWindowYears, 5);
 
@@ -334,19 +358,29 @@ void main() {
       expect(valuation.flatMultiple, closeTo(14.08, 0.01));
       expect(valuation.lowMultiple, closeTo(12.24, 0.01));
       expect(valuation.highMultiple, closeTo(16.59, 0.01));
-      // 100m x 12.24 over 10m shares. No net-debt adjustment: the cash flow
-      // is already after the interest the lenders take.
-      expect(valuation.fairValueLow, closeTo(122.37, 0.01));
+      // 100m x 12.24 over 10m shares is $122.37, and the bottom of the band
+      // is a third below it: the margin for any of the figures being wrong.
+      // The 40m of net debt is well inside what the cash flow carries, so it
+      // changes nothing — it is already paid for out of the stream.
+      expect(valuation.fairValueLowBeforeMargin, closeTo(122.37, 0.01));
+      expect(valuation.fairValueLow, closeTo(85.66, 0.01));
       expect(valuation.fairValueHigh, closeTo(165.94, 0.01));
-      // How far a $100 price sits below each bound.
-      expect(valuation.percentToLow, closeTo(22.37, 0.01));
+      expect(valuation.excessDebtDeducted, 0);
+      // How far a $100 price sits from each bound.
+      expect(valuation.percentToLow, closeTo(-14.34, 0.01));
       expect(valuation.percentToHigh, closeTo(65.94, 0.01));
     });
 
     test('places the price against the band', () {
+      // $100 is below what the arithmetic gives but not by the margin, so it
+      // is a normal price rather than a cheap one.
+      expect(
+        Valuation(snapshot: _snapshot(), pricePerShare: 80).verdict,
+        ValuationVerdict.undervalued,
+      );
       expect(
         Valuation(snapshot: _snapshot(), pricePerShare: 100).verdict,
-        ValuationVerdict.undervalued,
+        ValuationVerdict.fairlyValued,
       );
       expect(
         Valuation(snapshot: _snapshot(), pricePerShare: 146).verdict,
@@ -361,13 +395,13 @@ void main() {
     test('measures the distance to each end of the band', () {
       final valuation = Valuation(snapshot: _snapshot(), pricePerShare: 100);
 
-      // The band is 122 to 166 against a price of 100.
-      expect(valuation.percentToLow, closeTo(22.37, 0.01));
+      // The band is 86 to 166 against a price of 100.
+      expect(valuation.percentToLow, closeTo(-14.34, 0.01));
       expect(valuation.percentToHigh, closeTo(65.94, 0.01));
 
       // Above the band both readings turn negative: the price has to fall.
       final dear = Valuation(snapshot: _snapshot(), pricePerShare: 200);
-      expect(dear.percentToLow, closeTo(-38.81, 0.01));
+      expect(dear.percentToLow, closeTo(-57.17, 0.01));
       expect(dear.percentToHigh, closeTo(-17.03, 0.01));
     });
 
@@ -380,7 +414,7 @@ void main() {
         ),
         pricePerShare: 100,
       );
-      expect(growing.revenueGrowthPercent, closeTo(10, 0.01));
+      expect(growing.growthPercent, closeTo(10, 0.01));
       // Growth is paid for by the model rather than by a premium per point:
       // ten per cent fading to 2.5 is worth six more years than flat.
       expect(growing.centralMultiple, greaterThan(growing.flatMultiple));
@@ -398,9 +432,10 @@ void main() {
         soaring.creditedGrowthPercent,
         CashFlowModel.maximumCreditedGrowth * 100,
       );
-      expect(soaring.highMultiple, closeTo(62.41, 0.1));
+      expect(soaring.highMultiple, closeTo(32.79, 0.1));
 
-      // A shrinking business gets no discount either — the flat band stands.
+      // A shrinking business is worth less than a flat one — down to the
+      // floor, past which the model would be valuing a wind-up.
       final shrinking = Valuation(
         snapshot: _snapshot(
           startRevenue: 1000 * _million,
@@ -408,9 +443,12 @@ void main() {
         ),
         pricePerShare: 100,
       );
-      expect(shrinking.creditedGrowthPercent, 0);
-      // The no-growth multiple, not something below it.
-      expect(shrinking.lowMultiple, closeTo(12.24, 0.01));
+      expect(
+        shrinking.creditedGrowthPercent,
+        CashFlowModel.minimumCreditedGrowth * 100,
+      );
+      expect(shrinking.lowMultiple, lessThan(12.24));
+      expect(shrinking.lowMultiple, closeTo(7.82, 0.1));
     });
 
     test('falls back to net income where there is no free cash flow', () {
@@ -421,8 +459,9 @@ void main() {
 
       expect(valuation.basis, ValuationBasis.earnings);
       expect(valuation.basisAmount, 100 * _million);
+      expect(valuation.basisYears, 1);
       expect(valuation.freeCashFlowYieldPercent, isNull);
-      expect(valuation.verdict, ValuationVerdict.undervalued);
+      expect(valuation.verdict, ValuationVerdict.fairlyValued);
     });
 
     test('refuses to value a business that earns nothing', () {
@@ -440,14 +479,15 @@ void main() {
       expect(valuation.verdict, ValuationVerdict.unknown);
     });
 
-    test('does not charge for the same debt twice', () {
+    test('does not charge for debt the cash flow carries', () {
       // Free cash flow is operating cash flow less capital spending, and US
       // filers put interest paid in the operating section — so the lenders
       // have already been paid out of it. Subtracting their principal from a
-      // multiple of it as well would penalise the debt a second time, and the
-      // band would move with debt the cash flow has already accounted for.
-      final borrowed = Valuation(
-        snapshot: _snapshot(totalDebt: 5000 * _million),
+      // multiple of it as well would penalise the debt a second time, so debt
+      // up to three years of the stream leaves the band exactly where a
+      // debt-free company's sits.
+      final carried = Valuation(
+        snapshot: _snapshot(totalDebt: 310 * _million),
         pricePerShare: 100,
       );
       final debtFree = Valuation(
@@ -455,12 +495,30 @@ void main() {
         pricePerShare: 100,
       );
 
-      expect(borrowed.fairValueLow, debtFree.fairValueLow);
-      expect(borrowed.fairValueHigh, debtFree.fairValueHigh);
-      // The debt is still reported; it just is not double counted. Net of the
-      // fixture's 10m of cash.
-      expect(borrowed.netDebt, 4990 * _million);
-      expect(borrowed.enterpriseValue, greaterThan(borrowed.marketCap!));
+      expect(carried.netDebt, 300 * _million);
+      expect(carried.excessDebtDeducted, 0);
+      expect(carried.fairValueLow, debtFree.fairValueLow);
+      expect(carried.fairValueHigh, debtFree.fairValueHigh);
+      expect(carried.enterpriseValue, greaterThan(carried.marketCap!));
+    });
+
+    test('but debt beyond that comes off what the shares are worth', () {
+      // Fifty years of cash flow owed: the lenders own the business, and a
+      // multiple of its cash flow is theirs rather than the shareholders'.
+      // Before this, AT&T, Verizon and Comcast screened as deeply cheap on
+      // bands that never saw their borrowings.
+      final drowning = Valuation(
+        snapshot: _snapshot(totalDebt: 5000 * _million),
+        pricePerShare: 100,
+      );
+      expect(drowning.netDebt, 4990 * _million);
+      // Everything past three years of the 100m stream.
+      expect(drowning.excessDebtDeducted, 4690 * _million);
+      expect(drowning.hasBalanceSheetAdjustment, isTrue);
+      // More than the stream is worth, so the shares are worth nothing.
+      expect(drowning.fairValueLow, 0);
+      expect(drowning.fairValueHigh, 0);
+      expect(drowning.verdict, ValuationVerdict.overvalued);
     });
 
     test('derives the market and enterprise figures from the share count', () {
@@ -476,16 +534,18 @@ void main() {
       expect(valuation.priceToSalesRatio, closeTo(1, 0.001));
     });
 
-    test('a net cash pile lowers what an acquirer would pay', () {
+    test('a net cash pile is the owners\' too', () {
       final netCash = Valuation(
         snapshot: _snapshot(totalDebt: 10 * _million, cash: 50 * _million),
         pricePerShare: 100,
       );
 
-      // The enterprise value nets the surplus cash off the market value; the
-      // band itself is struck on the cash flow alone.
+      // The enterprise value nets the surplus cash off the market value, and
+      // the band adds it to what the stream is worth: 40m on 1,224m, so $4 a
+      // share before the margin and $2.80 after it.
       expect(netCash.enterpriseValue, 960 * _million);
-      expect(netCash.fairValueLow, closeTo(122.37, 0.01));
+      expect(netCash.netCashAdded, 40 * _million);
+      expect(netCash.fairValueLow, closeTo(88.46, 0.01));
     });
 
     test('leaves ratios unstated rather than meaningless at a loss', () {
@@ -524,6 +584,195 @@ void main() {
         pricePerShare: 100,
       );
       expect(dilutedOnly.marketCap, 1000 * _million);
+    });
+  });
+
+  group('the stream the band is struck on', () {
+    /// A company converting a steady fifth of revenue into cash for years,
+    /// then one year that converts almost nothing.
+    FinancialSnapshot steadyThenBad({double lastMargin = 0.02}) {
+      final years = <FiscalYearFigures>[];
+      for (var i = 0; i < 6; i++) {
+        final revenue = (1000 + 50 * i) * _million;
+        final margin = i == 5 ? lastMargin : 0.2;
+        years.add(
+          FiscalYearFigures(
+            fiscalYear: 2020 + i,
+            revenue: revenue,
+            priorRevenue: i == 0 ? null : (1000 + 50 * (i - 1)) * _million,
+            netIncome: revenue * 0.15,
+            operatingCashFlow: revenue * margin,
+            capitalExpenditure: 0,
+            cash: 0,
+            totalDebt: 0,
+            dilutedShares: 10 * _million,
+          ),
+        );
+      }
+      return FinancialSnapshot(
+        company: const Company(
+          ticker: 'STDY',
+          cik: '3',
+          name: 'Steady Corp',
+          sharesOutstanding: 10 * _million,
+        ),
+        years: years,
+      );
+    }
+
+    test('is the typical year, not the last one', () {
+      // Coca-Cola's one-off tax deposit halved its reported cash flow and,
+      // on that year alone, valued a $96 share at $19 to $26.
+      final valuation = Valuation(
+        snapshot: steadyThenBad(),
+        pricePerShare: 100,
+      );
+      expect(valuation.basisYears, 6);
+      // 20% of the latest 1,250m, not the 2% the year actually converted.
+      expect(valuation.basisAmount, closeTo(250 * _million, 1));
+      expect(valuation.freeCashFlow, closeTo(25 * _million, 1));
+      expect(
+        valuation.normalisedCashFlow!.normalisationEffectPercent,
+        closeTo(-90, 0.1),
+      );
+    });
+
+    test('is after stock pay in every year, not only the last', () {
+      final years = [
+        for (final year in steadyThenBad(lastMargin: 0.2).years)
+          FiscalYearFigures(
+            fiscalYear: year.fiscalYear,
+            revenue: year.revenue,
+            priorRevenue: year.priorRevenue,
+            netIncome: year.netIncome,
+            operatingCashFlow: year.operatingCashFlow,
+            capitalExpenditure: 0,
+            shareBasedCompensation: year.revenue! * 0.05,
+            dilutedShares: year.dilutedShares,
+          ),
+      ];
+      final valuation = Valuation(
+        snapshot: FinancialSnapshot(
+          company: const Company(
+            ticker: 'STDY',
+            cik: '3',
+            name: 'Steady Corp',
+            sharesOutstanding: 10 * _million,
+          ),
+          years: years,
+        ),
+        pricePerShare: 100,
+      );
+      // A fifth of revenue less a twentieth paid in shares: 15% of 1,250m.
+      expect(valuation.basisAmount, closeTo(187.5 * _million, 1));
+    });
+
+    test('falls back to the year as filed where there is no revenue', () {
+      final valuation = Valuation(
+        snapshot: _snapshot(
+          startRevenue: 0,
+          endRevenue: 0,
+        ).copyWithoutRevenue(),
+        pricePerShare: 100,
+      );
+      expect(valuation.basisYears, 1);
+      expect(valuation.basisAmount, 100 * _million);
+    });
+  });
+
+  group('the growth the multiple pays for is per share', () {
+    /// Revenue up a quarter a year, but every year's growth bought by
+    /// printing a quarter more shares: an owner of one share gets nothing.
+    FinancialSnapshot diluter() => FinancialSnapshot(
+      company: const Company(
+        ticker: 'DILU',
+        cik: '4',
+        name: 'Diluter Inc',
+        sharesOutstanding: 24.4 * _million,
+      ),
+      years: [
+        for (var i = 0; i < 5; i++)
+          FiscalYearFigures(
+            fiscalYear: 2021 + i,
+            revenue: 1000 * _million * math.pow(1.25, i),
+            priorRevenue: i == 0
+                ? null
+                : 1000 * _million * math.pow(1.25, i - 1),
+            netIncome: 100 * _million * math.pow(1.25, i),
+            operatingCashFlow: 120 * _million * math.pow(1.25, i),
+            capitalExpenditure: 20 * _million * math.pow(1.25, i),
+            dilutedShares: 10 * _million * math.pow(1.25, i),
+            cash: 0,
+            totalDebt: 0,
+          ),
+      ],
+    );
+
+    test('so growth bought with new shares is not paid for', () {
+      // Realty Income grew revenue 26% a year and its share count 20%, and
+      // on revenue alone it earned nearly ten extra turns of multiple.
+      final valuation = Valuation(snapshot: diluter(), pricePerShare: 100);
+      expect(valuation.growthPercent, closeTo(0, 0.01));
+      expect(valuation.creditedGrowthPercent, closeTo(0, 0.01));
+    });
+
+    test('and falls back to plain revenue growth without a share count', () {
+      final valuation = Valuation(
+        snapshot: _snapshot(
+          startRevenue: 1000 * _million,
+          endRevenue: 1100 * _million,
+        ),
+        pricePerShare: 100,
+      );
+      // The fixture's first year carries no share count.
+      expect(valuation.growthPercent, closeTo(10, 0.01));
+    });
+  });
+
+  group('what the model does not cover', () {
+    FinancialSnapshot bank({int? sic = 6021}) => FinancialSnapshot(
+      company: Company(
+        ticker: 'BANK',
+        cik: '5',
+        name: 'A Bank',
+        sic: sic,
+        sharesOutstanding: 10 * _million,
+      ),
+      years: _snapshot().years,
+    );
+
+    test('a bank, insurer or lender gets no band', () {
+      // JPMorgan reported operating cash flow of -\$148B for FY2025 and Bank
+      // of America +\$13B; neither figure says what either bank earns, and
+      // the debt the parser reads is the business itself.
+      for (final sic in [6021, 6199, 6211, 6331]) {
+        final valuation = Valuation(
+          snapshot: bank(sic: sic),
+          pricePerShare: 100,
+        );
+        expect(valuation.isCovered, isFalse, reason: 'SIC \$sic');
+        expect(valuation.fairValueLow, isNull);
+        expect(valuation.verdict, ValuationVerdict.notCovered);
+        // The ratios still read: a bank has a P/E.
+        expect(valuation.priceEarningsRatio, closeTo(10, 0.01));
+      }
+    });
+
+    test('nor does a REIT, whose capital spending is its business', () {
+      expect(
+        Valuation(snapshot: bank(sic: 6798), pricePerShare: 100).verdict,
+        ValuationVerdict.notCovered,
+      );
+    });
+
+    test('everything else is', () {
+      for (final sic in [null, 3571, 6500, 6770]) {
+        expect(
+          Valuation(snapshot: bank(sic: sic), pricePerShare: 100).isCovered,
+          isTrue,
+          reason: 'SIC \$sic',
+        );
+      }
     });
   });
 
