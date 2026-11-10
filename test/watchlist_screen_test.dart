@@ -66,7 +66,7 @@ void main() {
     await openHome(tester);
 
     expect(find.text('All companies'), findsOneWidget);
-    expect(find.text('${testTickers.length} matches'), findsOneWidget);
+    expect(find.text('$testCompanyCount matches'), findsOneWidget);
   });
 
   testWidgets('starring a company marks it on the list too', (tester) async {
@@ -227,7 +227,7 @@ void main() {
       await tester.tap(find.text('All'));
       await tester.pumpAndSettle();
       expect(find.text('All companies'), findsOneWidget);
-      expect(find.text('7 matches'), findsOneWidget);
+      expect(find.text('$testCompanyCount matches'), findsOneWidget);
       expect(isFilled(find.text('All')), isTrue);
     });
   });
@@ -275,7 +275,7 @@ void main() {
       // Reaching for the actions is not picking the list: the menu stays up
       // and the directory is untouched.
       expect(find.text('New list'), findsOneWidget);
-      expect(find.text('7 matches'), findsOneWidget);
+      expect(find.text('$testCompanyCount matches'), findsOneWidget);
 
       // And the same arrow puts them away again.
       await tester.tap(arrow, warnIfMissed: false);

@@ -48,7 +48,7 @@ void main() {
     viewModel.selectSector(SicSector.financials);
     expect(
       viewModel.results.map((c) => c.ticker),
-      containsAll(<String>['BRK-A', 'BRK-B']),
+      contains('BRK-A'),
     );
     expect(viewModel.results.map((c) => c.ticker), isNot(contains('AAPL')));
 
@@ -186,7 +186,7 @@ void main() {
     expect(viewModel.narrowedCountIn(SicSector.technology), 0);
     expect(
       viewModel.results.map((c) => c.ticker),
-      containsAll(<String>['BRK-A', 'BRK-B']),
+      contains('BRK-A'),
     );
   });
 
@@ -230,7 +230,7 @@ void main() {
     expect(viewModel.filterController.text, isEmpty);
     expect(
       viewModel.results.map((company) => company.ticker),
-      containsAll(<String>['BRK-A', 'BRK-B']),
+      contains('BRK-A'),
     );
   });
 
@@ -514,7 +514,7 @@ void main() {
       await pumpMenu(tester);
       await click(tester, find.text('Tech'));
       expect(find.text('SEC industries'), findsNothing);
-      expect(find.text('7 matches'), findsOneWidget);
+      expect(find.text('$testCompanyCount matches'), findsOneWidget);
 
       // And the chip still filters once the menu is down.
       await tester.tap(find.text('Tech'));

@@ -13,8 +13,10 @@ import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
+TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 MarketRatesRepo get _marketRatesRepo => GetIt.I.get<MarketRatesRepo>();
@@ -277,7 +279,11 @@ class ListValuationViewModel extends ChangeNotifier {
         final wait = _quoteRepo.timeUntilSlot;
         if (wait > Duration.zero) return _Outcome.blocked;
         try {
-          final fetched = await _quoteRepo.quoteFor(company.ticker);
+          // The filer's common share, not the tile's own symbol: the price
+          // is kept per filer, and a warrant's would be read as the share's.
+          final fetched = await _quoteRepo.quoteFor(
+            _directory.quoteSymbolFor(company),
+          );
           await _priceRepo.save(company.cik, fetched);
           quote = fetched;
           outcome = _Outcome.quoted;
@@ -336,10 +342,11 @@ class ListValuationViewModel extends ChangeNotifier {
     final snapshot = await _secRepo.fetchSnapshot(company.ticker);
     if (_isDisposed) return false;
     // Nothing is asked for where no rate can be built, nor where it is held.
+    final symbol = _directory.quoteSymbolFor(company);
     final wasHeld =
         !_marketRatesRepo.isConfigured ||
-        _marketRatesRepo.cachedRateFor(company.ticker) != null;
-    final rate = await _marketRatesRepo.rateFor(company.ticker);
+        _marketRatesRepo.cachedRateFor(symbol) != null;
+    final rate = await _marketRatesRepo.rateFor(symbol);
     if (_isDisposed) return !wasHeld;
     final reportedAt = _reportedAt[company.cik];
     if (reportedAt != null && !reportedAt.isBefore(startedAt)) {

@@ -30,14 +30,14 @@ void main() {
       find.text("${testTickers.length} tickers in SEC's directory"),
       findsOneWidget,
     );
-    expect(find.text('${testTickers.length} matches'), findsOneWidget);
+    expect(find.text('$testCompanyCount matches'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).last, 'BRK-');
     await tester.pumpAndSettle();
 
-    expect(find.text('2 matches'), findsOneWidget);
+    expect(find.text('1 match'), findsOneWidget);
     expect(find.text('BRK-A'), findsOneWidget);
-    expect(find.text('BRK-B'), findsOneWidget);
+    expect(find.text('BRK-B'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -47,8 +47,9 @@ void main() {
     await tester.enterText(find.byType(TextField).last, 'berkshire');
     await tester.pumpAndSettle();
 
+    expect(find.text('1 match'), findsOneWidget);
     expect(find.text('BRK-A'), findsOneWidget);
-    expect(find.text('BRK-B'), findsOneWidget);
+    expect(find.text('BRK-B'), findsNothing);
   });
 
   testWidgets('explains an empty result rather than showing a blank grid', (
@@ -97,7 +98,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('${testTickers.length} matches'), findsOneWidget);
+    expect(find.text('$testCompanyCount matches'), findsOneWidget);
   });
 }
 

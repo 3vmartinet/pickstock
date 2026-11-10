@@ -1,5 +1,10 @@
 import 'dart:async';
 
+export 'package:pickstock/repo/sec/ticker_directory_repo.dart'
+    show primarySymbol;
+import 'package:pickstock/repo/sec/ticker_directory_repo.dart'
+    show primarySymbol;
+
 import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
@@ -303,24 +308,4 @@ class MarketLeadersViewModel extends ChangeNotifier {
     _isDisposed = true;
     super.dispose();
   }
-}
-
-/// The symbol to quote a filer under, among all it trades as, or `null` if
-/// none is one a share count can be multiplied by.
-///
-/// [symbols] come in the order SEC lists them, which puts the common stock
-/// first, so the first one that is not a preferred share, unit or warrant
-/// (`JPM-PC`, `OXY-WT`) is it. Foreign ordinaries traded over the counter
-/// (five letters ending in F or Y, such as `BEIGF`) are never used: their
-/// price is per a share the filed count does not count in, and multiplied out
-/// they made a $4B company a $600B one. A filer listed only under suffixed
-/// symbols (`BRK-A`, `BRK-B`) falls back to the first of them.
-String? primarySymbol(List<String> symbols) {
-  bool isForeignOtc(String symbol) =>
-      symbol.length == 5 && (symbol.endsWith('F') || symbol.endsWith('Y'));
-  bool hasSuffix(String symbol) => symbol.contains('-') || symbol.contains('.');
-
-  final usable = symbols.where((symbol) => !isForeignOtc(symbol));
-  return usable.where((symbol) => !hasSuffix(symbol)).firstOrNull ??
-      usable.firstOrNull;
 }

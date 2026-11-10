@@ -240,6 +240,17 @@ than the documentation:
 Share classes are spelled differently at each end: EDGAR writes `BRK-A`,
 Finnhub quotes `BRK.A`. The hyphen is translated on the way out.
 
+**A filer is quoted under its common share**, whichever of its symbols is on
+screen. SEC lists a filer's preferred shares, notes and warrants beside its
+stock under the same CIK — Bank of America seventeen times — and the
+directory shows each filer once, under the first symbol SEC lists that is not
+one of those. The price is stored per filer and multiplied by the common
+share count, so a tile or a search for `OPENW` asks for `OPEN`'s price:
+Opendoor's warrant, at 3.5 cents, once read as the company's share price and
+made it 32,000% undervalued. The beta is fetched under the same symbol. Quotes
+an earlier build stored under the wrong symbol are dropped once, the first
+time a build that does this opens the database; typed prices stay.
+
 A fetched price is stored per company and reused for 15 minutes, so clicking
 between companies does not spend the budget and the report still opens with a
 price when the network is down.

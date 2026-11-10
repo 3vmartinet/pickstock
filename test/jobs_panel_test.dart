@@ -118,14 +118,18 @@ void main() {
   testWidgets('offers a scan of whatever is filtered', (tester) async {
     await openPanel(tester);
 
-    // Seven fixture tickers, so the button says what it is about to do.
-    expect(find.text('Scan 7 companies'), findsOneWidget);
+    // Six fixture companies, so the button says what it is about to do.
+    expect(find.text('Scan $testCompanyCount companies'), findsOneWidget);
+    expect(
+      find.text('Run 7 questions for $testCompanyCount companies'),
+      findsOneWidget,
+    );
     expect(find.textContaining('No reports yet'), findsNothing);
   });
 
   testWidgets('a scan produces a report you can open', (tester) async {
     await openPanel(tester);
-    await tester.tap(find.text('Scan 7 companies'));
+    await tester.tap(find.text('Scan $testCompanyCount companies'));
     await tester.pumpAndSettle();
 
     // Reopen the panel: the finished report is listed.
@@ -146,7 +150,7 @@ void main() {
     await openPanel(tester);
     expect(quotes.reserved, isFalse);
 
-    await tester.tap(find.text('Scan 7 companies'));
+    await tester.tap(find.text('Scan $testCompanyCount companies'));
     await tester.pumpAndSettle();
 
     // Handed back once the run is over, so browsing works again.
@@ -162,7 +166,7 @@ void main() {
     GetIt.I.registerSingleton<SecRepo>(const BrokenSecRepo('AAPL'));
 
     await openPanel(tester);
-    await tester.tap(find.text('Scan 7 companies'));
+    await tester.tap(find.text('Scan $testCompanyCount companies'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(LucideIcons.listChecks));
@@ -172,7 +176,7 @@ void main() {
     // would hold this disabled and the app bar spinning for the rest of the
     // session — which is how a single unreadable filer used to cost the
     // feature entirely.
-    final scan = find.text('Scan 7 companies');
+    final scan = find.text('Scan $testCompanyCount companies');
     expect(scan, findsOneWidget);
     expect(
       tester
@@ -201,7 +205,7 @@ void main() {
     GetIt.I.registerSingleton<ReportRepo>(UnwritableReportRepo(inner));
 
     await openPanel(tester);
-    await tester.tap(find.text('Scan 7 companies'));
+    await tester.tap(find.text('Scan $testCompanyCount companies'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(LucideIcons.listChecks));
@@ -210,7 +214,7 @@ void main() {
     // Nothing to open, and nothing pretending to still be running: three
     // hours of work is lost either way, and a job frozen at running would
     // cost every scan after it as well.
-    final scan = find.text('Scan 7 companies');
+    final scan = find.text('Scan $testCompanyCount companies');
     expect(
       tester
           .widget<PrimaryButton>(

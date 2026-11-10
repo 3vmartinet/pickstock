@@ -128,7 +128,7 @@ void main() {
     viewModel.setQuery('BRK');
 
     expect(viewModel.results.every((c) => c.ticker.startsWith('BRK')), isTrue);
-    expect(viewModel.resultCount, 2);
+    expect(viewModel.resultCount, 1);
   });
 
   group('upside orderings', () {

@@ -4,7 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/sec/mock_sec_repo.dart';
+import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 
 import 'support/test_directory.dart';
@@ -41,6 +45,19 @@ class SlowQuoteRepo implements QuoteRepo {
 
   void fail(int index, QuoteFailure failure) =>
       pending[index].completeError(QuoteException(failure));
+}
+
+/// Serves one filer's figures under another of its symbols, the way the
+/// database does for a warrant or a preferred share listed beside the stock.
+class AliasSecRepo implements SecRepo {
+  const AliasSecRepo(this.aliases, this.inner);
+
+  final Map<String, String> aliases;
+  final SecRepo inner;
+
+  @override
+  Future<FinancialSnapshot> fetchSnapshot(String ticker) =>
+      inner.fetchSnapshot(aliases[ticker.toUpperCase()] ?? ticker);
 }
 
 /// Lets the awaits inside the view model run.
@@ -128,6 +145,33 @@ void main() {
       unawaited(viewModel.refreshQuote());
       await _settle();
       expect(quotes.asked, ['AAPL', 'NVDA', 'NVDA']);
+    },
+  );
+
+  test(
+    'a company opened under a warrant is quoted as its common share',
+    () async {
+      // The price is stored per filer and multiplied by the common share count,
+      // so the warrant's own price — cents — would read as the company's.
+      await database
+          .into(database.tickers)
+          .insert(
+            TickersCompanion.insert(
+              symbol: 'AAPLW',
+              cik: '0000320193',
+              name: 'Apple Inc.',
+            ),
+          );
+      await GetIt.I.get<TickerDirectoryRepo>().load();
+      GetIt.I.unregister<SecRepo>();
+      GetIt.I.registerSingleton<SecRepo>(
+        const AliasSecRepo({'AAPLW': 'AAPL'}, MockSecRepo()),
+      );
+
+      await viewModel.search('AAPLW');
+
+      expect(viewModel.snapshot?.company.cik, '0000320193');
+      expect(quotes.asked, ['AAPL']);
     },
   );
 

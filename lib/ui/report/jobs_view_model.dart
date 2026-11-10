@@ -12,8 +12,10 @@ import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
+TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 ReportRepo get _reportRepo => GetIt.I.get<ReportRepo>();
@@ -209,7 +211,8 @@ class JobsViewModel extends ChangeNotifier {
         return null;
       }
 
-      final quote = await _pacedQuote(company.ticker);
+      // The common share's price, whichever symbol the list carried.
+      final quote = await _pacedQuote(_directory.quoteSymbolFor(company));
       await _priceRepo.save(company.cik, quote);
 
       final valuation = Valuation(

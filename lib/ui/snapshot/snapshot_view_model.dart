@@ -29,12 +29,14 @@ import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/institutional_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
+import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
 import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
+TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 InstitutionalRepo get _institutionalRepo => GetIt.I.get<InstitutionalRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
@@ -598,7 +600,9 @@ class SnapshotViewModel extends ChangeNotifier {
         currentSnapshot = await _secRepo.fetchSnapshot(company.ticker);
         final storedQuote = await _priceRepo.priceFor(company.cik);
         if (storedQuote != null) {
-          final rate = await _marketRatesRepo.rateFor(company.ticker);
+          final rate = await _marketRatesRepo.rateFor(
+            _directory.quoteSymbolFor(company),
+          );
           currentValuation = Valuation(
             snapshot: currentSnapshot,
             pricePerShare: storedQuote.pricePerShare,
@@ -997,8 +1001,12 @@ class SnapshotViewModel extends ChangeNotifier {
   /// whether or not either answers.
   DiscountRate? get discountRate => _discountRate;
 
-  Future<void> _loadDiscountRate(String ticker, int generation) async {
-    final rate = await _marketRatesRepo.rateFor(ticker);
+  Future<void> _loadDiscountRate(Company company, int generation) async {
+    // Under the common share's symbol, like the quote: a preferred share's
+    // beta is not the equity's.
+    final rate = await _marketRatesRepo.rateFor(
+      _directory.quoteSymbolFor(company),
+    );
     if (generation != _requestGeneration) return;
     _discountRate = rate;
     notifyListeners();
@@ -1139,7 +1147,11 @@ class SnapshotViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final quoted = await _quoteRepo.quoteFor(current.company.ticker);
+      // The filer's common share, whichever of its symbols was opened: the
+      // price is stored per filer and multiplied by the common share count.
+      final quoted = await _quoteRepo.quoteFor(
+        _directory.quoteSymbolFor(current.company),
+      );
       if (generation != _requestGeneration) return;
       _showPrice(quoted);
       await _priceRepo.save(current.company.cik, quoted);
@@ -1241,7 +1253,7 @@ class SnapshotViewModel extends ChangeNotifier {
       // screen: it cost a minute each to get and nothing about it has gone
       // stale in the time it took to open the company again.
       unawaited(_restoreNotes(snapshot.company.cik, generation));
-      unawaited(_loadDiscountRate(symbol, generation));
+      unawaited(_loadDiscountRate(snapshot.company, generation));
       unawaited(_loadHoldings(snapshot.company, generation));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {

@@ -51,6 +51,9 @@ const List<(String symbol, String cik, String name)> testTickers = [
   ('NVDA', '0001045810', 'NVIDIA CORP'),
 ];
 
+/// The count of unique filers (CIKs) in [testTickers].
+final int testCompanyCount = testTickers.map((t) => t.$2).toSet().length;
+
 /// Registers everything the app resolves from `get_it`, against an in-memory
 /// database seeded with [testTickers].
 ///

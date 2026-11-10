@@ -35,6 +35,10 @@ part 'app_database.g.dart';
 /// collapsed.
 const int extractorVersion = 12;
 
+/// The setting that records the one-off clean-up of prices quoted under the
+/// wrong symbol; see `_discardPricesQuotedPerSymbol`.
+const String pricesQuotedPerFilerKey = 'prices.quotedPerFiler';
+
 /// What an ingested table's copy is called while a load fills it.
 const String _shadowSuffix = '_next';
 
@@ -561,8 +565,32 @@ class AppDatabase extends _$AppDatabase {
       // A load the app was closed in the middle of: its half-filled copies
       // are no use to anyone, and the archive it was reading is still staged.
       await dropShadowTables();
+      await _discardPricesQuotedPerSymbol();
     },
   );
+
+  /// Forgets, once, the quotes an earlier build fetched under whichever of a
+  /// filer's symbols happened to be on screen.
+  ///
+  /// A price is stored per filer and multiplied by the common share count,
+  /// but until the directory named the common share, a tile for a warrant or
+  /// a preferred share fetched that instrument's price and kept it as the
+  /// company's: Opendoor's `OPENW` warrant, at 3.5 cents, made the company
+  /// read as 32,000% undervalued. Only filers with more than one symbol can
+  /// have been affected, and only fetched quotes — a typed price is the
+  /// reader's own and stays. The next quote replaces what is dropped.
+  Future<void> _discardPricesQuotedPerSymbol() async {
+    final done =
+        await (select(settings)
+              ..where((row) => row.key.equals(pricesQuotedPerFilerKey)))
+            .getSingleOrNull();
+    if (done != null) return;
+    await customStatement(
+      'DELETE FROM share_prices WHERE is_quoted = 1 AND cik IN ('
+      '  SELECT cik FROM tickers GROUP BY cik HAVING COUNT(*) > 1)',
+    );
+    await saveSetting(pricesQuotedPerFilerKey, 'true');
+  }
 
   /// The years on file for [cik], oldest first.
   Future<List<FiscalYearRow>> yearsFor(String cik) {
@@ -835,11 +863,17 @@ class AppDatabase extends _$AppDatabase {
     };
   }
 
-  /// Every known symbol, ordered alphabetically.
+  /// Every known symbol, in the order SEC lists them.
+  ///
+  /// SEC's directory puts a filer's common stock before its preferred shares,
+  /// notes and warrants, and the ingest writes the rows in that order, so the
+  /// row order is the only record of which of a filer's symbols is the one
+  /// to quote. Alphabetical order would put JPMorgan's `AMJB` note ahead of
+  /// `JPM`.
   Future<List<TickerRow>> allTickers() {
     return (select(
       tickers,
-    )..orderBy([(row) => OrderingTerm.asc(row.symbol)])).get();
+    )..orderBy([(row) => OrderingTerm.asc(row.rowId)])).get();
   }
 
   /// Creates the starred list once, on a database that has none.

@@ -84,13 +84,13 @@ void main() {
 
     await tester.enterText(find.byType(TextField).last, 'BRK');
     await tester.pumpAndSettle();
-    expect(find.text('2 matches'), findsOneWidget);
+    expect(find.text('1 match'), findsOneWidget);
 
     await tester.tap(find.text('BERKSHIRE HATHAWAY INC').first);
     await tester.pumpAndSettle();
     await returnToList(tester);
 
-    expect(find.text('2 matches'), findsOneWidget);
+    expect(find.text('1 match'), findsOneWidget);
   });
 
   testWidgets('the list comes back where it was left', (tester) async {
