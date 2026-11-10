@@ -231,4 +231,167 @@ void main() {
     // The whole of it belongs to the listed shares, which is the usual case.
     expect(years.last.parentStake, 1);
   });
+
+  group('the top line', () {
+    Map<String, dynamic> facts(Map<String, List<Map<String, dynamic>>> tags) =>
+        {
+          'facts': {
+            'us-gaap': {
+              'NetCashProvidedByUsedInOperatingActivities': {
+                'units': {
+                  'USD': [_year(2024, 1), _year(2025, 1)],
+                },
+              },
+              for (final MapEntry(:key, :value) in tags.entries)
+                key: {
+                  'units': {'USD': value},
+                },
+            },
+          },
+        };
+
+    test('is the total where contract revenue is only part of it', () {
+      // Archer-Daniels-Midland's FY2025: most of what it sells is settled
+      // as commodity contracts, which ASC 606 leaves out of contract revenue.
+      final years = CompanyFactsParser.parse(
+        facts({
+          'RevenueFromContractWithCustomerExcludingAssessedTax': [
+            _year(2024, 24e9),
+            _year(2025, 25.0e9),
+          ],
+          'Revenues': [_year(2024, 85.5e9), _year(2025, 80.3e9)],
+        }),
+      );
+      expect(years.last.revenue, 80.3e9);
+      expect(years.last.priorRevenue, 85.5e9);
+    });
+
+    test('is contract revenue where the total tagged is smaller', () {
+      final years = CompanyFactsParser.parse(
+        facts({
+          'RevenueFromContractWithCustomerExcludingAssessedTax': [
+            _year(2025, 100),
+          ],
+          'Revenues': [_year(2025, 90)],
+        }),
+      );
+      expect(years.last.revenue, 100);
+    });
+
+    test('never takes the figure including excise tax over the one '
+        'excluding it', () {
+      final years = CompanyFactsParser.parse(
+        facts({
+          'RevenueFromContractWithCustomerExcludingAssessedTax': [
+            _year(2025, 20),
+          ],
+          'RevenueFromContractWithCustomerIncludingAssessedTax': [
+            _year(2025, 24),
+          ],
+        }),
+      );
+      expect(years.last.revenue, 20);
+    });
+
+    test('is what a utility files where it files nothing else', () {
+      // Xcel's FY2025.
+      final years = CompanyFactsParser.parse(
+        facts({
+          'RegulatedAndUnregulatedOperatingRevenue': [_year(2025, 14.67e9)],
+          'RegulatedOperatingRevenueGas': [_year(2025, 2.65e9)],
+        }),
+      );
+      expect(years.last.revenue, 14.67e9);
+    });
+
+    test('is the larger in each quarter too', () {
+      Map<String, dynamic> quarter(
+        String fp,
+        String start,
+        String end,
+        num v,
+      ) => {
+        'accn': 'q-$fp',
+        'fy': 2025,
+        'fp': fp,
+        'form': '10-Q',
+        'start': start,
+        'end': end,
+        'val': v,
+      };
+      final quarters = CompanyFactsParser.parseQuarters(
+        facts({
+          'RevenueFromContractWithCustomerExcludingAssessedTax': [
+            quarter('Q1', '2025-01-01', '2025-03-31', 6),
+          ],
+          'Revenues': [quarter('Q1', '2025-01-01', '2025-03-31', 20)],
+        }),
+      );
+      expect(quarters.single.revenue, 20);
+    });
+  });
+
+  group('net income', () {
+    Map<String, dynamic> facts(Map<String, num> tags) => {
+      'facts': {
+        'us-gaap': {
+          'NetCashProvidedByUsedInOperatingActivities': {
+            'units': {
+              'USD': [_year(2025, 1)],
+            },
+          },
+          for (final MapEntry(:key, :value) in tags.entries)
+            key: {
+              'units': {
+                'USD': [_year(2025, value)],
+              },
+            },
+        },
+      },
+    };
+
+    test('is the common shareholders\' figure where the filer stopped '
+        'tagging the plain one', () {
+      // Caterpillar's FY2025: no NetIncomeLoss since 2010.
+      final year = CompanyFactsParser.parse(
+        facts({
+          'NetIncomeLossAvailableToCommonStockholdersBasic': 8.884e9,
+          'ProfitLoss': 8.882e9,
+        }),
+      ).single;
+      expect(year.netIncome, 8.884e9);
+    });
+
+    test('is the group\'s profit less the outside owners\' share where '
+        'only the group figure is tagged', () {
+      final year = CompanyFactsParser.parse(
+        facts({
+          'ProfitLoss': 4357,
+          'NetIncomeLossAttributableToNoncontrollingInterest': 3373,
+        }),
+      ).single;
+      expect(year.netIncome, 984);
+      expect(year.parentStake, closeTo(984 / 4357, 1e-9));
+    });
+
+    test('is all of the group\'s profit where no outside owners are '
+        'tagged', () {
+      // Broadcom's FY2025.
+      final year = CompanyFactsParser.parse(facts({'ProfitLoss': 23.126e9}))
+          .single;
+      expect(year.netIncome, 23.126e9);
+      expect(year.parentStake, 1);
+    });
+
+    test('is the plain figure wherever it is tagged', () {
+      final year = CompanyFactsParser.parse(
+        facts({
+          'NetIncomeLoss': 100,
+          'NetIncomeLossAvailableToCommonStockholdersBasic': 95,
+          'ProfitLoss': 120,
+        }),
+      ).single;
+      expect(year.netIncome, 100);
+    });
+  });
 }

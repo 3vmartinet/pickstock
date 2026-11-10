@@ -180,6 +180,7 @@ abstract final class CompanyFactsParser {
         metric: _quarterSeries(facts, metric),
     };
     _fillFourthQuarters(facts, seriesByMetric);
+    _settleTopAndBottomLines(seriesByMetric);
 
     // Revenue defines which quarters exist: without it a row says nothing.
     final keys = seriesByMetric[XbrlMetric.revenue]!.keys.toList()..sort();
@@ -231,6 +232,32 @@ abstract final class CompanyFactsParser {
         if (first == null || second == null || third == null) continue;
         quarters[fourth] = entry.value - (first + second + third);
       }
+    }
+  }
+
+  /// Folds the alternative readings of revenue and net income into the one
+  /// series each that everything downstream reads, period by period.
+  ///
+  /// Revenue is the larger of contract revenue and the total, since the total
+  /// only ever adds what contract revenue leaves out. Net income, where the
+  /// filer tags no parent figure at all, is the group's profit less the share
+  /// outside owners hold — all of it where none is tagged, which is what
+  /// [XbrlMetric.profitLoss] already means for a filer without them.
+  static void _settleTopAndBottomLines<K>(
+    Map<XbrlMetric, Map<K, double>> seriesByMetric,
+  ) {
+    final revenue = seriesByMetric[XbrlMetric.revenue]!;
+    for (final MapEntry(:key, :value)
+        in seriesByMetric[XbrlMetric.totalRevenue]!.entries) {
+      final contract = revenue[key];
+      if (contract == null || value > contract) revenue[key] = value;
+    }
+
+    final netIncome = seriesByMetric[XbrlMetric.netIncome]!;
+    final outside = seriesByMetric[XbrlMetric.noncontrollingInterestIncome]!;
+    for (final MapEntry(:key, :value)
+        in seriesByMetric[XbrlMetric.profitLoss]!.entries) {
+      netIncome.putIfAbsent(key, () => value - (outside[key] ?? 0));
     }
   }
 
@@ -352,6 +379,7 @@ abstract final class CompanyFactsParser {
       for (final metric in XbrlMetric.values)
         metric: _annualSeries(facts, metric),
     };
+    _settleTopAndBottomLines(seriesByMetric);
 
     final years = seriesByMetric[XbrlMetric.operatingCashFlow]!.keys.toList()
       ..sort();

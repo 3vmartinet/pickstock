@@ -18,15 +18,62 @@ enum XbrlUnit {
 /// (a point in time) from income-statement and cash-flow ones (a duration),
 /// which is how a full-year fact is told apart from a quarterly one.
 enum XbrlMetric {
+  /// Revenue from contracts with customers, which is what most filers tag as
+  /// their top line. Read beside [totalRevenue] and the larger taken — see
+  /// there for why.
   revenue(
     tags: [
       'RevenueFromContractWithCustomerExcludingAssessedTax',
       'RevenueFromContractWithCustomerIncludingAssessedTax',
-      'Revenues',
-      'SalesRevenueNet',
     ],
   ),
-  netIncome(tags: ['NetIncomeLoss']),
+
+  /// The whole top line, for filers whose contract revenue is only part of
+  /// it.
+  ///
+  /// Contract revenue leaves out whatever is not a sale to a customer under
+  /// ASC 606: leasing, financing, derivatives settled in commodities. Ten of
+  /// the two hundred largest filers report a total above it, and reading the
+  /// contract figure first left Archer-Daniels-Midland at $25.0B of its
+  /// $80.3B, General Motors without GM Financial's $17B and ConocoPhillips
+  /// $7B short — every margin struck against those was the wrong size.
+  ///
+  /// Kept apart from [revenue] rather than appended to its tags, because the
+  /// larger of the two is wanted and never the larger of every tag: that
+  /// would pick the figure including excise tax over the one excluding it.
+  ///
+  /// The last two are what utilities file instead: Xcel ($14.7B), DTE
+  /// ($15.8B) and a dozen others tag no other revenue concept at all and read
+  /// as earning nothing.
+  totalRevenue(
+    tags: [
+      'Revenues',
+      'SalesRevenueNet',
+      'RegulatedAndUnregulatedOperatingRevenue',
+      'RegulatedOperatingRevenue',
+    ],
+  ),
+
+  /// The parent's profit, after any owed to holders of its preferred shares.
+  ///
+  /// The second tag is what filers use who stopped tagging the first:
+  /// Caterpillar has not since 2010, Booking since 2012, Mastercard since
+  /// 2013, and all three read as having no earnings at all. It is struck
+  /// after preferred dividends, which is the share of profit the common
+  /// shares being priced actually own.
+  ///
+  /// A filer with neither falls back to [profitLoss] less
+  /// [noncontrollingInterestIncome] — Broadcom and Viatris tag only the
+  /// group figure.
+  netIncome(
+    tags: ['NetIncomeLoss', 'NetIncomeLossAvailableToCommonStockholdersBasic'],
+  ),
+
+  /// The share of the group's profit that belongs to outside owners of its
+  /// subsidiaries, which is what separates [profitLoss] from [netIncome].
+  noncontrollingInterestIncome(
+    tags: ['NetIncomeLossAttributableToNoncontrollingInterest'],
+  ),
 
   /// Profit for the whole consolidated group, before any of it is attributed
   /// to owners outside the listed company.

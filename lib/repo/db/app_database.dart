@@ -33,7 +33,11 @@ part 'app_database.g.dart';
 /// holding and needs the margin before overheads to say so. And write-downs,
 /// so a margin that took a one-off impairment is not read as one that
 /// collapsed.
-const int extractorVersion = 12;
+///
+/// 13 takes the larger of contract revenue and total revenue, reads the
+/// utilities' revenue concepts, and finds net income for filers that stopped
+/// tagging `NetIncomeLoss` — Caterpillar, Mastercard and Booking among them.
+const int extractorVersion = 13;
 
 /// The setting that records the one-off clean-up of prices quoted under the
 /// wrong symbol; see `_discardPricesQuotedPerSymbol`.
