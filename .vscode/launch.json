@@ -6,7 +6,7 @@
     // These configurations run against the Flutter SDK on your PATH. There is
     // no per-launch or per-project SDK setting.
     //
-    // `--dart-define-from-file=env.json` supplies the Finnhub API key, which is
+    // `--dart-define-from-file=env.json` supplies the Finnhub and Massive API keys, which are
     // gitignored. Without it the app runs fine and the share price is typed in;
     // copy env.example.json to env.json and paste a key to get live quotes.
     "version": "0.2.0",

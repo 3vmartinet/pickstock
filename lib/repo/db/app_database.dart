@@ -1146,6 +1146,27 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  /// Records a day's closing prices for many filers at once, replacing what
+  /// each had.
+  Future<void> savePrices(List<SharePricesCompanion> rows) async {
+    if (rows.isEmpty) return;
+    await batch(
+      (batch) =>
+          batch.insertAll(sharePrices, rows, mode: InsertMode.insertOrReplace),
+    );
+  }
+
+  /// The filers whose stored price the reader typed, which no refresh may
+  /// overwrite.
+  Future<Set<String>> typedPriceCiks() async {
+    final rows =
+        await (selectOnly(sharePrices)
+              ..addColumns([sharePrices.cik])
+              ..where(sharePrices.isQuoted.equals(false)))
+            .get();
+    return {for (final row in rows) row.read(sharePrices.cik)!};
+  }
+
   /// Forgets the price entered for [cik].
   Future<void> clearPrice(String cik) {
     return (delete(sharePrices)..where((row) => row.cik.equals(cik))).go();

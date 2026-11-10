@@ -9,6 +9,7 @@ import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
@@ -18,6 +19,7 @@ SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
+BulkPriceRefresh get _bulkPrices => GetIt.I.get<BulkPriceRefresh>();
 ReportRepo get _reportRepo => GetIt.I.get<ReportRepo>();
 
 /// How often the running job republishes its progress.
@@ -211,10 +213,18 @@ class JobsViewModel extends ChangeNotifier {
         return null;
       }
 
-      // The common share's price, whichever symbol the list carried.
-      final symbol = _directory.quoteSymbolFor(company);
-      final quote = await _pacedQuote(symbol);
-      await _priceRepo.save(company.cik, quote);
+      // The day's close, where the closes are loaded in bulk: a scan is a
+      // screen, and forty minutes of quotes for a screen is forty minutes
+      // too many. Otherwise the common share's quote, whichever symbol the
+      // list carried.
+      final stored = await _priceRepo.priceFor(company.cik);
+      final Quote quote;
+      if (stored != null && (_bulkPrices.isConfigured || !stored.isQuoted)) {
+        quote = stored;
+      } else {
+        quote = await _pacedQuote(_directory.quoteSymbolFor(company));
+        await _priceRepo.save(company.cik, quote);
+      }
 
       final valuation = Valuation(
         snapshot: snapshot,

@@ -10,6 +10,7 @@ import 'package:pickstock/data/valuation/valuation_upside.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -18,6 +19,7 @@ SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
+BulkPriceRefresh get _bulkPrices => GetIt.I.get<BulkPriceRefresh>();
 
 /// How long a company's price is left alone after it was last asked for.
 ///
@@ -56,6 +58,25 @@ class ListValuationViewModel extends ChangeNotifier {
   /// quote key would otherwise have quotes spent and filings read behind its
   /// back, and fail on whichever of them was still in flight when it ended.
   static bool isEnabled = true;
+
+  ListValuationViewModel() {
+    // Every stored price moves at once when the day's closes land, and a
+    // verdict judged on yesterday's would otherwise stand until relaunch.
+    if (GetIt.I.isRegistered<BulkPriceRefresh>()) {
+      _bulkPrices.addListener(_onBulkPrices);
+    }
+  }
+
+  /// Forgets every judgement so the tiles on screen ask again — from the
+  /// stored prices, which costs no quote.
+  void _onBulkPrices() {
+    if (_isDisposed) return;
+    _verdicts.clear();
+    _upsides.clear();
+    _lastAsked.clear();
+    _revision++;
+    notifyListeners();
+  }
 
   final Map<String, ValuationVerdict> _verdicts = {};
 
@@ -117,8 +138,9 @@ class ListValuationViewModel extends ChangeNotifier {
   Map<String, ValuationUpside> get upsides => UnmodifiableMapView(_upsides);
 
   /// Whether tiles can be priced at all, which is what the verdict filter
-  /// needs to be offered.
-  bool get canValue => isEnabled && _quoteRepo.isConfigured;
+  /// needs to be offered: a quote source, or a day's closes already stored.
+  bool get canValue =>
+      isEnabled && (_quoteRepo.isConfigured || _bulkPrices.isConfigured);
 
   /// How many companies of the [sweep] are still to be looked at.
   int get sweepRemaining => _sweep.length - _sweepNext;
@@ -140,7 +162,7 @@ class ListValuationViewModel extends ChangeNotifier {
   void request(Company company) {
     // Without a key there is nothing to fetch, and the list says nothing
     // rather than half of it.
-    if (!isEnabled || !_quoteRepo.isConfigured || _isDisposed) return;
+    if (!canValue || _isDisposed) return;
     if (_isGuarded(company.cik)) return;
 
     // Moved to the front if it was already waiting: it is on screen again.
@@ -271,6 +293,7 @@ class ListValuationViewModel extends ChangeNotifier {
       var outcome = _Outcome.fromStore;
 
       if (!_isFresh(stored)) {
+        if (!_quoteRepo.isConfigured) return _Outcome.fromStore;
         final wait = _quoteRepo.timeUntilSlot;
         if (wait > Duration.zero) return _Outcome.blocked;
         try {
@@ -307,10 +330,14 @@ class ListValuationViewModel extends ChangeNotifier {
 
   /// Whether [stored] can stand without asking again: a typed price always
   /// can, since asking would overwrite the reader's own figure; a quote can
-  /// while it is younger than the guard.
-  static bool _isFresh(Quote? stored) {
+  /// while it is younger than the guard — or for as long as it likes where
+  /// the day's closes are loaded in bulk, since a list is a screen and a
+  /// screen does not turn on the afternoon's moves. The report still quotes
+  /// live when a company is opened.
+  bool _isFresh(Quote? stored) {
     if (stored == null) return false;
     if (!stored.isQuoted) return true;
+    if (_bulkPrices.isConfigured) return true;
     final fetchedAt = stored.fetchedAt;
     return fetchedAt != null &&
         DateTime.now().difference(fetchedAt) < listPriceGuard;
@@ -363,6 +390,9 @@ class ListValuationViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    if (GetIt.I.isRegistered<BulkPriceRefresh>()) {
+      _bulkPrices.removeListener(_onBulkPrices);
+    }
     _queue.clear();
     _sweep = const [];
     _pause?.cancel();

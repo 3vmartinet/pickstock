@@ -8,6 +8,7 @@ import 'package:pickstock/data/valuation/valuation_verdict.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/browse/widgets/ticker_grid.dart';
@@ -131,6 +132,71 @@ void main() {
 
     expect(await verdictOf(viewModel), ValuationVerdict.undervalued);
     expect(quotes.requested, ['AAPL']);
+  });
+
+  test(
+    'with the day\'s closes loaded, a stored close is never re-quoted',
+    () async {
+      // A list is a screen, and a screen does not turn on the afternoon's
+      // moves: with a bulk source built in, the stored close stands however
+      // old the guard says it is, and Finnhub is never asked for a tile.
+      await database.close();
+      await GetIt.I.reset();
+      quotes = FakeQuoteRepo(isConfigured: true, price: 80);
+      database = await registerTestDependencies(
+        withFinancials: true,
+        quoteRepo: quotes,
+        bulkPriceRepo: FakeBulkPriceRepo({'AAPL': 250}),
+      );
+      ListValuationViewModel.isEnabled = true;
+      await GetIt.I.get<PriceRepo>().save(
+        _apple.cik,
+        Quote(
+          pricePerShare: 250,
+          asOf: DateTime.utc(2026, 11, 9),
+          isQuoted: true,
+          fetchedAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+      );
+      final viewModel = ListValuationViewModel();
+      addTearDown(viewModel.dispose);
+
+      viewModel.request(_apple);
+
+      expect(await verdictOf(viewModel), ValuationVerdict.overvalued);
+      expect(quotes.requested, isEmpty);
+    },
+  );
+
+  test('judges every tile again when the day\'s closes land', () async {
+    await database.close();
+    await GetIt.I.reset();
+    final closes = FakeBulkPriceRepo({'AAPL': 80});
+    quotes = FakeQuoteRepo(isConfigured: false);
+    database = await registerTestDependencies(
+      withFinancials: true,
+      quoteRepo: quotes,
+      bulkPriceRepo: closes,
+    );
+    ListValuationViewModel.isEnabled = true;
+    await GetIt.I.get<PriceRepo>().save(
+      _apple.cik,
+      Quote(pricePerShare: 250, asOf: DateTime.now(), isQuoted: true),
+    );
+    final viewModel = ListValuationViewModel();
+    addTearDown(viewModel.dispose);
+    // No quote source at all: the list still values, from what is stored.
+    expect(viewModel.canValue, isTrue);
+    viewModel.request(_apple);
+    expect(await verdictOf(viewModel), ValuationVerdict.overvalued);
+
+    // The closes arrive, Apple at \$80. The old verdict is dropped and the
+    // tile asks again — from the store, so still without a quote.
+    await GetIt.I.get<BulkPriceRefresh>().refreshIfDue();
+    expect(viewModel.verdictFor(_apple.cik), isNull);
+    viewModel.request(_apple);
+    expect(await verdictOf(viewModel), ValuationVerdict.undervalued);
+    expect(quotes.requested, isEmpty);
   });
 
   test('a typed price is never overwritten by a quote', () async {

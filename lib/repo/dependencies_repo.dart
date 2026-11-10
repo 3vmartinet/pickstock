@@ -1,6 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
+import 'package:pickstock/repo/quote/bulk_price_repo.dart';
 import 'package:pickstock/repo/quote/finnhub_quote_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
@@ -39,6 +41,12 @@ abstract final class DependenciesRepo {
         () => usesMockData ? MemoryPriceRepo() : const LocalPriceRepo(),
       )
       ..registerLazySingleton<QuoteRepo>(FinnhubQuoteRepo.new)
+      ..registerLazySingleton<BulkPriceRepo>(
+        () => usesMockData
+            ? const UnavailableBulkPriceRepo()
+            : MassiveBulkPriceRepo(),
+      )
+      ..registerLazySingleton<BulkPriceRefresh>(BulkPriceRefresh.new)
       ..registerLazySingleton<ResearchNoteRepo>(
         () => usesMockData
             ? MemoryResearchNoteRepo()

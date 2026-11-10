@@ -17,6 +17,8 @@ import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
+import 'package:pickstock/repo/quote/bulk_price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/repo/report/report_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
@@ -371,6 +373,28 @@ class FakeOllamaRepo extends OllamaRepo {
   }
 }
 
+/// A day's closes for tests, handed over as the provider would.
+class FakeBulkPriceRepo implements BulkPriceRepo {
+  FakeBulkPriceRepo(this.closeBySymbol, {DateTime? tradingDay})
+    : tradingDay = tradingDay ?? DateTime.utc(2026, 11, 9);
+
+  final Map<String, double> closeBySymbol;
+  final DateTime tradingDay;
+
+  /// How many times the closes were asked for.
+  int fetched = 0;
+
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<BulkPrices?> fetchLatest() async {
+    fetched++;
+    if (closeBySymbol.isEmpty) return null;
+    return BulkPrices(tradingDay: tradingDay, closeBySymbol: closeBySymbol);
+  }
+}
+
 /// A quote source for tests: unconfigured by default, so the price is typed in
 /// exactly as it is in a build with no API key.
 class FakeQuoteRepo implements QuoteRepo {
@@ -418,6 +442,7 @@ Future<AppDatabase> registerTestDependencies({
   OllamaRepo? researchRepo,
   ResearchNoteRepo? researchNoteRepo,
   QuoteRepo? quoteRepo,
+  BulkPriceRepo? bulkPriceRepo,
   SettingsRepo? settingsRepo,
   bool autoDownloadUpdates = false,
   bool autoApplyUpdates = false,
@@ -509,6 +534,12 @@ Future<AppDatabase> registerTestDependencies({
     // price is a round trip through drift and is worth exercising as one.
     ..registerLazySingleton<PriceRepo>(() => const LocalPriceRepo())
     ..registerSingleton<QuoteRepo>(quoteRepo ?? FakeQuoteRepo())
+    // No bulk source unless a test brings one: a day's closes landing behind
+    // a test about something else would move every verdict it looks at.
+    ..registerSingleton<BulkPriceRepo>(
+      bulkPriceRepo ?? const UnavailableBulkPriceRepo(),
+    )
+    ..registerLazySingleton<BulkPriceRefresh>(BulkPriceRefresh.new)
     // The real implementation against the in-memory database: a list is a
     // couple of tables and a cascade, all of which is worth exercising.
     ..registerLazySingleton<WatchlistRepo>(LocalWatchlistRepo.new)

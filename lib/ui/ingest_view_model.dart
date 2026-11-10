@@ -7,6 +7,7 @@ import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/dependencies_repo.dart';
 import 'package:pickstock/repo/sec/bulk_ingest_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
 
@@ -14,6 +15,7 @@ AppDatabase get _database => GetIt.I.get<AppDatabase>();
 BulkIngestRepo get _bulkIngestRepo => GetIt.I.get<BulkIngestRepo>();
 TickerDirectoryRepo get _tickerDirectoryRepo =>
     GetIt.I.get<TickerDirectoryRepo>();
+BulkPriceRefresh get _bulkPriceRefresh => GetIt.I.get<BulkPriceRefresh>();
 SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 
 /// Whether the app has the data it needs to show anything at all.
@@ -256,6 +258,8 @@ class IngestViewModel extends ChangeNotifier {
           ? const IngestReady()
           : const IngestRequired(),
     );
+    // Behind the app, once a day: the directory is what it prices.
+    if (_state is IngestReady) unawaited(_bulkPriceRefresh.refreshIfDue());
 
     if (_state is IngestReady) {
       await _checkForNewerArchive(run.archiveLastModified);
@@ -434,6 +438,8 @@ class IngestViewModel extends ChangeNotifier {
   /// archive date it recorded.
   Future<void> _finishRun() async {
     await _tickerDirectoryRepo.load();
+    // New filers in the directory have no price yet.
+    unawaited(_bulkPriceRefresh.refreshIfDue());
     final run = await _database.lastIngest();
     _loadedArchiveDate = run?.archiveLastModified;
     _lastLoadDuration = run == null ? null : _durationOf(run);

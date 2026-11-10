@@ -14,6 +14,7 @@
 # builds with that key whatever env.json says. All of them are optional:
 #
 #   FINNHUB_API_KEY      live share prices; without it the price is typed in
+#   MASSIVE_API_KEY      a day's closing price for every US stock, once a day
 #   OLLAMA_API_KEY       Ollama's hosted web search; without it research is off
 #   OLLAMA_HOST          the local model server (default http://localhost:11434)
 #   OLLAMA_MODEL         the model it runs (default gemma4:12b-mlx)
@@ -21,7 +22,7 @@
 
 set -euo pipefail
 
-readonly defines=(FINNHUB_API_KEY OLLAMA_API_KEY OLLAMA_HOST OLLAMA_MODEL PICKSTOCK_MOCK_DATA)
+readonly defines=(FINNHUB_API_KEY MASSIVE_API_KEY OLLAMA_API_KEY OLLAMA_HOST OLLAMA_MODEL PICKSTOCK_MOCK_DATA)
 
 mode=${1:-}
 case "$mode" in
@@ -82,8 +83,9 @@ for name in "${defines[@]}"; do
   fi
 done
 has FINNHUB_API_KEY || echo "  warning: FINNHUB_API_KEY not set; share prices will have to be typed in"
+has MASSIVE_API_KEY || echo "  warning: MASSIVE_API_KEY not set; the list and the scan will price companies one quote at a time"
 has OLLAMA_API_KEY || echo "  warning: OLLAMA_API_KEY not set; web research will be unavailable"
-if [[ $mode == release ]] && { has FINNHUB_API_KEY || has OLLAMA_API_KEY; }; then
+if [[ $mode == release ]] && { has FINNHUB_API_KEY || has MASSIVE_API_KEY || has OLLAMA_API_KEY; }; then
   echo "  note: the keys are compiled into the app; do not hand the build to anyone you would not give them to"
 fi
 

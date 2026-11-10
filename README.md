@@ -348,9 +348,34 @@ expects, and that the local model actually calls the tools rather than answering
 from memory. Skipped without a key, and the model tests skip themselves if
 nothing is listening.
 
-**Ranking the whole directory by valuation is not offered.** At 60 calls a
-minute, pricing 10,391 companies takes about three hours, so it would have to be
-an overnight batch rather than a sort you can click.
+### A price for every company, once a day
+
+A quote a company at a time is what Finnhub offers for free, and at sixty a
+minute that is forty minutes for the directory: a verdict on every tile, a
+sort of the whole list by upside and a scan that finishes while you watch
+were out of reach. [Massive](https://massive.com) (formerly Polygon) offers
+the other shape for free: **every US stock's closing price in one request**,
+through its grouped daily bars, on a plan limited to five requests a minute
+and end-of-day data. One request a day is all this needs.
+
+`MASSIVE_API_KEY` reaches the app the way the Finnhub key does. With it,
+`BulkPriceRefresh` asks for the latest closes behind a working app once the
+directory has loaded — on launch and after an ingest, at most once every six
+hours — and stores each against its filer under the common share, exactly as
+a Finnhub quote is stored. A price the reader typed is left alone. From then
+on the **tiles judge from the stored close** without a quote each, the
+**scan values from it** and finishes in seconds rather than three quarters
+of an hour, and the largest-by-value rankings are current for every company.
+Opening a company still asks Finnhub for a live price, because a report is
+about now and a screen is about the day.
+
+Two things about the free plan, from its own documentation: a day's bars are
+served only **after midnight Eastern**, so the request starts from yesterday
+and walks back until a day answers — a 403 is a day not yet released, an
+empty day is a weekend or a holiday — and the provider spells a share class
+with a dot where SEC writes a hyphen, so `BRK-A` is looked up as `BRK.A`.
+Without the key nothing changes: tiles and scans quote one at a time as
+before.
 
 ### The seven-question framework
 
@@ -528,7 +553,9 @@ positive cash stream. The report says how many were skipped, so a short list is
 not mistaken for a thorough search.
 
 At 55 quotes a minute an unfiltered run takes about **42 minutes**; a sector
-filter usually brings it under ten. While it runs it **holds the whole quote
+filter usually brings it under ten. With the day's closes loaded in bulk (see
+[A price for every company](#a-price-for-every-company-once-a-day)) the run
+reads them instead and takes seconds. While it runs it **holds the whole quote
 budget** — opening a company shows "a report is using the quote allowance"
 beside the last stored price rather than competing for calls and making both
 slow. The remaining-time estimate comes from the rate actually achieved, not

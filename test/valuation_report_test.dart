@@ -4,6 +4,7 @@ import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/report/valuation_job.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/ui/report/jobs_view_model.dart';
 
@@ -68,13 +69,18 @@ void main() {
   late ScriptedQuoteRepo quotes;
   late JobsViewModel jobs;
 
-  Future<void> boot(Map<String, double> prices) async {
+  Future<void> boot(
+    Map<String, double> prices, {
+    FakeBulkPriceRepo? closes,
+  }) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     quotes = ScriptedQuoteRepo(prices);
     database = await registerTestDependencies(
       withFinancials: true,
       quoteRepo: quotes,
+      bulkPriceRepo: closes,
     );
+    if (closes != null) await GetIt.I.get<BulkPriceRefresh>().refreshIfDue();
     jobs = JobsViewModel();
     await Future<void>.delayed(Duration.zero);
   }
@@ -159,6 +165,23 @@ void main() {
     final report = await jobs.load(jobs.reports.single.id);
     expect(report!.entries, hasLength(1));
     expect(report.consideredCount, 1);
+  });
+
+  test('values from the stored closes where they are loaded in bulk', () async {
+    // Forty minutes of quotes for a screen is forty minutes too many: with
+    // the day's closes stored, the scan reads them and asks Finnhub nothing.
+    await boot({
+      'AAPL': 40,
+      'NVDA': 100000,
+    }, closes: FakeBulkPriceRepo({'AAPL': 40, 'NVDA': 100000}));
+
+    jobs.start(name: 'Test scan', companies: [_apple, _nvidia]);
+    await _finish(jobs);
+
+    expect(quotes.asked, isEmpty);
+    final report = await jobs.load(jobs.reports.single.id);
+    expect(report!.entries.map((e) => e.ticker), ['AAPL']);
+    expect(report.valuedCount, 2);
   });
 
   test('holds the quote budget only while it runs', () async {
