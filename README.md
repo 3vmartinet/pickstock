@@ -511,8 +511,15 @@ guessing: of 10,391 tickers only about 2,300 have a share count, revenue and a
 positive cash stream. The report says how many were skipped, so a short list is
 not mistaken for a thorough search.
 
-At 55 quotes a minute an unfiltered run takes about **42 minutes**; a sector
-filter usually brings it under ten. While it runs it **holds the whole quote
+Each company is judged at its own required return, as the report judges it:
+the beta behind that rate is a call to the same provider as the quote, so a
+rate not already held is paced and charged against the same budget. Valued
+at the assumed 9% instead, one company in six with a beta on file came out
+with a different verdict in the report from the one the scan had saved.
+
+At 55 calls a minute an unfiltered run takes about **42 minutes** where the
+betas are held from earlier sessions, and up to twice that where they are
+not; a sector filter usually brings it under ten. While it runs it **holds the whole quote
 budget** — opening a company shows "a report is using the quote allowance"
 beside the last stored price rather than competing for calls and making both
 slow. The remaining-time estimate comes from the rate actually achieved, not

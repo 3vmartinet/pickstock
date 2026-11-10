@@ -179,6 +179,9 @@ class FinnhubQuoteRepo implements QuoteRepo {
       ticker.trim().toUpperCase().replaceAll('-', '.');
 
   /// Takes one call out of the current window's budget, or refuses.
+  @override
+  bool claimCall() => _claimCall();
+
   bool _claimCall() {
     final now = DateTime.now();
     _calls.removeWhere((call) => now.difference(call) >= _window);

@@ -20,6 +20,12 @@ abstract interface class QuoteRepo {
   /// itself instead of walking into a refusal.
   Duration get timeUntilSlot;
 
+  /// Spends one call of the budget on a request made to the same provider by
+  /// someone else — the beta behind a company's own discount rate — or
+  /// refuses with `false` where none is free. The provider counts every
+  /// request against one allowance, whoever makes it.
+  bool claimCall();
+
   /// Hands the whole per-minute budget to a bulk run. Interactive quotes are
   /// refused with [QuoteFailure.jobRunning] until it is released, which is
   /// what makes a long run finish in a predictable time.

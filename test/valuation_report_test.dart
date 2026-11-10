@@ -3,7 +3,9 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/report/valuation_job.dart';
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/valuation/discount_rate.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/ui/report/jobs_view_model.dart';
 
@@ -22,6 +24,9 @@ class ScriptedQuoteRepo implements QuoteRepo {
 
   @override
   Duration get timeUntilSlot => Duration.zero;
+
+  @override
+  bool claimCall() => true;
 
   @override
   void reserveForJob() => reserved = true;
@@ -68,12 +73,16 @@ void main() {
   late ScriptedQuoteRepo quotes;
   late JobsViewModel jobs;
 
-  Future<void> boot(Map<String, double> prices) async {
+  Future<void> boot(
+    Map<String, double> prices, {
+    MarketRatesRepo? marketRatesRepo,
+  }) async {
     TestWidgetsFlutterBinding.ensureInitialized();
     quotes = ScriptedQuoteRepo(prices);
     database = await registerTestDependencies(
       withFinancials: true,
       quoteRepo: quotes,
+      marketRatesRepo: marketRatesRepo,
     );
     jobs = JobsViewModel();
     await Future<void>.delayed(Duration.zero);
@@ -99,6 +108,40 @@ void main() {
     expect(report.consideredCount, 2);
     expect(report.valuedCount, 2);
   });
+
+  test(
+    'values each company at its own required return, as the report does',
+    () async {
+      // At the assumed 9% Apple's band on the fixture is $96.64–$136.57, so
+      // $120 is fairly valued and the scan would leave it out. A beta of 2.4
+      // asks 16.9% of it, which values the same cash at far fewer years and
+      // puts $120 above the band — the verdict the report gives, and the one
+      // the scan must agree with.
+      await boot({
+        'AAPL': 120,
+      }, marketRatesRepo: FixedMarketRatesRepo(4.9, 2.4));
+
+      jobs.start(name: 'Test scan', companies: [_apple]);
+      await _finish(jobs);
+
+      final report = await jobs.load(jobs.reports.single.id);
+      expect(report!.valuedCount, 1);
+      expect(report.entries, isEmpty);
+
+      // And the other way: a company in a sleepy sector earns a lower return
+      // and a wider band, so the same price turns out cheap.
+      jobs.dispose();
+      await database.close();
+      await GetIt.I.reset();
+      await boot({
+        'AAPL': 120,
+      }, marketRatesRepo: FixedMarketRatesRepo(4.9, 0.2));
+      jobs.start(name: 'Test scan', companies: [_apple]);
+      await _finish(jobs);
+      final cheap = await jobs.load(jobs.reports.single.id);
+      expect(cheap!.entries.map((e) => e.ticker), ['AAPL']);
+    },
+  );
 
   test('ranks the most undervalued first', () async {
     await boot({'AAPL': 40, 'NVDA': 1});
@@ -213,5 +256,30 @@ void main() {
       expect(await database.entriesForReport(id), isEmpty);
       next.dispose();
     },
+  );
+}
+
+/// A required return the test dictates, held for every symbol.
+class FixedMarketRatesRepo implements MarketRatesRepo {
+  FixedMarketRatesRepo(this.riskFreePercent, this.beta);
+
+  final double riskFreePercent;
+  final double beta;
+  final List<String> asked = [];
+
+  @override
+  bool get isConfigured => true;
+
+  @override
+  Future<DiscountRate?> rateFor(String ticker) async {
+    asked.add(ticker);
+    return cachedRateFor(ticker);
+  }
+
+  @override
+  DiscountRate? cachedRateFor(String ticker) => DiscountRate(
+    riskFreePercent: riskFreePercent,
+    beta: beta,
+    asOf: DateTime(2026, 11, 9),
   );
 }
