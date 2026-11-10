@@ -5,6 +5,7 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
@@ -726,6 +727,76 @@ void main() {
       );
       // The fixture's first year carries no share count.
       expect(valuation.growthPercent, closeTo(10, 0.01));
+    });
+  });
+
+  group('the figures that have to be current', () {
+    FinancialSnapshot withTrailing(TrailingFigures trailing) {
+      final annual = _snapshot();
+      return FinancialSnapshot(
+        company: annual.company,
+        years: annual.years,
+        trailing: trailing,
+      );
+    }
+
+    test('scales the typical margin by the trailing revenue', () {
+      final annual = Valuation(snapshot: _snapshot(), pricePerShare: 50);
+      final valuation = Valuation(
+        snapshot: withTrailing(
+          TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            revenue: 1500 * _million,
+          ),
+        ),
+        pricePerShare: 50,
+      );
+      // The margin is the years'; only the sales it is applied to moved.
+      expect(valuation.basisAmount, annual.basisAmount! * 1.5);
+      expect(valuation.revenue, 1500 * _million);
+      expect(valuation.currentThrough, DateTime(2026, 9, 30));
+      // The balance sheet was not in the quarter, so the year's stands.
+      expect(valuation.netDebt, annual.netDebt);
+    });
+
+    test('reads cash and debt at the quarter end', () {
+      final valuation = Valuation(
+        snapshot: withTrailing(
+          TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            totalDebt: 200 * _million,
+            cash: 20 * _million,
+          ),
+        ),
+        pricePerShare: 50,
+      );
+      expect(valuation.netDebt, 180 * _million);
+      expect(valuation.revenue, 1000 * _million);
+    });
+
+    test("divides by the quarter's diluted count, after a split", () {
+      final annual = Valuation(snapshot: _snapshot(), pricePerShare: 50);
+      final valuation = Valuation(
+        snapshot: withTrailing(
+          TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            dilutedShares: 20 * _million,
+          ),
+        ),
+        pricePerShare: 25,
+      );
+      expect(valuation.dilutedShares, 20 * _million);
+      expect(valuation.earningsPerShare, annual.earningsPerShare! / 2);
+      // The cover count is already the new one, so the band is unmoved.
+      expect(valuation.fairValueHigh, annual.fairValueHigh);
+      // Nothing the reader would check against the annual report changed.
+      expect(valuation.currentThrough, isNull);
     });
   });
 

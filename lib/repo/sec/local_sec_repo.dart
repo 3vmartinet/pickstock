@@ -3,6 +3,7 @@ import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_quarter_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
@@ -40,6 +41,7 @@ class LocalSecRepo implements SecRepo {
     if (rows.isEmpty) throw const SecException(SecFailure.noAnnualData);
 
     final quarterRows = await _database.quartersFor(listing.cik);
+    final trailing = await _database.trailingFor(listing.cik);
 
     final stored = await _database.companyFor(listing.cik);
     final reported = rows.length > reportedYears
@@ -94,6 +96,21 @@ class LocalSecRepo implements SecRepo {
           ),
       ],
       quarters: _quartersFrom(quarterRows),
+      trailing: trailing == null
+          ? null
+          : TrailingFigures(
+              periodEnd: trailing.periodEnd,
+              fiscalYear: trailing.fiscalYear,
+              quarter: trailing.quarter,
+              revenue: trailing.revenue,
+              netIncome: trailing.netIncome,
+              operatingCashFlow: trailing.operatingCashFlow,
+              capitalExpenditure: trailing.capitalExpenditure,
+              shareBasedCompensation: trailing.shareBasedCompensation,
+              totalDebt: trailing.totalDebt,
+              cash: trailing.cash,
+              dilutedShares: trailing.dilutedShares,
+            ),
     );
   }
 

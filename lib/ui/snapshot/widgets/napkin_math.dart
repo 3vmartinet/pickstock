@@ -116,7 +116,7 @@ List<_Step> _stepsFor(
     return const [];
   }
 
-  final netDebt = figures.netDebt ?? 0;
+  final netDebt = valuation.netDebt ?? 0;
   final excess = valuation.excessDebtDeducted;
   final netCash = valuation.netCashAdded;
   final money = _formatRepo.compactCurrency;
@@ -142,12 +142,12 @@ List<_Step> _stepsFor(
       title: strings.napkinStep2Title,
       body: valuation.basisYears > 1
           ? strings.napkinStep2BodyTypical(
-              figures.revenue == null ? '—' : money(figures.revenue!),
+              valuation.revenue == null ? '—' : money(valuation.revenue!),
               money(basis),
               valuation.basisYears,
             )
           : strings.napkinStep2Body(
-              figures.revenue == null ? '—' : money(figures.revenue!),
+              valuation.revenue == null ? '—' : money(valuation.revenue!),
               money(basis),
             ),
     ),
@@ -284,6 +284,10 @@ List<String> _caveatsFor(
         strings.napkinCaveatShareCountStale('${filed.year}')
       else
         strings.napkinCaveatShareCount,
+    // Said because the sales and the balance sheet above will not match the
+    // annual report a reader checks them against.
+    if (valuation.currentThrough case final through?)
+      strings.napkinCaveatCurrent(_formatRepo.shortDate(through)),
     if (valuation.basis == ValuationBasis.earnings)
       strings.napkinCaveatEarnings,
     if (actualGrowth != null &&

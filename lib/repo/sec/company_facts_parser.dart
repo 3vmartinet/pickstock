@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:pickstock/data/snapshot/fiscal_quarter_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/data/xbrl/xbrl_metric.dart';
 
 const String _factsKey = 'facts';
@@ -43,6 +44,16 @@ const int _quartersPerYear = 4;
 /// only treated as a full year if it actually spans one.
 const int _minAnnualDays = 330;
 const int _maxAnnualDays = 400;
+
+/// The longest year-to-date a 10-Q states: nine months, give or take a
+/// 52/53-week calendar.
+const int _maxYearToDateDays = 290;
+
+/// How far two periods may sit apart and still be the same months a year
+/// apart, or a year and the one after it — again for 52/53-week calendars.
+const int _alignmentDays = 10;
+
+const String _filedKey = 'filed';
 
 /// Turns one SEC "company facts" payload into fiscal years of figures.
 ///
@@ -370,6 +381,320 @@ abstract final class CompanyFactsParser {
     return days >= _minQuarterDays && days <= _maxQuarterDays;
   }
 
+  /// The twelve months to the newest 10-Q, or `null` where there is none
+  /// newer than the 10-K — or none whose figures can be lined up with it.
+  ///
+  /// Each flow is the last full year, plus this year to date, less the same
+  /// months a year earlier, all three read off one tag so they cannot be
+  /// three different definitions of the line. The 10-Q supplies the second
+  /// and third (it states last year's months beside its own), so only a
+  /// quarter whose year-to-date starts the day after a 10-K's year ended is
+  /// read at all.
+  ///
+  /// Operating cash flow sets the date: every filer states it, and nearly
+  /// always year-to-date. A line that cannot be read to that same date is
+  /// left out rather than taken from another.
+  ///
+  /// The balance sheet is all or nothing. A filer that states its current
+  /// debt or its leases only in the annual report would otherwise lose them
+  /// for three quarters a year, and that debt disappearing is exactly what
+  /// makes a company look cheap. So where the annual balance sheet carries a
+  /// debt or cash line the quarter's does not, the quarter's debt and cash
+  /// are both left out and the annual ones stand.
+  static TrailingFigures? parseTrailing(Map<String, dynamic> facts) {
+    final reference = _trailingFlow(facts, XbrlMetric.operatingCashFlow);
+    if (reference == null) return null;
+    final end = reference.end;
+
+    // A 10-K for this period or a later one makes the trailing year the
+    // annual one, which the fiscal years already carry.
+    final annualOperating = _annualSeries(facts, XbrlMetric.operatingCashFlow);
+    final newestAnnualEnd = _newestAnnualEnd(
+      facts,
+      XbrlMetric.operatingCashFlow,
+    );
+    if (newestAnnualEnd == null ||
+        newestAnnualEnd.compareTo(end) >= 0 ||
+        annualOperating.isEmpty) {
+      return null;
+    }
+    final latestYear = annualOperating.keys.reduce(math.max);
+
+    double? flow(XbrlMetric metric) =>
+        _trailingFlow(facts, metric, at: end)?.value;
+
+    final contract = flow(XbrlMetric.revenue);
+    final total = flow(XbrlMetric.totalRevenue);
+    final revenue = contract == null
+        ? total
+        : total == null
+        ? contract
+        : math.max(contract, total);
+
+    final group = flow(XbrlMetric.profitLoss);
+    final netIncome =
+        flow(XbrlMetric.netIncome) ??
+        (group == null
+            ? null
+            : group - (flow(XbrlMetric.noncontrollingInterestIncome) ?? 0));
+
+    // The balance sheet, read only where it is as complete as the annual one.
+    const leaseMetrics = [
+      ...XbrlMetric.leaseComponents,
+      XbrlMetric.operatingLeaseTotal,
+    ];
+    final balanceMetrics = [
+      ...XbrlMetric.debtComponents,
+      ...leaseMetrics,
+      ...XbrlMetric.cashComponents,
+    ];
+    final atQuarter = {
+      for (final metric in balanceMetrics)
+        metric: _instantAt(facts, metric, end),
+    };
+    final atYearEnd = {
+      for (final metric in balanceMetrics)
+        metric: _annualSeries(facts, metric)[latestYear],
+    };
+    bool asComplete(List<XbrlMetric> metrics) => metrics.every(
+      (metric) => atQuarter[metric] != null || atYearEnd[metric] == null,
+    );
+    double? sumOf(
+      List<XbrlMetric> components,
+      Map<XbrlMetric, double?> values,
+    ) {
+      if (components.every((metric) => values[metric] == null)) return null;
+      return components.fold<double>(
+        0,
+        (sum, metric) => sum + (values[metric] ?? 0),
+      );
+    }
+
+    double? leasesIn(Map<XbrlMetric, double?> values) =>
+        sumOf(XbrlMetric.leaseComponents, values) ??
+        values[XbrlMetric.operatingLeaseTotal];
+
+    // Borrowings and cash must both be stated at the quarter. Leases need not:
+    // two filers in three disclose them only in the annual report, and rent
+    // committed for a decade barely moves in a quarter, so the year-end
+    // figure is carried rather than the debt and cash discarded for want of
+    // it. The quarter's own is read where it is as complete as the year's.
+    final complete =
+        asComplete(XbrlMetric.debtComponents) &&
+        asComplete(XbrlMetric.cashComponents);
+    final leases = asComplete(leaseMetrics)
+        ? leasesIn(atQuarter)
+        : leasesIn(atYearEnd);
+
+    return TrailingFigures(
+      periodEnd: DateTime.parse(end),
+      fiscalYear: reference.fiscalYear,
+      quarter: reference.quarter,
+      revenue: revenue,
+      netIncome: netIncome,
+      operatingCashFlow: reference.value,
+      capitalExpenditure: flow(XbrlMetric.capitalExpenditure),
+      shareBasedCompensation: flow(XbrlMetric.shareBasedCompensation),
+      totalDebt: complete
+          ? _plus(sumOf(XbrlMetric.debtComponents, atQuarter), leases)
+          : null,
+      cash: complete ? sumOf(XbrlMetric.cashComponents, atQuarter) : null,
+      dilutedShares: _trailingFlow(
+        facts,
+        XbrlMetric.dilutedShares,
+        at: end,
+        isAverage: true,
+      )?.value,
+    );
+  }
+
+  /// One metric's trailing figure: the first of its tags that reads to [at],
+  /// or — with no date given — whichever tag reads furthest forward.
+  ///
+  /// [isAverage] is for the diluted share count, which is an average over
+  /// the year to date rather than a total to be added up, and is taken as
+  /// the 10-Q states it.
+  static _TrailingFlow? _trailingFlow(
+    Map<String, dynamic> facts,
+    XbrlMetric metric, {
+    String? at,
+    bool isAverage = false,
+  }) {
+    _TrailingFlow? newest;
+    for (final tag in metric.tags) {
+      final found = _trailingFlowForTag(
+        facts,
+        tag,
+        unit: metric.unit,
+        isAverage: isAverage,
+      );
+      if (found == null) continue;
+      if (at != null) {
+        if (found.end == at) return found;
+        continue;
+      }
+      if (newest == null || found.end.compareTo(newest.end) > 0) {
+        newest = found;
+      }
+    }
+    return newest;
+  }
+
+  static _TrailingFlow? _trailingFlowForTag(
+    Map<String, dynamic> facts,
+    String tag, {
+    required XbrlUnit unit,
+    required bool isAverage,
+  }) {
+    final usGaap = facts[_factsKey]?[_usGaapKey] as Map<String, dynamic>?;
+    final units = usGaap?[tag]?[_unitsKey]?[unit.key] as List<dynamic>?;
+    if (units == null) return null;
+
+    final toDate = <Map<String, dynamic>>[];
+    final annual = <Map<String, dynamic>>[];
+    for (final raw in units) {
+      final fact = raw as Map<String, dynamic>;
+      final start = fact[_startKey] as String?;
+      final end = fact[_endKey] as String?;
+      if (start == null || end == null || fact[_valueKey] is! num) continue;
+      final days = _daysBetween(start, end);
+      if (fact[_formKey] == _quarterlyForm &&
+          days >= _minQuarterDays &&
+          days <= _maxYearToDateDays &&
+          _quarterOf(fact) != null) {
+        toDate.add(fact);
+      } else if (fact[_formKey] == _annualForm &&
+          days >= _minAnnualDays &&
+          days <= _maxAnnualDays) {
+        annual.add(fact);
+      }
+    }
+    if (toDate.isEmpty) return null;
+
+    final end = toDate
+        .map((fact) => fact[_endKey] as String)
+        .reduce((a, b) => a.compareTo(b) >= 0 ? a : b);
+    // The year to date is the longest period ending on the quarter end; a
+    // 10-Q states the quarter alone beside it.
+    final current = toDate
+        .where((fact) => fact[_endKey] == end)
+        .reduce(
+          (a, b) =>
+              _spanOf(a) > _spanOf(b) ||
+                  (_spanOf(a) == _spanOf(b) &&
+                      _filed(a).compareTo(_filed(b)) > 0)
+              ? a
+              : b,
+        );
+    final value = (current[_valueKey] as num).toDouble();
+    final quarter = _quarterOf(current)!;
+    final fiscalYear = current[_fiscalYearKey] as int;
+    if (isAverage) {
+      return _TrailingFlow(end, value, fiscalYear, quarter);
+    }
+
+    final span = _spanOf(current);
+    final yearEarlier = DateTime.parse(end).subtract(const Duration(days: 365));
+    final prior = toDate
+        .where(
+          (fact) =>
+              fact[_accessionKey] == current[_accessionKey] &&
+              (DateTime.parse(
+                    fact[_endKey] as String,
+                  ).difference(yearEarlier).inDays).abs() <=
+                  _alignmentDays &&
+              (_spanOf(fact) - span).abs() <= _alignmentDays,
+        )
+        .firstOrNull;
+    if (prior == null) return null;
+
+    // The full year the year-to-date follows on from.
+    final dayBefore = DateTime.parse(current[_startKey] as String)
+        .subtract(const Duration(days: 1));
+    final bases =
+        annual
+            .where(
+              (fact) =>
+                  (DateTime.parse(
+                    fact[_endKey] as String,
+                  ).difference(dayBefore).inDays).abs() <=
+                  _alignmentDays,
+            )
+            .toList()
+          ..sort((a, b) => _filed(a).compareTo(_filed(b)));
+    if (bases.isEmpty) return null;
+
+    return _TrailingFlow(
+      end,
+      (bases.last[_valueKey] as num).toDouble() +
+          value -
+          (prior[_valueKey] as num).toDouble(),
+      fiscalYear,
+      quarter,
+    );
+  }
+
+  /// The value of an instant metric on [end] in a quarterly report, the first
+  /// of its tags that has one.
+  static double? _instantAt(
+    Map<String, dynamic> facts,
+    XbrlMetric metric,
+    String end,
+  ) {
+    final usGaap = facts[_factsKey]?[_usGaapKey] as Map<String, dynamic>?;
+    for (final tag in metric.tags) {
+      final units =
+          usGaap?[tag]?[_unitsKey]?[metric.unit.key] as List<dynamic>?;
+      if (units == null) continue;
+      Map<String, dynamic>? found;
+      for (final raw in units) {
+        final fact = raw as Map<String, dynamic>;
+        if (fact[_formKey] != _quarterlyForm) continue;
+        if (fact[_startKey] != null || fact[_endKey] != end) continue;
+        if (fact[_valueKey] is! num) continue;
+        if (found == null || _filed(fact).compareTo(_filed(found)) > 0) {
+          found = fact;
+        }
+      }
+      if (found != null) return (found[_valueKey] as num).toDouble();
+    }
+    return null;
+  }
+
+  /// The end of the newest full year any 10-K states for [metric].
+  static String? _newestAnnualEnd(
+    Map<String, dynamic> facts,
+    XbrlMetric metric,
+  ) {
+    final usGaap = facts[_factsKey]?[_usGaapKey] as Map<String, dynamic>?;
+    String? newest;
+    for (final tag in metric.tags) {
+      final units =
+          usGaap?[tag]?[_unitsKey]?[metric.unit.key] as List<dynamic>?;
+      if (units == null) continue;
+      for (final raw in units) {
+        final fact = raw as Map<String, dynamic>;
+        final start = fact[_startKey] as String?;
+        final end = fact[_endKey] as String?;
+        if (fact[_formKey] != _annualForm || start == null || end == null) {
+          continue;
+        }
+        if (!_spansAFullYear(start, end)) continue;
+        if (newest == null || end.compareTo(newest) > 0) newest = end;
+      }
+    }
+    return newest;
+  }
+
+  static int _daysBetween(String start, String end) =>
+      DateTime.parse(end).difference(DateTime.parse(start)).inDays;
+
+  static int _spanOf(Map<String, dynamic> fact) =>
+      _daysBetween(fact[_startKey] as String, fact[_endKey] as String);
+
+  static String _filed(Map<String, dynamic> fact) =>
+      fact[_filedKey] as String? ?? '';
+
   /// Every fiscal year the payload covers, oldest first.
   ///
   /// Years are those for which operating cash flow is known: without it there
@@ -598,6 +923,16 @@ abstract final class CompanyFactsParser {
     final days = DateTime.parse(end).difference(DateTime.parse(start)).inDays;
     return days >= _minAnnualDays && days <= _maxAnnualDays;
   }
+}
+
+/// One line of the trailing year, and the quarter it reads to.
+class _TrailingFlow {
+  const _TrailingFlow(this.end, this.value, this.fiscalYear, this.quarter);
+
+  final String end;
+  final double value;
+  final int fiscalYear;
+  final int quarter;
 }
 
 /// Identifies one fiscal quarter, so quarters sort and compare like numbers.

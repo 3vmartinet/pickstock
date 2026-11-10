@@ -31,12 +31,22 @@ class Valuation extends Equatable {
     required double pricePerShare,
   }) {
     final latest = snapshot.latest;
-    // The cover-page count is the current one; the annual diluted average is
-    // the divisor earnings are reported against. Each is used where it fits,
-    // and either can stand in for the other.
-    final outstanding =
-        snapshot.company.sharesOutstanding ?? latest.dilutedShares;
-    final diluted = latest.dilutedShares ?? snapshot.company.sharesOutstanding;
+    final trailing = snapshot.trailing;
+    // The cover-page count is the current one; the diluted average is the
+    // divisor earnings are reported against. Each is used where it fits, and
+    // either can stand in for the other. The average is the newest quarter's
+    // where there is one: a split since the annual report leaves the annual
+    // average in the old shares — Amphenol's 1.28B against 2.58B after its
+    // two-for-one, Booking's 33M against 772M after its twenty-five — and
+    // earnings per share, and the fair value of a filer with no cover count,
+    // that many times too high.
+    final yearDiluted = trailing?.dilutedShares ?? latest.dilutedShares;
+    final outstanding = snapshot.company.sharesOutstanding ?? yearDiluted;
+    final diluted = yearDiluted ?? snapshot.company.sharesOutstanding;
+    // What the business sells and owes now, from the newest quarter where it
+    // is newer than the annual report; the year's otherwise.
+    final revenue = trailing?.revenue ?? latest.revenue;
+    final netDebt = trailing?.netDebt ?? latest.netDebt;
     final rates = _growthRates(snapshot);
 
     return Valuation._(
@@ -52,9 +62,14 @@ class Valuation extends Equatable {
       normalisedCashFlow: NormalisedCashFlow.of(snapshot),
       shareBasedCompensation: latest.shareBasedCompensation,
       parentStake: latest.parentStake,
-      revenue: latest.revenue,
-      netDebt: latest.netDebt,
+      revenue: revenue,
+      netDebt: netDebt,
       fiscalYear: latest.fiscalYear,
+      currentThrough:
+          trailing != null &&
+              (trailing.revenue != null || trailing.netDebt != null)
+          ? trailing.periodEnd
+          : null,
       growthPercent: _median(rates),
       windowYears: rates.length,
       isCovered: _isCovered(snapshot.company.sic),
@@ -76,6 +91,7 @@ class Valuation extends Equatable {
     required this.revenue,
     required this.netDebt,
     required this.fiscalYear,
+    required this.currentThrough,
     required this.growthPercent,
     required int windowYears,
     required this.isCovered,
@@ -182,6 +198,11 @@ class Valuation extends Equatable {
 
   /// The fiscal year every figure above is taken from.
   final int fiscalYear;
+
+  /// The quarter end that the revenue, the cash and the debt are read to,
+  /// where a 10-Q newer than the annual report supplied them; `null` where
+  /// they are the annual report's.
+  final DateTime? currentThrough;
 
   /// Typical growth of revenue per share over the window, in percentage
   /// points, before the band's floor and ceiling: what the company has
@@ -528,6 +549,7 @@ class Valuation extends Equatable {
     revenue,
     netDebt,
     fiscalYear,
+    currentThrough,
     growthPercent,
     _windowYears,
     isCovered,

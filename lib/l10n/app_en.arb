@@ -872,6 +872,12 @@
   "@napkinCaveatMargin": { "placeholders": { "points": { "type": "String" } } },
   "napkinCaveatGrowthCapped": "Its middle year grew {actual} per share, but no business compounds like that for a decade, so only {credited} a year is paid for.",
   "@napkinCaveatGrowthCapped": { "placeholders": { "actual": { "type": "String" }, "credited": { "type": "String" } } },
+  "napkinCaveatCurrent": "The sales, cash and debt above are from the latest quarterly report, for the twelve months to {date}, because the annual report is older. The typical margin is still read across full years.",
+  "@napkinCaveatCurrent": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
   "napkinCaveatEarnings": "It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.",
   "napkinCaveatOutsideOwners": "Only {share} of this business belongs to the listed shares; the rest is held by owners outside the company. The cash above is the whole group's brought down to that share, because the share count beside it counts the listed shares alone.",
   "@napkinCaveatOutsideOwners": { "placeholders": { "share": { "type": "String" } } },

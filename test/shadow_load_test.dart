@@ -163,7 +163,7 @@ void main() {
 
     final first = AppDatabase.forTesting(NativeDatabase(file));
     await first.createShadowTables();
-    expect(await _shadowTables(first), hasLength(4));
+    expect(await _shadowTables(first), hasLength(5));
     await first.close();
 
     final reopened = AppDatabase.forTesting(NativeDatabase(file));

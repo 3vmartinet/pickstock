@@ -37,7 +37,9 @@ part 'app_database.g.dart';
 /// 13 takes the larger of contract revenue and total revenue, reads the
 /// utilities' revenue concepts, and finds net income for filers that stopped
 /// tagging `NetIncomeLoss` — Caterpillar, Mastercard and Booking among them.
-const int extractorVersion = 13;
+///
+/// 14 reads the twelve months to the newest 10-Q.
+const int extractorVersion = 14;
 
 /// The setting that records the one-off clean-up of prices quoted under the
 /// wrong symbol; see `_discardPricesQuotedPerSymbol`.
@@ -188,6 +190,28 @@ class FiscalQuarters extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {cik, fiscalYear, quarter};
+}
+
+/// The twelve months to a filer's newest 10-Q, where it is newer than the
+/// 10-K. One row per filer, replaced by each ingest and dropped once the
+/// annual report catches up.
+@DataClassName('TrailingYearRow')
+class TrailingYears extends Table {
+  TextColumn get cik => text().references(Companies, #cik)();
+  DateTimeColumn get periodEnd => dateTime()();
+  IntColumn get fiscalYear => integer()();
+  IntColumn get quarter => integer()();
+  RealColumn get revenue => real().nullable()();
+  RealColumn get netIncome => real().nullable()();
+  RealColumn get operatingCashFlow => real().nullable()();
+  RealColumn get capitalExpenditure => real().nullable()();
+  RealColumn get shareBasedCompensation => real().nullable()();
+  RealColumn get totalDebt => real().nullable()();
+  RealColumn get cash => real().nullable()();
+  RealColumn get dilutedShares => real().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {cik};
 }
 
 /// The last share price entered for a company.
@@ -388,6 +412,7 @@ class IngestRuns extends Table {
     Tickers,
     FiscalYears,
     FiscalQuarters,
+    TrailingYears,
     IngestRuns,
     SharePrices,
     Watchlists,
@@ -409,7 +434,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -420,6 +445,12 @@ class AppDatabase extends _$AppDatabase {
       // matching exact version pairs meant the next bump silently fell through
       // to the rebuild.
       if (from >= 2) {
+        if (from < 20) {
+          // Created empty: the rows arrive with the next ingest, which the
+          // extractor version already insists on.
+          logInfo(() => 'Adding trailing_years');
+          await migrator.createTable(trailingYears);
+        }
         if (from < 3) {
           logInfo(() => 'Adding ingest_runs.archive_last_modified');
           await migrator.addColumn(ingestRuns, ingestRuns.archiveLastModified);
@@ -620,6 +651,14 @@ class AppDatabase extends _$AppDatabase {
             (row) => OrderingTerm.asc(row.quarter),
           ]))
         .get();
+  }
+
+  /// The twelve months to [cik]'s newest 10-Q, or `null` where its 10-K is
+  /// as recent.
+  Future<TrailingYearRow?> trailingFor(String cik) {
+    return (select(
+      trailingYears,
+    )..where((row) => row.cik.equals(cik))).getSingleOrNull();
   }
 
   Future<CompanyRow?> companyFor(String cik) {
@@ -1184,6 +1223,7 @@ class AppDatabase extends _$AppDatabase {
     companies,
     fiscalYears,
     fiscalQuarters,
+    trailingYears,
   ];
 
   /// What a shadow copy of [table] is called while a load fills it.
@@ -1306,6 +1346,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> clearFinancials() async {
+    await delete(trailingYears).go();
     await delete(fiscalQuarters).go();
     await delete(fiscalYears).go();
     await delete(companies).go();

@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:pickstock/data/snapshot/fiscal_quarter_figures.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/sec/company_facts_parser.dart';
@@ -113,6 +114,7 @@ class IngestedCompany {
     required this.name,
     required this.years,
     required this.quarters,
+    this.trailing,
     this.sharesOutstanding,
     this.sharesLastFiled,
   });
@@ -126,6 +128,9 @@ class IngestedCompany {
   final DateTime? sharesLastFiled;
   final List<FiscalYearFigures> years;
   final List<FiscalQuarterFigures> quarters;
+
+  /// The twelve months to the newest 10-Q, where it is newer than the 10-K.
+  final TrailingFigures? trailing;
 }
 
 /// Decompresses and parses the archive entries at [entryIndices].
@@ -163,6 +168,7 @@ List<IngestedCompany> parseArchiveEntries(
         name: CompanyFactsParser.entityName(facts) ?? cik,
         years: years,
         quarters: CompanyFactsParser.parseQuarters(facts),
+        trailing: CompanyFactsParser.parseTrailing(facts),
         sharesOutstanding: CompanyFactsParser.latestSharesOutstanding(facts),
         sharesLastFiled: CompanyFactsParser.lastFiledShareCount(facts),
       ),
@@ -1226,6 +1232,24 @@ class BulkIngestRepo {
               capitalExpenditure: Value(quarter.capitalExpenditure),
               totalDebt: Value(quarter.totalDebt),
               cash: Value(quarter.cash),
+            ),
+      ]);
+      _database.insertIntoShadow(batch, _database.trailingYears, [
+        for (final company in parsed)
+          if (company.trailing case final trailing?)
+            TrailingYearsCompanion.insert(
+              cik: company.cik,
+              periodEnd: trailing.periodEnd,
+              fiscalYear: trailing.fiscalYear,
+              quarter: trailing.quarter,
+              revenue: Value(trailing.revenue),
+              netIncome: Value(trailing.netIncome),
+              operatingCashFlow: Value(trailing.operatingCashFlow),
+              capitalExpenditure: Value(trailing.capitalExpenditure),
+              shareBasedCompensation: Value(trailing.shareBasedCompensation),
+              totalDebt: Value(trailing.totalDebt),
+              cash: Value(trailing.cash),
+              dilutedShares: Value(trailing.dilutedShares),
             ),
       ]);
     });

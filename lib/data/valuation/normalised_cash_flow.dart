@@ -9,7 +9,8 @@ import 'package:pickstock/data/valuation/cash_flow_model.dart';
 /// 2025, each roughly halving reported free cash flow without changing what
 /// the business earns; against a $96 share, Coca-Cola's one bad year valued
 /// it at $19 to $26. So the stream every valuation discounts is the median
-/// free cash flow margin over the last decade, applied to the latest revenue.
+/// free cash flow margin over the last decade, applied to the latest revenue
+/// — the twelve months to the newest quarter where one is on file.
 ///
 /// After stock pay. The cash flow statement adds it back because no cash
 /// left the building, which is true and beside the point: the shares were
@@ -61,7 +62,10 @@ class NormalisedCashFlow {
     final years = snapshot.years;
     final latest = snapshot.latest;
     final reported = latest.freeCashFlowAfterStockPay;
-    final revenue = latest.revenue;
+    // What it sells today: the twelve months to the newest quarter where a
+    // 10-Q is newer than the annual report. The margin is a decade's; the
+    // scale it is applied to should be now's.
+    final revenue = snapshot.trailing?.revenue ?? latest.revenue;
 
     final window = years.length > CashFlowModel.horizon
         ? years.sublist(years.length - CashFlowModel.horizon)

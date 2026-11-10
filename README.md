@@ -271,9 +271,9 @@ Everything else comes out of the filings:
 | Market value | price × shares outstanding (`dei:EntityCommonStockSharesOutstanding` from the newest filing's cover, falling back to `us-gaap:CommonStockSharesOutstanding`) |
 | Enterprise value | market value + net debt: what an acquirer pays for the whole business, reported as context rather than used in the band |
 | Earnings per share | net income ÷ diluted weighted-average shares, the divisor the company itself reports against |
-| Stream | The median free cash flow margin after stock pay over up to ten years, applied to the latest revenue — net income where there is no positive cash stream — brought down to the listed shares' stake in the group |
+| Stream | The median free cash flow margin after stock pay over up to ten years, applied to the latest revenue (the twelve months to the newest 10-Q where it is newer than the 10-K) — net income where there is no positive cash stream — brought down to the listed shares' stake in the group |
 | Multiple | One discounted cash flow, run on a unit of that stream at a fixed 9% required return, a point either side of it for the band, paying for the typical growth of revenue *per share* over the last five changes, held between −10% and +15% |
-| Balance sheet | Net cash is added; debt beyond three years of the stream is taken off. The rest of the debt is already paid for out of a cash flow that is after interest |
+| Balance sheet | As at the newest 10-Q where that is newer than the 10-K. Net cash is added; debt beyond three years of the stream is taken off. The rest of the debt is already paid for out of a cash flow that is after interest |
 | Margin of safety | The low end of the band is a third below the arithmetic. A price has to clear that before the company is called undervalued |
 | Not covered | Banks, insurers, lenders, brokers and REITs: their cash flow says nothing about what they earn, and the report says so rather than producing a band |
 
@@ -760,6 +760,32 @@ reported. The UI states this in a footnote when the quarterly tab is open.
 
 Cash-flow lines are commonly filed year-to-date rather than per quarter, so
 free cash flow shows `n/a` for many quarters rather than a wrong number.
+
+### The twelve months to the newest quarter
+
+By the time a December filer's third-quarter 10-Q lands its 10-K is ten months
+old, and a valuation struck on it is a year behind the business. So where a
+10-Q is newer, the valuation reads three things from it: the **revenue** the
+typical margin is applied to, the **cash and debt**, and the **diluted share
+count**. The margins and the growth stay annual, which is what makes them
+typical.
+
+Each trailing flow is the last full year, plus this year to date, less the
+same months a year earlier, all three off one tag, so a line filed only
+year-to-date reads as well as one filed by quarter. The balance sheet is used
+only where the quarter states every borrowing and cash line the year did, so
+debt a filer discloses only annually is never dropped. Leases are the
+exception: two filers in three restate them only annually, so the year-end
+figure is carried. Measured on the 224 largest valued filers in November 2026:
+
+- **Amazon's** long-term debt went from $66B to $173B in nine months.
+- **Baker Hughes's** debt rose from $6.7B to $18.9B.
+- **Marathon, ONEOK and PBF** were being judged on sales 25–30% below today's.
+- After splits, **Amphenol's** annual diluted count was half its current one,
+  **Booking's** a twenty-fifth and **Carvana's** a third. Carvana files no
+  cover count, so its band was three times too high.
+
+The worked example says when its figures come from a quarter.
 
 ### Fiscal-year attribution
 

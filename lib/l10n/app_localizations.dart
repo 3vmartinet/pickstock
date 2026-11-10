@@ -3594,6 +3594,12 @@ abstract class AppLocalizations {
   /// **'Its middle year grew {actual} per share, but no business compounds like that for a decade, so only {credited} a year is paid for.'**
   String napkinCaveatGrowthCapped(String actual, String credited);
 
+  /// No description provided for @napkinCaveatCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'The sales, cash and debt above are from the latest quarterly report, for the twelve months to {date}, because the annual report is older. The typical margin is still read across full years.'**
+  String napkinCaveatCurrent(String date);
+
   /// No description provided for @napkinCaveatEarnings.
   ///
   /// In en, this message translates to:

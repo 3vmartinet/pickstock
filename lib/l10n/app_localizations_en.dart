@@ -2389,6 +2389,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String napkinCaveatCurrent(String date) {
+    return 'The sales, cash and debt above are from the latest quarterly report, for the twelve months to $date, because the annual report is older. The typical margin is still read across full years.';
+  }
+
+  @override
   String get napkinCaveatEarnings =>
       'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.';
 

@@ -2588,6 +2588,765 @@ class FiscalQuartersCompanion extends UpdateCompanion<FiscalQuarterRow> {
   }
 }
 
+class $TrailingYearsTable extends TrailingYears
+    with TableInfo<$TrailingYearsTable, TrailingYearRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrailingYearsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cikMeta = const VerificationMeta('cik');
+  @override
+  late final GeneratedColumn<String> cik = GeneratedColumn<String>(
+    'cik',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES companies (cik)',
+    ),
+  );
+  static const VerificationMeta _periodEndMeta = const VerificationMeta(
+    'periodEnd',
+  );
+  @override
+  late final GeneratedColumn<DateTime> periodEnd = GeneratedColumn<DateTime>(
+    'period_end',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fiscalYearMeta = const VerificationMeta(
+    'fiscalYear',
+  );
+  @override
+  late final GeneratedColumn<int> fiscalYear = GeneratedColumn<int>(
+    'fiscal_year',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quarterMeta = const VerificationMeta(
+    'quarter',
+  );
+  @override
+  late final GeneratedColumn<int> quarter = GeneratedColumn<int>(
+    'quarter',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revenueMeta = const VerificationMeta(
+    'revenue',
+  );
+  @override
+  late final GeneratedColumn<double> revenue = GeneratedColumn<double>(
+    'revenue',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _netIncomeMeta = const VerificationMeta(
+    'netIncome',
+  );
+  @override
+  late final GeneratedColumn<double> netIncome = GeneratedColumn<double>(
+    'net_income',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _operatingCashFlowMeta = const VerificationMeta(
+    'operatingCashFlow',
+  );
+  @override
+  late final GeneratedColumn<double> operatingCashFlow =
+      GeneratedColumn<double>(
+        'operating_cash_flow',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _capitalExpenditureMeta =
+      const VerificationMeta('capitalExpenditure');
+  @override
+  late final GeneratedColumn<double> capitalExpenditure =
+      GeneratedColumn<double>(
+        'capital_expenditure',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _shareBasedCompensationMeta =
+      const VerificationMeta('shareBasedCompensation');
+  @override
+  late final GeneratedColumn<double> shareBasedCompensation =
+      GeneratedColumn<double>(
+        'share_based_compensation',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _totalDebtMeta = const VerificationMeta(
+    'totalDebt',
+  );
+  @override
+  late final GeneratedColumn<double> totalDebt = GeneratedColumn<double>(
+    'total_debt',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cashMeta = const VerificationMeta('cash');
+  @override
+  late final GeneratedColumn<double> cash = GeneratedColumn<double>(
+    'cash',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dilutedSharesMeta = const VerificationMeta(
+    'dilutedShares',
+  );
+  @override
+  late final GeneratedColumn<double> dilutedShares = GeneratedColumn<double>(
+    'diluted_shares',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cik,
+    periodEnd,
+    fiscalYear,
+    quarter,
+    revenue,
+    netIncome,
+    operatingCashFlow,
+    capitalExpenditure,
+    shareBasedCompensation,
+    totalDebt,
+    cash,
+    dilutedShares,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'trailing_years';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrailingYearRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cik')) {
+      context.handle(
+        _cikMeta,
+        cik.isAcceptableOrUnknown(data['cik']!, _cikMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cikMeta);
+    }
+    if (data.containsKey('period_end')) {
+      context.handle(
+        _periodEndMeta,
+        periodEnd.isAcceptableOrUnknown(data['period_end']!, _periodEndMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_periodEndMeta);
+    }
+    if (data.containsKey('fiscal_year')) {
+      context.handle(
+        _fiscalYearMeta,
+        fiscalYear.isAcceptableOrUnknown(data['fiscal_year']!, _fiscalYearMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fiscalYearMeta);
+    }
+    if (data.containsKey('quarter')) {
+      context.handle(
+        _quarterMeta,
+        quarter.isAcceptableOrUnknown(data['quarter']!, _quarterMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quarterMeta);
+    }
+    if (data.containsKey('revenue')) {
+      context.handle(
+        _revenueMeta,
+        revenue.isAcceptableOrUnknown(data['revenue']!, _revenueMeta),
+      );
+    }
+    if (data.containsKey('net_income')) {
+      context.handle(
+        _netIncomeMeta,
+        netIncome.isAcceptableOrUnknown(data['net_income']!, _netIncomeMeta),
+      );
+    }
+    if (data.containsKey('operating_cash_flow')) {
+      context.handle(
+        _operatingCashFlowMeta,
+        operatingCashFlow.isAcceptableOrUnknown(
+          data['operating_cash_flow']!,
+          _operatingCashFlowMeta,
+        ),
+      );
+    }
+    if (data.containsKey('capital_expenditure')) {
+      context.handle(
+        _capitalExpenditureMeta,
+        capitalExpenditure.isAcceptableOrUnknown(
+          data['capital_expenditure']!,
+          _capitalExpenditureMeta,
+        ),
+      );
+    }
+    if (data.containsKey('share_based_compensation')) {
+      context.handle(
+        _shareBasedCompensationMeta,
+        shareBasedCompensation.isAcceptableOrUnknown(
+          data['share_based_compensation']!,
+          _shareBasedCompensationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_debt')) {
+      context.handle(
+        _totalDebtMeta,
+        totalDebt.isAcceptableOrUnknown(data['total_debt']!, _totalDebtMeta),
+      );
+    }
+    if (data.containsKey('cash')) {
+      context.handle(
+        _cashMeta,
+        cash.isAcceptableOrUnknown(data['cash']!, _cashMeta),
+      );
+    }
+    if (data.containsKey('diluted_shares')) {
+      context.handle(
+        _dilutedSharesMeta,
+        dilutedShares.isAcceptableOrUnknown(
+          data['diluted_shares']!,
+          _dilutedSharesMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cik};
+  @override
+  TrailingYearRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrailingYearRow(
+      cik: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cik'],
+      )!,
+      periodEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}period_end'],
+      )!,
+      fiscalYear: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}fiscal_year'],
+      )!,
+      quarter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quarter'],
+      )!,
+      revenue: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}revenue'],
+      ),
+      netIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}net_income'],
+      ),
+      operatingCashFlow: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}operating_cash_flow'],
+      ),
+      capitalExpenditure: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}capital_expenditure'],
+      ),
+      shareBasedCompensation: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}share_based_compensation'],
+      ),
+      totalDebt: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_debt'],
+      ),
+      cash: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cash'],
+      ),
+      dilutedShares: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}diluted_shares'],
+      ),
+    );
+  }
+
+  @override
+  $TrailingYearsTable createAlias(String alias) {
+    return $TrailingYearsTable(attachedDatabase, alias);
+  }
+}
+
+class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
+  final String cik;
+  final DateTime periodEnd;
+  final int fiscalYear;
+  final int quarter;
+  final double? revenue;
+  final double? netIncome;
+  final double? operatingCashFlow;
+  final double? capitalExpenditure;
+  final double? shareBasedCompensation;
+  final double? totalDebt;
+  final double? cash;
+  final double? dilutedShares;
+  const TrailingYearRow({
+    required this.cik,
+    required this.periodEnd,
+    required this.fiscalYear,
+    required this.quarter,
+    this.revenue,
+    this.netIncome,
+    this.operatingCashFlow,
+    this.capitalExpenditure,
+    this.shareBasedCompensation,
+    this.totalDebt,
+    this.cash,
+    this.dilutedShares,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cik'] = Variable<String>(cik);
+    map['period_end'] = Variable<DateTime>(periodEnd);
+    map['fiscal_year'] = Variable<int>(fiscalYear);
+    map['quarter'] = Variable<int>(quarter);
+    if (!nullToAbsent || revenue != null) {
+      map['revenue'] = Variable<double>(revenue);
+    }
+    if (!nullToAbsent || netIncome != null) {
+      map['net_income'] = Variable<double>(netIncome);
+    }
+    if (!nullToAbsent || operatingCashFlow != null) {
+      map['operating_cash_flow'] = Variable<double>(operatingCashFlow);
+    }
+    if (!nullToAbsent || capitalExpenditure != null) {
+      map['capital_expenditure'] = Variable<double>(capitalExpenditure);
+    }
+    if (!nullToAbsent || shareBasedCompensation != null) {
+      map['share_based_compensation'] = Variable<double>(
+        shareBasedCompensation,
+      );
+    }
+    if (!nullToAbsent || totalDebt != null) {
+      map['total_debt'] = Variable<double>(totalDebt);
+    }
+    if (!nullToAbsent || cash != null) {
+      map['cash'] = Variable<double>(cash);
+    }
+    if (!nullToAbsent || dilutedShares != null) {
+      map['diluted_shares'] = Variable<double>(dilutedShares);
+    }
+    return map;
+  }
+
+  TrailingYearsCompanion toCompanion(bool nullToAbsent) {
+    return TrailingYearsCompanion(
+      cik: Value(cik),
+      periodEnd: Value(periodEnd),
+      fiscalYear: Value(fiscalYear),
+      quarter: Value(quarter),
+      revenue: revenue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revenue),
+      netIncome: netIncome == null && nullToAbsent
+          ? const Value.absent()
+          : Value(netIncome),
+      operatingCashFlow: operatingCashFlow == null && nullToAbsent
+          ? const Value.absent()
+          : Value(operatingCashFlow),
+      capitalExpenditure: capitalExpenditure == null && nullToAbsent
+          ? const Value.absent()
+          : Value(capitalExpenditure),
+      shareBasedCompensation: shareBasedCompensation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shareBasedCompensation),
+      totalDebt: totalDebt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalDebt),
+      cash: cash == null && nullToAbsent ? const Value.absent() : Value(cash),
+      dilutedShares: dilutedShares == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dilutedShares),
+    );
+  }
+
+  factory TrailingYearRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrailingYearRow(
+      cik: serializer.fromJson<String>(json['cik']),
+      periodEnd: serializer.fromJson<DateTime>(json['periodEnd']),
+      fiscalYear: serializer.fromJson<int>(json['fiscalYear']),
+      quarter: serializer.fromJson<int>(json['quarter']),
+      revenue: serializer.fromJson<double?>(json['revenue']),
+      netIncome: serializer.fromJson<double?>(json['netIncome']),
+      operatingCashFlow: serializer.fromJson<double?>(
+        json['operatingCashFlow'],
+      ),
+      capitalExpenditure: serializer.fromJson<double?>(
+        json['capitalExpenditure'],
+      ),
+      shareBasedCompensation: serializer.fromJson<double?>(
+        json['shareBasedCompensation'],
+      ),
+      totalDebt: serializer.fromJson<double?>(json['totalDebt']),
+      cash: serializer.fromJson<double?>(json['cash']),
+      dilutedShares: serializer.fromJson<double?>(json['dilutedShares']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cik': serializer.toJson<String>(cik),
+      'periodEnd': serializer.toJson<DateTime>(periodEnd),
+      'fiscalYear': serializer.toJson<int>(fiscalYear),
+      'quarter': serializer.toJson<int>(quarter),
+      'revenue': serializer.toJson<double?>(revenue),
+      'netIncome': serializer.toJson<double?>(netIncome),
+      'operatingCashFlow': serializer.toJson<double?>(operatingCashFlow),
+      'capitalExpenditure': serializer.toJson<double?>(capitalExpenditure),
+      'shareBasedCompensation': serializer.toJson<double?>(
+        shareBasedCompensation,
+      ),
+      'totalDebt': serializer.toJson<double?>(totalDebt),
+      'cash': serializer.toJson<double?>(cash),
+      'dilutedShares': serializer.toJson<double?>(dilutedShares),
+    };
+  }
+
+  TrailingYearRow copyWith({
+    String? cik,
+    DateTime? periodEnd,
+    int? fiscalYear,
+    int? quarter,
+    Value<double?> revenue = const Value.absent(),
+    Value<double?> netIncome = const Value.absent(),
+    Value<double?> operatingCashFlow = const Value.absent(),
+    Value<double?> capitalExpenditure = const Value.absent(),
+    Value<double?> shareBasedCompensation = const Value.absent(),
+    Value<double?> totalDebt = const Value.absent(),
+    Value<double?> cash = const Value.absent(),
+    Value<double?> dilutedShares = const Value.absent(),
+  }) => TrailingYearRow(
+    cik: cik ?? this.cik,
+    periodEnd: periodEnd ?? this.periodEnd,
+    fiscalYear: fiscalYear ?? this.fiscalYear,
+    quarter: quarter ?? this.quarter,
+    revenue: revenue.present ? revenue.value : this.revenue,
+    netIncome: netIncome.present ? netIncome.value : this.netIncome,
+    operatingCashFlow: operatingCashFlow.present
+        ? operatingCashFlow.value
+        : this.operatingCashFlow,
+    capitalExpenditure: capitalExpenditure.present
+        ? capitalExpenditure.value
+        : this.capitalExpenditure,
+    shareBasedCompensation: shareBasedCompensation.present
+        ? shareBasedCompensation.value
+        : this.shareBasedCompensation,
+    totalDebt: totalDebt.present ? totalDebt.value : this.totalDebt,
+    cash: cash.present ? cash.value : this.cash,
+    dilutedShares: dilutedShares.present
+        ? dilutedShares.value
+        : this.dilutedShares,
+  );
+  TrailingYearRow copyWithCompanion(TrailingYearsCompanion data) {
+    return TrailingYearRow(
+      cik: data.cik.present ? data.cik.value : this.cik,
+      periodEnd: data.periodEnd.present ? data.periodEnd.value : this.periodEnd,
+      fiscalYear: data.fiscalYear.present
+          ? data.fiscalYear.value
+          : this.fiscalYear,
+      quarter: data.quarter.present ? data.quarter.value : this.quarter,
+      revenue: data.revenue.present ? data.revenue.value : this.revenue,
+      netIncome: data.netIncome.present ? data.netIncome.value : this.netIncome,
+      operatingCashFlow: data.operatingCashFlow.present
+          ? data.operatingCashFlow.value
+          : this.operatingCashFlow,
+      capitalExpenditure: data.capitalExpenditure.present
+          ? data.capitalExpenditure.value
+          : this.capitalExpenditure,
+      shareBasedCompensation: data.shareBasedCompensation.present
+          ? data.shareBasedCompensation.value
+          : this.shareBasedCompensation,
+      totalDebt: data.totalDebt.present ? data.totalDebt.value : this.totalDebt,
+      cash: data.cash.present ? data.cash.value : this.cash,
+      dilutedShares: data.dilutedShares.present
+          ? data.dilutedShares.value
+          : this.dilutedShares,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrailingYearRow(')
+          ..write('cik: $cik, ')
+          ..write('periodEnd: $periodEnd, ')
+          ..write('fiscalYear: $fiscalYear, ')
+          ..write('quarter: $quarter, ')
+          ..write('revenue: $revenue, ')
+          ..write('netIncome: $netIncome, ')
+          ..write('operatingCashFlow: $operatingCashFlow, ')
+          ..write('capitalExpenditure: $capitalExpenditure, ')
+          ..write('shareBasedCompensation: $shareBasedCompensation, ')
+          ..write('totalDebt: $totalDebt, ')
+          ..write('cash: $cash, ')
+          ..write('dilutedShares: $dilutedShares')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cik,
+    periodEnd,
+    fiscalYear,
+    quarter,
+    revenue,
+    netIncome,
+    operatingCashFlow,
+    capitalExpenditure,
+    shareBasedCompensation,
+    totalDebt,
+    cash,
+    dilutedShares,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrailingYearRow &&
+          other.cik == this.cik &&
+          other.periodEnd == this.periodEnd &&
+          other.fiscalYear == this.fiscalYear &&
+          other.quarter == this.quarter &&
+          other.revenue == this.revenue &&
+          other.netIncome == this.netIncome &&
+          other.operatingCashFlow == this.operatingCashFlow &&
+          other.capitalExpenditure == this.capitalExpenditure &&
+          other.shareBasedCompensation == this.shareBasedCompensation &&
+          other.totalDebt == this.totalDebt &&
+          other.cash == this.cash &&
+          other.dilutedShares == this.dilutedShares);
+}
+
+class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
+  final Value<String> cik;
+  final Value<DateTime> periodEnd;
+  final Value<int> fiscalYear;
+  final Value<int> quarter;
+  final Value<double?> revenue;
+  final Value<double?> netIncome;
+  final Value<double?> operatingCashFlow;
+  final Value<double?> capitalExpenditure;
+  final Value<double?> shareBasedCompensation;
+  final Value<double?> totalDebt;
+  final Value<double?> cash;
+  final Value<double?> dilutedShares;
+  final Value<int> rowid;
+  const TrailingYearsCompanion({
+    this.cik = const Value.absent(),
+    this.periodEnd = const Value.absent(),
+    this.fiscalYear = const Value.absent(),
+    this.quarter = const Value.absent(),
+    this.revenue = const Value.absent(),
+    this.netIncome = const Value.absent(),
+    this.operatingCashFlow = const Value.absent(),
+    this.capitalExpenditure = const Value.absent(),
+    this.shareBasedCompensation = const Value.absent(),
+    this.totalDebt = const Value.absent(),
+    this.cash = const Value.absent(),
+    this.dilutedShares = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrailingYearsCompanion.insert({
+    required String cik,
+    required DateTime periodEnd,
+    required int fiscalYear,
+    required int quarter,
+    this.revenue = const Value.absent(),
+    this.netIncome = const Value.absent(),
+    this.operatingCashFlow = const Value.absent(),
+    this.capitalExpenditure = const Value.absent(),
+    this.shareBasedCompensation = const Value.absent(),
+    this.totalDebt = const Value.absent(),
+    this.cash = const Value.absent(),
+    this.dilutedShares = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cik = Value(cik),
+       periodEnd = Value(periodEnd),
+       fiscalYear = Value(fiscalYear),
+       quarter = Value(quarter);
+  static Insertable<TrailingYearRow> custom({
+    Expression<String>? cik,
+    Expression<DateTime>? periodEnd,
+    Expression<int>? fiscalYear,
+    Expression<int>? quarter,
+    Expression<double>? revenue,
+    Expression<double>? netIncome,
+    Expression<double>? operatingCashFlow,
+    Expression<double>? capitalExpenditure,
+    Expression<double>? shareBasedCompensation,
+    Expression<double>? totalDebt,
+    Expression<double>? cash,
+    Expression<double>? dilutedShares,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cik != null) 'cik': cik,
+      if (periodEnd != null) 'period_end': periodEnd,
+      if (fiscalYear != null) 'fiscal_year': fiscalYear,
+      if (quarter != null) 'quarter': quarter,
+      if (revenue != null) 'revenue': revenue,
+      if (netIncome != null) 'net_income': netIncome,
+      if (operatingCashFlow != null) 'operating_cash_flow': operatingCashFlow,
+      if (capitalExpenditure != null) 'capital_expenditure': capitalExpenditure,
+      if (shareBasedCompensation != null)
+        'share_based_compensation': shareBasedCompensation,
+      if (totalDebt != null) 'total_debt': totalDebt,
+      if (cash != null) 'cash': cash,
+      if (dilutedShares != null) 'diluted_shares': dilutedShares,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrailingYearsCompanion copyWith({
+    Value<String>? cik,
+    Value<DateTime>? periodEnd,
+    Value<int>? fiscalYear,
+    Value<int>? quarter,
+    Value<double?>? revenue,
+    Value<double?>? netIncome,
+    Value<double?>? operatingCashFlow,
+    Value<double?>? capitalExpenditure,
+    Value<double?>? shareBasedCompensation,
+    Value<double?>? totalDebt,
+    Value<double?>? cash,
+    Value<double?>? dilutedShares,
+    Value<int>? rowid,
+  }) {
+    return TrailingYearsCompanion(
+      cik: cik ?? this.cik,
+      periodEnd: periodEnd ?? this.periodEnd,
+      fiscalYear: fiscalYear ?? this.fiscalYear,
+      quarter: quarter ?? this.quarter,
+      revenue: revenue ?? this.revenue,
+      netIncome: netIncome ?? this.netIncome,
+      operatingCashFlow: operatingCashFlow ?? this.operatingCashFlow,
+      capitalExpenditure: capitalExpenditure ?? this.capitalExpenditure,
+      shareBasedCompensation:
+          shareBasedCompensation ?? this.shareBasedCompensation,
+      totalDebt: totalDebt ?? this.totalDebt,
+      cash: cash ?? this.cash,
+      dilutedShares: dilutedShares ?? this.dilutedShares,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cik.present) {
+      map['cik'] = Variable<String>(cik.value);
+    }
+    if (periodEnd.present) {
+      map['period_end'] = Variable<DateTime>(periodEnd.value);
+    }
+    if (fiscalYear.present) {
+      map['fiscal_year'] = Variable<int>(fiscalYear.value);
+    }
+    if (quarter.present) {
+      map['quarter'] = Variable<int>(quarter.value);
+    }
+    if (revenue.present) {
+      map['revenue'] = Variable<double>(revenue.value);
+    }
+    if (netIncome.present) {
+      map['net_income'] = Variable<double>(netIncome.value);
+    }
+    if (operatingCashFlow.present) {
+      map['operating_cash_flow'] = Variable<double>(operatingCashFlow.value);
+    }
+    if (capitalExpenditure.present) {
+      map['capital_expenditure'] = Variable<double>(capitalExpenditure.value);
+    }
+    if (shareBasedCompensation.present) {
+      map['share_based_compensation'] = Variable<double>(
+        shareBasedCompensation.value,
+      );
+    }
+    if (totalDebt.present) {
+      map['total_debt'] = Variable<double>(totalDebt.value);
+    }
+    if (cash.present) {
+      map['cash'] = Variable<double>(cash.value);
+    }
+    if (dilutedShares.present) {
+      map['diluted_shares'] = Variable<double>(dilutedShares.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrailingYearsCompanion(')
+          ..write('cik: $cik, ')
+          ..write('periodEnd: $periodEnd, ')
+          ..write('fiscalYear: $fiscalYear, ')
+          ..write('quarter: $quarter, ')
+          ..write('revenue: $revenue, ')
+          ..write('netIncome: $netIncome, ')
+          ..write('operatingCashFlow: $operatingCashFlow, ')
+          ..write('capitalExpenditure: $capitalExpenditure, ')
+          ..write('shareBasedCompensation: $shareBasedCompensation, ')
+          ..write('totalDebt: $totalDebt, ')
+          ..write('cash: $cash, ')
+          ..write('dilutedShares: $dilutedShares, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $IngestRunsTable extends IngestRuns
     with TableInfo<$IngestRunsTable, IngestRunRow> {
   @override
@@ -5908,6 +6667,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TickersTable tickers = $TickersTable(this);
   late final $FiscalYearsTable fiscalYears = $FiscalYearsTable(this);
   late final $FiscalQuartersTable fiscalQuarters = $FiscalQuartersTable(this);
+  late final $TrailingYearsTable trailingYears = $TrailingYearsTable(this);
   late final $IngestRunsTable ingestRuns = $IngestRunsTable(this);
   late final $SharePricesTable sharePrices = $SharePricesTable(this);
   late final $WatchlistsTable watchlists = $WatchlistsTable(this);
@@ -5929,6 +6689,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tickers,
     fiscalYears,
     fiscalQuarters,
+    trailingYears,
     ingestRuns,
     sharePrices,
     watchlists,
@@ -6014,6 +6775,24 @@ final class $$CompaniesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$TrailingYearsTable, List<TrailingYearRow>>
+  _trailingYearsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.trailingYears,
+    aliasName: 'companies__cik__trailing_years__cik',
+  );
+
+  $$TrailingYearsTableProcessedTableManager get trailingYearsRefs {
+    final manager = $$TrailingYearsTableTableManager(
+      $_db,
+      $_db.trailingYears,
+    ).filter((f) => f.cik.cik.sqlEquals($_itemColumn<String>('cik')!));
+
+    final cache = $_typedResult.readTableOrNull(_trailingYearsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$CompaniesTableFilterComposer
@@ -6091,6 +6870,31 @@ class $$CompaniesTableFilterComposer
           }) => $$FiscalQuartersTableFilterComposer(
             $db: $db,
             $table: $db.fiscalQuarters,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> trailingYearsRefs(
+    Expression<bool> Function($$TrailingYearsTableFilterComposer f) f,
+  ) {
+    final $$TrailingYearsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cik,
+      referencedTable: $db.trailingYears,
+      getReferencedColumn: (t) => t.cik,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrailingYearsTableFilterComposer(
+            $db: $db,
+            $table: $db.trailingYears,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6213,6 +7017,31 @@ class $$CompaniesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> trailingYearsRefs<T extends Object>(
+    Expression<T> Function($$TrailingYearsTableAnnotationComposer a) f,
+  ) {
+    final $$TrailingYearsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cik,
+      referencedTable: $db.trailingYears,
+      getReferencedColumn: (t) => t.cik,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrailingYearsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.trailingYears,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CompaniesTableTableManager
@@ -6231,6 +7060,7 @@ class $$CompaniesTableTableManager
           PrefetchHooks Function({
             bool fiscalYearsRefs,
             bool fiscalQuartersRefs,
+            bool trailingYearsRefs,
           })
         > {
   $$CompaniesTableTableManager(_$AppDatabase db, $CompaniesTable table)
@@ -6285,12 +7115,17 @@ class $$CompaniesTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({fiscalYearsRefs = false, fiscalQuartersRefs = false}) {
+              ({
+                fiscalYearsRefs = false,
+                fiscalQuartersRefs = false,
+                trailingYearsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (fiscalYearsRefs) db.fiscalYears,
                     if (fiscalQuartersRefs) db.fiscalQuarters,
+                    if (trailingYearsRefs) db.trailingYears,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -6337,6 +7172,27 @@ class $$CompaniesTableTableManager
                           ) => referencedItems.where((e) => e.cik == item.cik),
                           typedResults: items,
                         ),
+                      if (trailingYearsRefs)
+                        await $_getPrefetchedData<
+                          CompanyRow,
+                          $CompaniesTable,
+                          TrailingYearRow
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CompaniesTableReferences
+                              ._trailingYearsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CompaniesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).trailingYearsRefs,
+                          referencedItemsForCurrentItem: (
+                            item,
+                            referencedItems,
+                          ) => referencedItems.where((e) => e.cik == item.cik),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -6357,7 +7213,11 @@ typedef $$CompaniesTableProcessedTableManager =
       $$CompaniesTableUpdateCompanionBuilder,
       (CompanyRow, $$CompaniesTableReferences),
       CompanyRow,
-      PrefetchHooks Function({bool fiscalYearsRefs, bool fiscalQuartersRefs})
+      PrefetchHooks Function({
+        bool fiscalYearsRefs,
+        bool fiscalQuartersRefs,
+        bool trailingYearsRefs,
+      })
     >;
 typedef $$TickersTableCreateCompanionBuilder = TickersCompanion Function({
   required String symbol,
@@ -7584,6 +8444,469 @@ typedef $$FiscalQuartersTableProcessedTableManager =
       $$FiscalQuartersTableUpdateCompanionBuilder,
       (FiscalQuarterRow, $$FiscalQuartersTableReferences),
       FiscalQuarterRow,
+      PrefetchHooks Function({bool cik})
+    >;
+typedef $$TrailingYearsTableCreateCompanionBuilder =
+    TrailingYearsCompanion Function({
+      required String cik,
+      required DateTime periodEnd,
+      required int fiscalYear,
+      required int quarter,
+      Value<double?> revenue,
+      Value<double?> netIncome,
+      Value<double?> operatingCashFlow,
+      Value<double?> capitalExpenditure,
+      Value<double?> shareBasedCompensation,
+      Value<double?> totalDebt,
+      Value<double?> cash,
+      Value<double?> dilutedShares,
+      Value<int> rowid,
+    });
+typedef $$TrailingYearsTableUpdateCompanionBuilder =
+    TrailingYearsCompanion Function({
+      Value<String> cik,
+      Value<DateTime> periodEnd,
+      Value<int> fiscalYear,
+      Value<int> quarter,
+      Value<double?> revenue,
+      Value<double?> netIncome,
+      Value<double?> operatingCashFlow,
+      Value<double?> capitalExpenditure,
+      Value<double?> shareBasedCompensation,
+      Value<double?> totalDebt,
+      Value<double?> cash,
+      Value<double?> dilutedShares,
+      Value<int> rowid,
+    });
+
+final class $$TrailingYearsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $TrailingYearsTable, TrailingYearRow> {
+  $$TrailingYearsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CompaniesTable _cikTable(_$AppDatabase db) =>
+      db.companies.createAlias('trailing_years__cik__companies__cik');
+
+  $$CompaniesTableProcessedTableManager get cik {
+    final $_column = $_itemColumn<String>('cik')!;
+
+    final manager = $$CompaniesTableTableManager(
+      $_db,
+      $_db.companies,
+    ).filter((f) => f.cik.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cikTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TrailingYearsTableFilterComposer
+    extends Composer<_$AppDatabase, $TrailingYearsTable> {
+  $$TrailingYearsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<DateTime> get periodEnd => $composableBuilder(
+    column: $table.periodEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fiscalYear => $composableBuilder(
+    column: $table.fiscalYear,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quarter => $composableBuilder(
+    column: $table.quarter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get revenue => $composableBuilder(
+    column: $table.revenue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get netIncome => $composableBuilder(
+    column: $table.netIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get operatingCashFlow => $composableBuilder(
+    column: $table.operatingCashFlow,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get capitalExpenditure => $composableBuilder(
+    column: $table.capitalExpenditure,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get shareBasedCompensation => $composableBuilder(
+    column: $table.shareBasedCompensation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalDebt => $composableBuilder(
+    column: $table.totalDebt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cash => $composableBuilder(
+    column: $table.cash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get dilutedShares => $composableBuilder(
+    column: $table.dilutedShares,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CompaniesTableFilterComposer get cik {
+    final $$CompaniesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cik,
+      referencedTable: $db.companies,
+      getReferencedColumn: (t) => t.cik,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompaniesTableFilterComposer(
+            $db: $db,
+            $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrailingYearsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TrailingYearsTable> {
+  $$TrailingYearsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<DateTime> get periodEnd => $composableBuilder(
+    column: $table.periodEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fiscalYear => $composableBuilder(
+    column: $table.fiscalYear,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quarter => $composableBuilder(
+    column: $table.quarter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get revenue => $composableBuilder(
+    column: $table.revenue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get netIncome => $composableBuilder(
+    column: $table.netIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get operatingCashFlow => $composableBuilder(
+    column: $table.operatingCashFlow,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get capitalExpenditure => $composableBuilder(
+    column: $table.capitalExpenditure,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get shareBasedCompensation => $composableBuilder(
+    column: $table.shareBasedCompensation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalDebt => $composableBuilder(
+    column: $table.totalDebt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cash => $composableBuilder(
+    column: $table.cash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get dilutedShares => $composableBuilder(
+    column: $table.dilutedShares,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CompaniesTableOrderingComposer get cik {
+    final $$CompaniesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cik,
+      referencedTable: $db.companies,
+      getReferencedColumn: (t) => t.cik,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompaniesTableOrderingComposer(
+            $db: $db,
+            $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrailingYearsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TrailingYearsTable> {
+  $$TrailingYearsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<DateTime> get periodEnd =>
+      $composableBuilder(column: $table.periodEnd, builder: (column) => column);
+
+  GeneratedColumn<int> get fiscalYear => $composableBuilder(
+    column: $table.fiscalYear,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quarter =>
+      $composableBuilder(column: $table.quarter, builder: (column) => column);
+
+  GeneratedColumn<double> get revenue =>
+      $composableBuilder(column: $table.revenue, builder: (column) => column);
+
+  GeneratedColumn<double> get netIncome =>
+      $composableBuilder(column: $table.netIncome, builder: (column) => column);
+
+  GeneratedColumn<double> get operatingCashFlow => $composableBuilder(
+    column: $table.operatingCashFlow,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get capitalExpenditure => $composableBuilder(
+    column: $table.capitalExpenditure,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get shareBasedCompensation => $composableBuilder(
+    column: $table.shareBasedCompensation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get totalDebt =>
+      $composableBuilder(column: $table.totalDebt, builder: (column) => column);
+
+  GeneratedColumn<double> get cash =>
+      $composableBuilder(column: $table.cash, builder: (column) => column);
+
+  GeneratedColumn<double> get dilutedShares => $composableBuilder(
+    column: $table.dilutedShares,
+    builder: (column) => column,
+  );
+
+  $$CompaniesTableAnnotationComposer get cik {
+    final $$CompaniesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cik,
+      referencedTable: $db.companies,
+      getReferencedColumn: (t) => t.cik,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CompaniesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.companies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TrailingYearsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrailingYearsTable,
+          TrailingYearRow,
+          $$TrailingYearsTableFilterComposer,
+          $$TrailingYearsTableOrderingComposer,
+          $$TrailingYearsTableAnnotationComposer,
+          $$TrailingYearsTableCreateCompanionBuilder,
+          $$TrailingYearsTableUpdateCompanionBuilder,
+          (TrailingYearRow, $$TrailingYearsTableReferences),
+          TrailingYearRow,
+          PrefetchHooks Function({bool cik})
+        > {
+  $$TrailingYearsTableTableManager(_$AppDatabase db, $TrailingYearsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TrailingYearsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TrailingYearsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TrailingYearsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cik = const Value.absent(),
+                Value<DateTime> periodEnd = const Value.absent(),
+                Value<int> fiscalYear = const Value.absent(),
+                Value<int> quarter = const Value.absent(),
+                Value<double?> revenue = const Value.absent(),
+                Value<double?> netIncome = const Value.absent(),
+                Value<double?> operatingCashFlow = const Value.absent(),
+                Value<double?> capitalExpenditure = const Value.absent(),
+                Value<double?> shareBasedCompensation = const Value.absent(),
+                Value<double?> totalDebt = const Value.absent(),
+                Value<double?> cash = const Value.absent(),
+                Value<double?> dilutedShares = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrailingYearsCompanion(
+                cik: cik,
+                periodEnd: periodEnd,
+                fiscalYear: fiscalYear,
+                quarter: quarter,
+                revenue: revenue,
+                netIncome: netIncome,
+                operatingCashFlow: operatingCashFlow,
+                capitalExpenditure: capitalExpenditure,
+                shareBasedCompensation: shareBasedCompensation,
+                totalDebt: totalDebt,
+                cash: cash,
+                dilutedShares: dilutedShares,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cik,
+                required DateTime periodEnd,
+                required int fiscalYear,
+                required int quarter,
+                Value<double?> revenue = const Value.absent(),
+                Value<double?> netIncome = const Value.absent(),
+                Value<double?> operatingCashFlow = const Value.absent(),
+                Value<double?> capitalExpenditure = const Value.absent(),
+                Value<double?> shareBasedCompensation = const Value.absent(),
+                Value<double?> totalDebt = const Value.absent(),
+                Value<double?> cash = const Value.absent(),
+                Value<double?> dilutedShares = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrailingYearsCompanion.insert(
+                cik: cik,
+                periodEnd: periodEnd,
+                fiscalYear: fiscalYear,
+                quarter: quarter,
+                revenue: revenue,
+                netIncome: netIncome,
+                operatingCashFlow: operatingCashFlow,
+                capitalExpenditure: capitalExpenditure,
+                shareBasedCompensation: shareBasedCompensation,
+                totalDebt: totalDebt,
+                cash: cash,
+                dilutedShares: dilutedShares,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TrailingYearsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({cik = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (cik) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.cik,
+                        referencedTable: $$TrailingYearsTableReferences
+                            ._cikTable(db),
+                        referencedColumn: $$TrailingYearsTableReferences
+                            ._cikTable(db)
+                            .cik,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TrailingYearsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrailingYearsTable,
+      TrailingYearRow,
+      $$TrailingYearsTableFilterComposer,
+      $$TrailingYearsTableOrderingComposer,
+      $$TrailingYearsTableAnnotationComposer,
+      $$TrailingYearsTableCreateCompanionBuilder,
+      $$TrailingYearsTableUpdateCompanionBuilder,
+      (TrailingYearRow, $$TrailingYearsTableReferences),
+      TrailingYearRow,
       PrefetchHooks Function({bool cik})
     >;
 typedef $$IngestRunsTableCreateCompanionBuilder = IngestRunsCompanion Function({
@@ -9837,6 +11160,8 @@ class $AppDatabaseManager {
       $$FiscalYearsTableTableManager(_db, _db.fiscalYears);
   $$FiscalQuartersTableTableManager get fiscalQuarters =>
       $$FiscalQuartersTableTableManager(_db, _db.fiscalQuarters);
+  $$TrailingYearsTableTableManager get trailingYears =>
+      $$TrailingYearsTableTableManager(_db, _db.trailingYears);
   $$IngestRunsTableTableManager get ingestRuns =>
       $$IngestRunsTableTableManager(_db, _db.ingestRuns);
   $$SharePricesTableTableManager get sharePrices =>
