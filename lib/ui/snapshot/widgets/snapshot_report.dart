@@ -21,7 +21,6 @@ import 'package:pickstock/ui/snapshot/widgets/order_book_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/company_header.dart';
 import 'package:pickstock/ui/snapshot/widgets/expectation_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/framework/framework_section.dart';
-import 'package:pickstock/ui/snapshot/widgets/holdings/holdings_section.dart';
 import 'package:pickstock/ui/snapshot/widgets/price_target_card.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_order_toggle.dart';
 import 'package:pickstock/ui/snapshot/widgets/history_period_tabs.dart';
@@ -299,7 +298,6 @@ class _TabBody extends StatelessWidget {
       // and was read by nobody.
       ReportTab.valuation => const <Widget>[_ValuationSection()],
       ReportTab.expectations => const <Widget>[_ExpectationsSection()],
-      ReportTab.holdings => const <Widget>[HoldingsSection()],
       ReportTab.framework => const <Widget>[FrameworkSection()],
     };
 
@@ -693,8 +691,6 @@ class ReportFootnotes extends StatelessWidget {
                 basis.getLabel(context.strings),
               ),
             ).muted().xSmall(),
-          if (tab == ReportTab.holdings)
-            Text(context.strings.footnoteHoldings).muted().xSmall(),
           if (isQuarterly)
             Text(context.strings.footnoteQuarters).muted().xSmall(),
           Text(context.strings.footnoteSource).muted().xSmall(),

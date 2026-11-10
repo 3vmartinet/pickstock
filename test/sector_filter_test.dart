@@ -46,10 +46,7 @@ void main() {
     expect(viewModel.results.map((c) => c.ticker), isNot(contains('BRK-A')));
 
     viewModel.selectSector(SicSector.financials);
-    expect(
-      viewModel.results.map((c) => c.ticker),
-      contains('BRK-A'),
-    );
+    expect(viewModel.results.map((c) => c.ticker), contains('BRK-A'));
     expect(viewModel.results.map((c) => c.ticker), isNot(contains('AAPL')));
 
     // Cleared again.
@@ -184,10 +181,7 @@ void main() {
 
     expect(viewModel.sector, SicSector.financials);
     expect(viewModel.narrowedCountIn(SicSector.technology), 0);
-    expect(
-      viewModel.results.map((c) => c.ticker),
-      contains('BRK-A'),
-    );
+    expect(viewModel.results.map((c) => c.ticker), contains('BRK-A'));
   });
 
   test('selecting the sector widens it past any narrowing', () async {

@@ -24,10 +24,8 @@ import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/data/valuation/discount_rate.dart';
-import 'package:pickstock/data/snapshot/institutional_shareholding.dart';
 import 'package:pickstock/repo/market/market_rates_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
-import 'package:pickstock/repo/sec/institutional_repo.dart';
 import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/settings/settings_repo.dart';
@@ -37,7 +35,6 @@ import 'package:pickstock/ui/snapshot/snapshot_state.dart';
 
 SecRepo get _secRepo => GetIt.I.get<SecRepo>();
 TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
-InstitutionalRepo get _institutionalRepo => GetIt.I.get<InstitutionalRepo>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 OllamaRepo get _researchRepo => GetIt.I.get<OllamaRepo>();
@@ -881,22 +878,7 @@ class SnapshotViewModel extends ChangeNotifier {
     if (tab == _reportTab) return;
     _reportTab = tab;
     notifyListeners();
-    if (tab == ReportTab.holdings &&
-        _institutionalShareholding == null &&
-        snapshot != null &&
-        !_isHoldingsLoading) {
-      unawaited(_loadHoldings(snapshot!.company, _requestGeneration));
-    }
   }
-
-  InstitutionalShareholding? _institutionalShareholding;
-
-  /// Institutional shareholding and beneficial ownership from SEC EDGAR.
-  InstitutionalShareholding? get institutionalShareholding =>
-      _institutionalShareholding;
-
-  bool _isHoldingsLoading = false;
-  bool get isHoldingsLoading => _isHoldingsLoading;
 
   String? _highlightedKind;
   Timer? _highlightTimer;
@@ -1170,28 +1152,6 @@ class SnapshotViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadHoldings(Company company, int generation) async {
-    _isHoldingsLoading = true;
-    notifyListeners();
-    try {
-      final holdings = await _institutionalRepo.fetchShareholding(
-        company,
-        currentPrice: _quote?.pricePerShare,
-      );
-      if (generation != _requestGeneration) return;
-      _institutionalShareholding = holdings;
-    } catch (error) {
-      logWarning(
-        () => 'Could not fetch holdings for ${company.ticker}: $error',
-      );
-    } finally {
-      if (generation == _requestGeneration) {
-        _isHoldingsLoading = false;
-        notifyListeners();
-      }
-    }
-  }
-
   /// A stored price is refetched when it is absent, older than
   /// [quoteFreshness], or was typed rather than quoted — a real quote beats a
   /// guess, and the user can always type over it again.
@@ -1203,9 +1163,6 @@ class SnapshotViewModel extends ChangeNotifier {
 
   void _showPrice(Quote? price) {
     _quote = price;
-    if (snapshot != null && _institutionalShareholding != null) {
-      unawaited(_loadHoldings(snapshot!.company, _requestGeneration));
-    }
   }
 
   /// Guards against a slow first request overwriting a newer one's result.
@@ -1237,8 +1194,6 @@ class SnapshotViewModel extends ChangeNotifier {
       _events = const [];
       _eventsFailure = null;
       _eventsState = EventsState.idle;
-      _institutionalShareholding = null;
-      _isHoldingsLoading = false;
       _insightStates.clear();
       _insightAnswers.clear();
       _insightFailures.clear();
@@ -1254,7 +1209,6 @@ class SnapshotViewModel extends ChangeNotifier {
       // stale in the time it took to open the company again.
       unawaited(_restoreNotes(snapshot.company.cik, generation));
       unawaited(_loadDiscountRate(snapshot.company, generation));
-      unawaited(_loadHoldings(snapshot.company, generation));
       await _restorePrice(snapshot.company.cik, generation);
     } on SecException catch (error) {
       if (generation != _requestGeneration) return;

@@ -13,10 +13,6 @@ enum ReportTab {
   valuation(icon: LucideIcons.scale),
   expectations(icon: LucideIcons.target),
 
-  /// Institutional shareholding, beneficial ownership, and activist filings
-  /// from Form 13F, Schedule 13D, and Schedule 13G.
-  holdings(icon: LucideIcons.chartPie),
-
   /// The seven questions that rule a company out, answered by the local model
   /// from the filings and the web. Last, because it draws on everything the
   /// three before it show.
@@ -30,7 +26,6 @@ enum ReportTab {
     ReportTab.overview => strings.tabOverview,
     ReportTab.valuation => strings.tabValuation,
     ReportTab.expectations => strings.tabExpectations,
-    ReportTab.holdings => strings.tabHoldings,
     ReportTab.framework => strings.tabFramework,
   };
 }
