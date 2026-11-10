@@ -8,6 +8,7 @@ import 'package:pickstock/ui/app_view_model.dart';
 import 'package:pickstock/ui/browse/browse_view_model.dart';
 import 'package:pickstock/ui/browse/framework_scores_view_model.dart';
 import 'package:pickstock/ui/ingest_view_model.dart';
+import 'package:pickstock/ui/snapshot/market_leaders_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 import 'package:pickstock/ui/report/jobs_view_model.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
@@ -51,6 +52,9 @@ class PickStockApp extends StatelessWidget {
         // Read once for every company and refreshed by the research queue,
         // rather than per tile.
         ChangeNotifierProvider(create: (_) => FrameworkScoresViewModel()),
+        // Above the router like the report: the ranking on the empty pane is
+        // priced once and kept, not re-asked for on every return to it.
+        ChangeNotifierProvider(create: (_) => MarketLeadersViewModel()),
         // Owned by the locator rather than created here: the report models
         // reach it without a context, and it must outlive every screen that
         // puts a question into it.

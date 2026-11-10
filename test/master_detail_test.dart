@@ -43,7 +43,7 @@ void main() {
 
     // Both panes at once: the list, and the report's own empty state.
     expect(find.text('PickStock'), findsOneWidget);
-    expect(find.text('Check a company before you invest'), findsOneWidget);
+    expect(find.text('Select a company'), findsOneWidget);
   });
 
   testWidgets('picking a company swaps the detail without leaving the list', (
@@ -205,7 +205,7 @@ void main() {
     await openBrowser(tester, _narrowSize);
 
     // No detail pane beside the list.
-    expect(find.text('Check a company before you invest'), findsNothing);
+    expect(find.text('Select a company'), findsNothing);
 
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();

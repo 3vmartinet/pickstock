@@ -983,14 +983,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backToList => 'Back to the list';
 
   @override
-  String get idleShortcuts => 'Or start with one of these';
-
-  @override
-  String get idleTitle => 'Check a company before you invest';
+  String get idleTitle => 'Select a company';
 
   @override
   String get idleBody =>
-      'Pick a company from the list to pull ten fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from its own 10-K filings.';
+      'Ten years of reported financials, a fair-value range and institutional ownership, sourced directly from SEC filings.';
+
+  @override
+  String get idleRecentTitle => 'Recently viewed';
+
+  @override
+  String get idleLeadersTitle => 'Largest by market value';
+
+  @override
+  String idleLeadersNote(String date) {
+    return 'Share price × shares outstanding. Prices as of $date.';
+  }
 
   @override
   String loadingFetching(String ticker) {

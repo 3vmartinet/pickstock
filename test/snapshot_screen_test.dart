@@ -25,7 +25,7 @@ void main() {
   testWidgets('renders the full report for a known ticker', (tester) async {
     await _pumpApp(tester, _desktopSize);
 
-    expect(find.text('Check a company before you invest'), findsOneWidget);
+    expect(find.text('Select a company'), findsOneWidget);
 
     await _search(tester, 'AAPL');
 
@@ -211,7 +211,7 @@ void main() {
     // No company to open, so the list reports the miss and the detail pane
     // keeps its empty state rather than showing a lookup failure.
     expect(find.text('No matching symbols'), findsOneWidget);
-    expect(find.text('Check a company before you invest'), findsOneWidget);
+    expect(find.text('Select a company'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

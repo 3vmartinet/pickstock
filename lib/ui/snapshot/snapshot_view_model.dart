@@ -51,10 +51,8 @@ SettingsRepo get _settingsRepo => GetIt.I.get<SettingsRepo>();
 /// on.
 const Duration quoteFreshness = Duration(minutes: 15);
 
-/// Tickers offered as a starting point on the empty screen.
-const List<String> suggestedTickers = ['AAPL', 'MSFT', 'NVDA', 'KO', 'F'];
-
-const int _maxRecentTickers = 6;
+/// How many recently opened companies the empty report pane offers back.
+const int maxRecentTickers = 10;
 
 /// How long a freshly arrived answer stays marked as fresh.
 ///
@@ -97,10 +95,8 @@ class SnapshotViewModel extends ChangeNotifier {
   SnapshotState _state = const SnapshotIdle();
   SnapshotState get state => _state;
 
-  final List<String> _recentTickers = [];
-
-  /// Most recently searched first.
-  List<String> get recentTickers => List.unmodifiable(_recentTickers);
+  /// The companies last opened, most recent first, kept across launches.
+  List<String> get recentTickers => _settingsRepo.recentTickers;
 
   bool get isLoading => _state is SnapshotLoading;
 
@@ -1351,12 +1347,11 @@ class SnapshotViewModel extends ChangeNotifier {
       setFrameworkListSticky(!isFrameworkListSticky);
 
   void _rememberTicker(String ticker) {
-    _recentTickers
-      ..remove(ticker)
-      ..insert(0, ticker);
-    if (_recentTickers.length > _maxRecentTickers) {
-      _recentTickers.removeLast();
-    }
+    final recent = [
+      ticker,
+      ...recentTickers.where((known) => known != ticker),
+    ].take(maxRecentTickers).toList();
+    unawaited(_settingsRepo.setRecentTickers(recent));
   }
 
   void _setState(SnapshotState state) {

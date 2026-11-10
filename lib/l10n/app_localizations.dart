@@ -1414,23 +1414,35 @@ abstract class AppLocalizations {
   /// **'Back to the list'**
   String get backToList;
 
-  /// No description provided for @idleShortcuts.
-  ///
-  /// In en, this message translates to:
-  /// **'Or start with one of these'**
-  String get idleShortcuts;
-
   /// No description provided for @idleTitle.
   ///
   /// In en, this message translates to:
-  /// **'Check a company before you invest'**
+  /// **'Select a company'**
   String get idleTitle;
 
   /// No description provided for @idleBody.
   ///
   /// In en, this message translates to:
-  /// **'Pick a company from the list to pull ten fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from its own 10-K filings.'**
+  /// **'Ten years of reported financials, a fair-value range and institutional ownership, sourced directly from SEC filings.'**
   String get idleBody;
+
+  /// No description provided for @idleRecentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently viewed'**
+  String get idleRecentTitle;
+
+  /// No description provided for @idleLeadersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest by market value'**
+  String get idleLeadersTitle;
+
+  /// No description provided for @idleLeadersNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Share price × shares outstanding. Prices as of {date}.'**
+  String idleLeadersNote(String date);
 
   /// No description provided for @loadingFetching.
   ///

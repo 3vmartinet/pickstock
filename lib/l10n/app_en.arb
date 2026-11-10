@@ -289,9 +289,12 @@
   "verdictFilterNoneBody": "No company in this list matches that valuation at current prices.",
   "backToList": "Back to the list",
 
-  "idleShortcuts": "Or start with one of these",
-  "idleTitle": "Check a company before you invest",
-  "idleBody": "Pick a company from the list to pull ten fiscal years of revenue, profitability, free cash flow and balance-sheet strength — straight from its own 10-K filings.",
+  "idleTitle": "Select a company",
+  "idleBody": "Ten years of reported financials, a fair-value range and institutional ownership, sourced directly from SEC filings.",
+  "idleRecentTitle": "Recently viewed",
+  "idleLeadersTitle": "Largest by market value",
+  "idleLeadersNote": "Share price × shares outstanding. Prices as of {date}.",
+  "@idleLeadersNote": { "placeholders": { "date": { "type": "String" } } },
 
   "loadingFetching": "Fetching XBRL company facts for {ticker}…",
   "@loadingFetching": { "placeholders": { "ticker": { "type": "String" } } },

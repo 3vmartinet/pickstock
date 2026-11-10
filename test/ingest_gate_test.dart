@@ -49,7 +49,7 @@ void main() {
     expect(find.text('Download SEC data'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('PickStock'), findsNothing);
-    expect(find.text('Check a company before you invest'), findsNothing);
+    expect(find.text('Select a company'), findsNothing);
   });
 
   testWidgets('lets the app through once the database holds data', (

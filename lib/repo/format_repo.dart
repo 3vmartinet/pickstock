@@ -44,6 +44,22 @@ class FormatRepo {
   /// A headline figure, e.g. `$416.2B`.
   String compactCurrency(double dollars) => _compactCurrency.format(dollars);
 
+  /// A company's market value at a fixed precision per scale, e.g. `\$3.50T`
+  /// or `\$865B`, so a ranked column of them lines up on the decimal point
+  /// rather than reading `\$3.5T` above `\$3.94T`.
+  String marketValue(double dollars) {
+    const trillion = 1e12;
+    const billion = 1e9;
+    if (dollars >= trillion) {
+      return '$_currencySymbol${(dollars / trillion).toStringAsFixed(2)}T';
+    }
+    if (dollars >= billion) {
+      final digits = dollars >= 100 * billion ? 0 : 1;
+      return '$_currencySymbol${(dollars / billion).toStringAsFixed(digits)}B';
+    }
+    return compactCurrency(dollars);
+  }
+
   /// A headline figure with the sign dropped, for use next to a label that
   /// already says whether it is debt or cash.
   String compactCurrencyMagnitude(double dollars) =>

@@ -27,6 +27,7 @@ const String _frameworkListStickyKey = 'frameworkListSticky';
 const String _autoFetchBusinessDescriptionKey = 'autoFetchBusinessDescription';
 const String _localSearchEnabledKey = 'localSearchEnabled';
 const String _localSearchUrlKey = 'localSearchUrl';
+const String _recentTickersKey = 'recentTickers';
 
 /// The handful of choices the app remembers between launches.
 ///
@@ -121,6 +122,11 @@ abstract interface class SettingsRepo {
   /// Where that server answers.
   String get localSearchUrl;
   Future<void> setLocalSearchUrl(String url);
+
+  /// The companies last opened, most recent first, which the empty report
+  /// pane offers back.
+  List<String> get recentTickers;
+  Future<void> setRecentTickers(List<String> tickers);
 }
 
 class LocalSettingsRepo implements SettingsRepo {
@@ -297,6 +303,18 @@ class LocalSettingsRepo implements SettingsRepo {
         : _write(_localSearchUrlKey, trimmed);
   }
 
+  @override
+  List<String> get recentTickers {
+    final stored = _values[_recentTickersKey];
+    if (stored == null || stored.isEmpty) return const [];
+    return List.unmodifiable(stored.split(','));
+  }
+
+  @override
+  Future<void> setRecentTickers(List<String> tickers) => tickers.isEmpty
+      ? _erase(_recentTickersKey)
+      : _write(_recentTickersKey, tickers.join(','));
+
   /// Reads an enum by name, tolerating a value this build no longer has: a
   /// renamed sector should reset the filter, not crash the app on launch.
   T? _read<T extends Enum>(String key, List<T> values) {
@@ -456,4 +474,13 @@ class MemorySettingsRepo implements SettingsRepo {
   @override
   Future<void> setLocalSearchUrl(String url) async =>
       _localSearchUrl = url.trim().isEmpty ? defaultSearxngUrl : url.trim();
+
+  List<String> _recentTickers = const [];
+
+  @override
+  List<String> get recentTickers => _recentTickers;
+
+  @override
+  Future<void> setRecentTickers(List<String> tickers) async =>
+      _recentTickers = List.unmodifiable(tickers);
 }

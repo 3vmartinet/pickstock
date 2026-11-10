@@ -36,6 +36,7 @@ import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
+import 'package:pickstock/ui/snapshot/market_leaders_view_model.dart';
 
 /// A small stand-in for SEC's directory, covering the shapes the app has to
 /// handle: a hyphenated symbol, a seven-character one, two symbols sharing a
@@ -424,6 +425,7 @@ Future<AppDatabase> registerTestDependencies({
 }) async {
   // Off unless a test asks for it: see [ListValuationViewModel.isEnabled].
   ListValuationViewModel.isEnabled = false;
+  MarketLeadersViewModel.isRefreshEnabled = false;
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
   if (withIngest) {
