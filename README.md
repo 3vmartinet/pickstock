@@ -721,6 +721,13 @@ flutter run -d macos --dart-define-from-file=env.json   # or -d linux
 The define is optional — `flutter run -d macos` works, with the share price
 typed in rather than quoted. `.vscode/launch.json` passes it for you.
 
+To build the app rather than run it, `./debug.sh` or `./release.sh` (both call
+`tool/build_macos.sh`). The keys are compiled in, so they must be there at build
+time: each is read from `env.json`, and a shell variable of the same name wins —
+`OLLAMA_MODEL=qwen3:8b ./release.sh`. `OLLAMA_HOST`, `OLLAMA_MODEL` and, for
+debug only, `PICKSTOCK_MOCK_DATA` work the same way. Extra arguments go to
+`flutter build macos`.
+
 `--dart-define=PICKSTOCK_MOCK_DATA=true` swaps the database for a fixture
 carrying Apple's filed figures, which is what most widget tests run against.
 
