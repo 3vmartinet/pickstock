@@ -1,7 +1,9 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/research/company_insight.dart';
+import 'package:pickstock/data/research/filings_check.dart';
 import 'package:pickstock/data/research/framework_evidence.dart';
 import 'package:pickstock/data/research/framework_question.dart';
+import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
@@ -21,6 +23,15 @@ import 'package:pickstock/ui/settings/widgets/search_setup_dialog.dart';
 
 ThemeRepo get _themeRepo => GetIt.I.get<ThemeRepo>();
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
+
+/// [reading]'s reason in a sentence, as the card and the scorecards say it.
+String filingsSentence(FilingsReading reading, AppLocalizations strings) =>
+    reading.describe(
+      strings,
+      _formatRepo.percent,
+      _formatRepo.ratio,
+      _formatRepo.price,
+    );
 
 /// The colour a verdict is shown in: the theme's good and bad, and caution
 /// for a question the model could not settle — it is neither, and it still
@@ -51,7 +62,6 @@ class FrameworkQuestionCard extends StatelessWidget {
     if (snapshot == null) return const SizedBox.shrink();
 
     final state = viewModel.frameworkState(question);
-    final answer = viewModel.frameworkAnswer(question);
     final evidence = FrameworkEvidence.forQuestion(
       question,
       snapshot,
@@ -92,7 +102,7 @@ class FrameworkQuestionCard extends StatelessWidget {
           _Heading(
             question: question,
             state: state,
-            answer: answer,
+            verdict: viewModel.frameworkVerdict(question),
             isFresh: isFresh,
           ),
           body,
@@ -118,13 +128,15 @@ class _Heading extends StatelessWidget {
   const _Heading({
     required this.question,
     required this.state,
-    required this.answer,
+    required this.verdict,
     required this.isFresh,
   });
 
   final FrameworkQuestion question;
   final InsightState state;
-  final FrameworkAnswer? answer;
+
+  /// The verdict that counts, the filings' or the model's.
+  final FrameworkVerdict? verdict;
 
   /// Whether this one question has just been answered again.
   final bool isFresh;
@@ -133,7 +145,7 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = context.strings;
     final theme = context.theme;
-    final verdict = answer?.verdict;
+    final verdict = this.verdict;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -188,6 +200,47 @@ class _Heading extends StatelessWidget {
           _ when verdict != null => VerdictPill(verdict: verdict),
           _ => const SizedBox.shrink(),
         },
+      ],
+    );
+  }
+}
+
+/// What the filings settled, and why, with the model's own reading where it
+/// came out differently.
+class _FilingsLine extends StatelessWidget {
+  const _FilingsLine({required this.reading, required this.modelVerdict});
+
+  final FilingsReading reading;
+  final FrameworkVerdict? modelVerdict;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = context.strings;
+    final disagreed = modelVerdict;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: ThemeRepo.spaceXSmall,
+      children: [
+        Tooltip(
+          tooltip: HintTooltip(strings.filingsSettledHint).call,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: ThemeRepo.spaceXSmall,
+            children: [
+              const Icon(LucideIcons.fileText)
+                  .iconXSmall()
+                  .iconMutedForeground(),
+              Text(strings.filingsSettled).muted().xSmall().semiBold(),
+            ],
+          ),
+        ),
+        Text(filingsSentence(reading, strings)).large().semiBold(),
+        if (disagreed != null)
+          Text(
+            strings.filingsModelDisagrees(
+              disagreed.getLabel(strings).toLowerCase(),
+            ),
+          ).muted().xSmall(),
       ],
     );
   }
@@ -283,11 +336,30 @@ class _Reading extends StatelessWidget {
           )
         : null;
 
+    final filings = viewModel.filingsReading(question);
+    final filingsLine = filings == null
+        ? null
+        : _FilingsLine(reading: filings, modelVerdict: answer?.modelVerdict);
+
+    // Timing is the price against the band, which the filings settle on
+    // their own: there is nothing for the model to research.
+    if (filingsLine != null && FilingsCheck.settlesAlone(question)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: ThemeRepo.spaceSmall,
+        children: [
+          filingsLine,
+          Text(strings.filingsTimingNotAsked).muted().xSmall(),
+        ],
+      );
+    }
+
     if (answer == null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: ThemeRepo.spaceSmall,
         children: [
+          ?filingsLine,
           Text(strings.frameworkLookFor).muted().xSmall().semiBold(),
           Text(question.getLookFor(strings)).muted().small(),
           ?failureLine,
@@ -317,9 +389,17 @@ class _Reading extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: ThemeRepo.spaceSmall,
       children: [
-        // The answer, in the largest type on the card after the question: it
-        // is what the card exists to say.
-        Text(answer.headline).large().semiBold(),
+        // Where the filings settled it, their reason leads and the model's
+        // answer follows as its research: what it found, not the verdict.
+        if (filingsLine != null) ...[
+          filingsLine,
+          const SizedBox(height: ThemeRepo.spaceXSmall),
+          Text(strings.frameworkModelNotes).muted().xSmall().semiBold(),
+          Text(answer.headline).semiBold(),
+        ] else
+          // The answer, in the largest type on the card after the question:
+          // it is what the card exists to say.
+          Text(answer.headline).large().semiBold(),
         if (answer.explanation.isNotEmpty) Text(answer.explanation).small(),
         if (answer.points.isNotEmpty) ...[
           const SizedBox(height: ThemeRepo.spaceXSmall),

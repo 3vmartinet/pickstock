@@ -3594,6 +3594,156 @@ abstract class AppLocalizations {
   /// **'Its middle year grew {actual} per share, but no business compounds like that for a decade, so only {credited} a year is paid for.'**
   String napkinCaveatGrowthCapped(String actual, String credited);
 
+  /// No description provided for @filingsGrowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue grew {rate} a year over the last three years, and the latest year kept rising.'**
+  String filingsGrowing(String rate);
+
+  /// No description provided for @filingsNotGrowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue grew {rate} a year over the last three years: flat or shrinking once inflation is taken off.'**
+  String filingsNotGrowing(String rate);
+
+  /// No description provided for @filingsReversing.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue grew only {rate} a year over three years, and the latest year fell {latest}.'**
+  String filingsReversing(String rate, String latest);
+
+  /// No description provided for @filingsDipInRise.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue grew {rate} a year over three years but fell {latest} in the latest: a dip or a turn, which the filings cannot say.'**
+  String filingsDipInRise(String rate, String latest);
+
+  /// No description provided for @filingsMarginsHolding.
+  ///
+  /// In en, this message translates to:
+  /// **'Margins moved {points} points over three years: holding or rising.'**
+  String filingsMarginsHolding(String points);
+
+  /// No description provided for @filingsMarginsFalling.
+  ///
+  /// In en, this message translates to:
+  /// **'Margins fell {points} points over three years.'**
+  String filingsMarginsFalling(String points);
+
+  /// No description provided for @filingsMarginsSlipping.
+  ///
+  /// In en, this message translates to:
+  /// **'Margins slipped {points} points over three years: not yet a fall, no longer holding.'**
+  String filingsMarginsSlipping(String points);
+
+  /// No description provided for @filingsCashBacked.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash from operations was {ratio}× profit over three years, positive every year, with cash to spare after investment.'**
+  String filingsCashBacked(String ratio);
+
+  /// No description provided for @filingsCashPositive.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash from operations was positive every year for three years, with cash to spare after investment, though the company reports no profit.'**
+  String get filingsCashPositive;
+
+  /// No description provided for @filingsCashBurning.
+  ///
+  /// In en, this message translates to:
+  /// **'It spent more cash than it made over the last three years.'**
+  String get filingsCashBurning;
+
+  /// No description provided for @filingsProfitNotCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash from operations was only {ratio}× profit over three years: the profit is not arriving as cash.'**
+  String filingsProfitNotCash(String ratio);
+
+  /// No description provided for @filingsCashUneven.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash from operations was positive overall but not every year, or short of profit: too uneven to settle.'**
+  String get filingsCashUneven;
+
+  /// No description provided for @filingsDebtBeyondCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Its net debt would take {years} years of typical spare cash to clear, and is {multiple}× its operating profit before depreciation: more than the business can carry.'**
+  String filingsDebtBeyondCash(String years, String multiple);
+
+  /// No description provided for @filingsDebtWithoutEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'It owes more than it holds, with neither operating profit nor spare cash to pay it from.'**
+  String get filingsDebtWithoutEarnings;
+
+  /// No description provided for @filingsInterestUncovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating profit covers its interest only {cover}×, and there is no spare cash to make up the rest.'**
+  String filingsInterestUncovered(String cover);
+
+  /// No description provided for @filingsBelowRange.
+  ///
+  /// In en, this message translates to:
+  /// **'At {price} it is below the {low} to {high} the filings support.'**
+  String filingsBelowRange(String price, String low, String high);
+
+  /// No description provided for @filingsAboveRange.
+  ///
+  /// In en, this message translates to:
+  /// **'At {price} it is above the {low} to {high} the filings support.'**
+  String filingsAboveRange(String price, String low, String high);
+
+  /// No description provided for @filingsInRange.
+  ///
+  /// In en, this message translates to:
+  /// **'At {price} it sits within the {low} to {high} the filings support: not cheap enough to be the moment.'**
+  String filingsInRange(String price, String low, String high);
+
+  /// No description provided for @filingsCannotValue.
+  ///
+  /// In en, this message translates to:
+  /// **'PickStock cannot value it from the filings, so there is no range to time a purchase against.'**
+  String get filingsCannotValue;
+
+  /// No description provided for @filingsNoPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'There is no share price yet to time a purchase by.'**
+  String get filingsNoPrice;
+
+  /// No description provided for @frameworkModelNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'The model\'s research'**
+  String get frameworkModelNotes;
+
+  /// No description provided for @filingsSettled.
+  ///
+  /// In en, this message translates to:
+  /// **'From the filings'**
+  String get filingsSettled;
+
+  /// No description provided for @filingsSettledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled by a rule over the company\'s own figures, not by the model. The model\'s research, where it has been asked, is below as notes.'**
+  String get filingsSettledHint;
+
+  /// No description provided for @filingsModelDisagrees.
+  ///
+  /// In en, this message translates to:
+  /// **'The model\'s reading of its research was {verdict}.'**
+  String filingsModelDisagrees(String verdict);
+
+  /// No description provided for @filingsTimingNotAsked.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing is read from the price against the range the filings support, so the model is not asked it.'**
+  String get filingsTimingNotAsked;
+
   /// No description provided for @napkinCaveatCurrent.
   ///
   /// In en, this message translates to:

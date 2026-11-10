@@ -72,7 +72,7 @@ class Valuation extends Equatable {
           : null,
       growthPercent: _median(rates),
       windowYears: rates.length,
-      isCovered: _isCovered(snapshot.company.sic),
+      isCovered: covers(snapshot.company.sic),
     );
   }
 
@@ -530,7 +530,10 @@ class Valuation extends Equatable {
         : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
-  static bool _isCovered(int? sic) =>
+  /// Whether a filer of industry [sic] can be valued on its cash flow — not
+  /// a bank, insurer, lender, broker or REIT. Read too by the framework's
+  /// filings checks, which ask the same of the same figures.
+  static bool covers(int? sic) =>
       sic != _reitSic && SicSector.of(sic) != SicSector.financials;
 
   @override

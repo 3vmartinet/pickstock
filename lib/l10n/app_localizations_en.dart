@@ -2389,6 +2389,119 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String filingsGrowing(String rate) {
+    return 'Revenue grew $rate a year over the last three years, and the latest year kept rising.';
+  }
+
+  @override
+  String filingsNotGrowing(String rate) {
+    return 'Revenue grew $rate a year over the last three years: flat or shrinking once inflation is taken off.';
+  }
+
+  @override
+  String filingsReversing(String rate, String latest) {
+    return 'Revenue grew only $rate a year over three years, and the latest year fell $latest.';
+  }
+
+  @override
+  String filingsDipInRise(String rate, String latest) {
+    return 'Revenue grew $rate a year over three years but fell $latest in the latest: a dip or a turn, which the filings cannot say.';
+  }
+
+  @override
+  String filingsMarginsHolding(String points) {
+    return 'Margins moved $points points over three years: holding or rising.';
+  }
+
+  @override
+  String filingsMarginsFalling(String points) {
+    return 'Margins fell $points points over three years.';
+  }
+
+  @override
+  String filingsMarginsSlipping(String points) {
+    return 'Margins slipped $points points over three years: not yet a fall, no longer holding.';
+  }
+
+  @override
+  String filingsCashBacked(String ratio) {
+    return 'Cash from operations was $ratio× profit over three years, positive every year, with cash to spare after investment.';
+  }
+
+  @override
+  String get filingsCashPositive =>
+      'Cash from operations was positive every year for three years, with cash to spare after investment, though the company reports no profit.';
+
+  @override
+  String get filingsCashBurning =>
+      'It spent more cash than it made over the last three years.';
+
+  @override
+  String filingsProfitNotCash(String ratio) {
+    return 'Cash from operations was only $ratio× profit over three years: the profit is not arriving as cash.';
+  }
+
+  @override
+  String get filingsCashUneven =>
+      'Cash from operations was positive overall but not every year, or short of profit: too uneven to settle.';
+
+  @override
+  String filingsDebtBeyondCash(String years, String multiple) {
+    return 'Its net debt would take $years years of typical spare cash to clear, and is $multiple× its operating profit before depreciation: more than the business can carry.';
+  }
+
+  @override
+  String get filingsDebtWithoutEarnings =>
+      'It owes more than it holds, with neither operating profit nor spare cash to pay it from.';
+
+  @override
+  String filingsInterestUncovered(String cover) {
+    return 'Operating profit covers its interest only $cover×, and there is no spare cash to make up the rest.';
+  }
+
+  @override
+  String filingsBelowRange(String price, String low, String high) {
+    return 'At $price it is below the $low to $high the filings support.';
+  }
+
+  @override
+  String filingsAboveRange(String price, String low, String high) {
+    return 'At $price it is above the $low to $high the filings support.';
+  }
+
+  @override
+  String filingsInRange(String price, String low, String high) {
+    return 'At $price it sits within the $low to $high the filings support: not cheap enough to be the moment.';
+  }
+
+  @override
+  String get filingsCannotValue =>
+      'PickStock cannot value it from the filings, so there is no range to time a purchase against.';
+
+  @override
+  String get filingsNoPrice =>
+      'There is no share price yet to time a purchase by.';
+
+  @override
+  String get frameworkModelNotes => 'The model\'s research';
+
+  @override
+  String get filingsSettled => 'From the filings';
+
+  @override
+  String get filingsSettledHint =>
+      'Settled by a rule over the company\'s own figures, not by the model. The model\'s research, where it has been asked, is below as notes.';
+
+  @override
+  String filingsModelDisagrees(String verdict) {
+    return 'The model\'s reading of its research was $verdict.';
+  }
+
+  @override
+  String get filingsTimingNotAsked =>
+      'Timing is read from the price against the range the filings support, so the model is not asked it.';
+
+  @override
   String napkinCaveatCurrent(String date) {
     return 'The sales, cash and debt above are from the latest quarterly report, for the twelve months to $date, because the annual report is older. The typical margin is still read across full years.';
   }

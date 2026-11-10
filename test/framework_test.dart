@@ -4,11 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/research_task.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
+import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 import 'package:pickstock/ui/browse/widgets/framework_gauge.dart';
 import 'package:pickstock/ui/report/research_queue.dart';
@@ -25,6 +28,8 @@ import 'support/test_directory.dart';
 /// the scorecard and the first cards under it.
 const Size _wideSize = Size(1600, 1400);
 
+const String _appleCik = '0000320193';
+
 const String _tenK = 'https://www.sec.gov/Archives/edgar/data/320193/10k.htm';
 
 void main() {
@@ -38,6 +43,10 @@ void main() {
       withFinancials: true,
       researchRepo: research,
     );
+    // Below the band the fixture's figures support, so the timing question —
+    // which the filings settle against the price — comes out yes, and seven
+    // yeses are possible at all.
+    await GetIt.I.get<PriceRepo>().save(_appleCik, Quote.entered(40));
   });
 
   tearDown(() async {
@@ -76,7 +85,9 @@ void main() {
     await openFramework(tester);
 
     expect(find.byType(FrameworkScorecard), findsOneWidget);
-    expect(find.text('Not screened yet'), findsOneWidget);
+    // Cash and timing are settled by the figures and the price before the
+    // model is asked anything; the rest wait for it.
+    expect(find.text('Run the seven questions'), findsOneWidget);
     expect(find.byType(FrameworkQuestionCard), findsNWidgets(7));
     // Each card says what it will be judged on, and shows what the filings
     // already say — the second needs no model at all.
@@ -92,9 +103,11 @@ void main() {
     await openFramework(tester);
     await run(tester);
 
+    // All but timing, which is the price against the band and needs no
+    // research.
     expect([
       for (final (question, _) in research.screened) question,
-    ], FrameworkQuestion.values);
+    ], FrameworkQuestion.values.where((q) => q != FrameworkQuestion.timing));
     // Each question is its own prompt, written for what it asks.
     final prompts = {
       for (final (question, prompt) in research.screened) question: prompt,
@@ -103,7 +116,6 @@ void main() {
     expect(prompts[FrameworkQuestion.moat], contains('unlimited capital'));
     expect(prompts[FrameworkQuestion.management], contains('insider'));
     expect(prompts[FrameworkQuestion.risk], contains('three specific things'));
-    expect(prompts[FrameworkQuestion.timing], contains('catalysts'));
     for (final prompt in prompts.values) {
       expect(prompt, contains('Apple Inc. (AAPL)'));
     }
@@ -155,6 +167,40 @@ void main() {
         find.descendant(of: find.byType(ReportTabs), matching: matching);
     expect(inTabs(find.byIcon(LucideIcons.circleCheck)), findsOneWidget);
     expect(inTabs(find.byType(FrameworkGauge)), findsNothing);
+  });
+
+  testWidgets('the filings settle what they can, and the model is notes', (
+    tester,
+  ) async {
+    // The fixture's cash from operations is 1.12x its profit, positive every
+    // year: the model reading its research as a no does not make it one.
+    research.frameworkAnswers = {
+      FrameworkQuestion.cash: const FrameworkAnswer(
+        verdict: FrameworkVerdict.no,
+        headline: 'Cash flow fell short of profit last year',
+        explanation: 'Working capital absorbed cash.',
+      ),
+    };
+    await openFramework(tester);
+    await run(tester);
+
+    expect(find.text('Watchlist candidate'), findsOneWidget);
+    expect(
+      find.text("The model's reading of its research was no."),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Cash flow fell short of profit last year'),
+      findsOneWidget,
+    );
+    expect(find.text("The model's research"), findsWidgets);
+
+    // Filed as settled, so the tile counts what the report shows.
+    final notes = await GetIt.I.get<ResearchNoteRepo>().bodiesOfKind(
+      FrameworkQuestion.cash.noteKind,
+    );
+    expect(notes.single.body, contains('"verdict":"yes"'));
+    expect(notes.single.body, contains('"modelVerdict":"no"'));
   });
 
   testWidgets('an unclear answer leaves it unsettled rather than failed', (

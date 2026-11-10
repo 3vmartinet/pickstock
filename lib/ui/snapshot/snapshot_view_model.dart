@@ -10,6 +10,7 @@ import 'package:pickstock/data/snapshot/period_figures.dart';
 import 'package:pickstock/data/research/company_event.dart';
 import 'package:pickstock/data/research/company_insight.dart';
 import 'package:pickstock/data/research/framework_layout.dart';
+import 'package:pickstock/data/research/filings_check.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
@@ -462,33 +463,50 @@ class SnapshotViewModel extends ChangeNotifier {
     return state == InsightState.queued || state == InsightState.loading;
   });
 
-  /// The framework's rule, applied to whatever has been answered.
-  FrameworkOutcome get frameworkOutcome => FrameworkOutcome.from([
+  /// Whether the model has answered any of the seven for the company on
+  /// screen. The filings settle some before it is asked, so a verdict on the
+  /// scorecard is no longer the sign that the framework has been run.
+  bool get hasFrameworkAnswers => _frameworkAnswers.isNotEmpty;
+
+  /// What the filings settle of [question] for the company on screen, read
+  /// from the figures and the price as they are now.
+  FilingsReading? filingsReading(FrameworkQuestion question) {
+    final current = snapshot;
+    if (current == null) return null;
+    return FilingsCheck.of(question, current, valuation: valuation);
+  }
+
+  /// The verdict [question] stands at: the filings' where they settle it,
+  /// the model's answer otherwise, or `null` where neither has one.
+  ///
+  /// The filings are read live rather than from the note, so a new price or
+  /// a new year moves the verdict without asking the model again.
+  FrameworkVerdict? frameworkVerdict(FrameworkQuestion question) =>
+      filingsReading(question)?.verdict ?? _frameworkAnswers[question]?.verdict;
+
+  Map<FrameworkQuestion, FrameworkVerdict> get _verdicts => {
     for (final question in FrameworkQuestion.values)
-      ?_frameworkAnswers[question]?.verdict,
-  ]);
+      question: ?frameworkVerdict(question),
+  };
+
+  /// The framework's rule, applied to whatever has been answered.
+  FrameworkOutcome get frameworkOutcome =>
+      FrameworkOutcome.from(_verdicts.values);
 
   /// The answers so far as a score: what the tab's pie shows, the same as
   /// the company's tile.
-  FrameworkScore get frameworkScore => FrameworkScore(
-    verdicts: {
-      for (final MapEntry(key: question, value: answer)
-          in _frameworkAnswers.entries)
-        question: answer.verdict,
-    },
-  );
+  FrameworkScore get frameworkScore => FrameworkScore(verdicts: _verdicts);
 
   /// The questions answered no, in the framework's order: what the reader is
   /// told to move on because of.
   List<FrameworkQuestion> get frameworkNoes => [
-    for (final question in FrameworkQuestion.values)
-      if (_frameworkAnswers[question]?.verdict == FrameworkVerdict.no) question,
+    for (final MapEntry(key: question, value: verdict) in _verdicts.entries)
+      if (verdict == FrameworkVerdict.no) question,
   ];
 
   /// How many of the seven came back as [verdict].
-  int frameworkCount(FrameworkVerdict verdict) => _frameworkAnswers.values
-      .where((answer) => answer.verdict == verdict)
-      .length;
+  int frameworkCount(FrameworkVerdict verdict) =>
+      _verdicts.values.where((each) => each == verdict).length;
 
   /// When the oldest answer on file was read: a scorecard is only as current
   /// as the stalest thing on it.
@@ -576,6 +594,12 @@ class SnapshotViewModel extends ChangeNotifier {
     return queuedCount;
   }
 
+  /// What a timing note says in its headline. Never shown in the report,
+  /// which states the filings' reason itself; kept so the note reads as an
+  /// answer to anything else that opens it.
+  static const String _settledHeadline =
+      'Read from the price against the range the filings support.';
+
   Future<void> _screenCompany(
     Company company,
     List<FrameworkQuestion> questions,
@@ -645,22 +669,45 @@ class SnapshotViewModel extends ChangeNotifier {
         continue;
       }
       try {
-        final reading = await _researchRepo.screen(
-          prompts,
+        // What the filings settle is filed as the verdict, so the tiles —
+        // which read only what is filed — count the same answer the report
+        // shows. The model's research stays as the notes beside it.
+        final settled = FilingsCheck.of(
           question,
-          isCancelled: isCancelled,
+          prompts.snapshot,
+          valuation: prompts.valuation,
         );
-        if (reading == null || isCancelled()) return;
+        final FrameworkAnswer answer;
+        final List<SearchResult> sources;
+        if (settled != null && FilingsCheck.settlesAlone(question)) {
+          answer = FrameworkAnswer(
+            verdict: settled.verdict,
+            headline: _settledHeadline,
+            explanation: '',
+          );
+          sources = const [];
+        } else {
+          final reading = await _researchRepo.screen(
+            prompts,
+            question,
+            isCancelled: isCancelled,
+          );
+          if (reading == null || isCancelled()) return;
+          answer = settled == null
+              ? reading.answer
+              : reading.answer.settledAs(settled.verdict);
+          sources = reading.sources;
+        }
         await _noteRepo.saveAnswer(
           cik: company.cik,
           kind: question.noteKind,
-          text: jsonEncode(reading.answer.toJson()),
-          sources: reading.sources,
+          text: jsonEncode(answer.toJson()),
+          sources: sources,
         );
         answered.add(question);
         if (_isOnScreen(company)) {
-          _frameworkAnswers[question] = reading.answer;
-          _frameworkSources[question] = reading.sources;
+          _frameworkAnswers[question] = answer;
+          _frameworkSources[question] = sources;
           _frameworkGeneratedAt[question] = DateTime.now();
           _frameworkFailures.remove(question);
         }

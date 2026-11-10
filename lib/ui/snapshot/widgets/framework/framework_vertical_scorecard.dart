@@ -50,7 +50,7 @@ class FrameworkVerticalScorecard extends StatelessWidget {
             _VerticalRunProgress(run: run)
           else if (!viewModel.canResearch)
             Text(strings.frameworkUnavailable).muted().xSmall()
-          else if (outcome == FrameworkOutcome.notStarted)
+          else if (!viewModel.hasFrameworkAnswers)
             Text(strings.frameworkIntro).muted().xSmall(),
         ],
       ),
@@ -83,7 +83,7 @@ class _VerticalOutcome extends StatelessWidget {
       FrameworkOutcome.watchlist => LucideIcons.circleCheck,
     };
     final answered = FrameworkQuestion.values.where(
-      (question) => viewModel.frameworkAnswer(question) != null,
+      (question) => viewModel.frameworkVerdict(question) != null,
     );
     final detail = switch (outcome) {
       FrameworkOutcome.notStarted => strings.frameworkOutcomeNotStartedDetail,
@@ -182,7 +182,7 @@ class _VerticalActions extends StatelessWidget {
         if (outcome == FrameworkOutcome.watchlist)
           AddToWatchlistButton(cik: cik),
         if (viewModel.canResearch && !viewModel.isFrameworkBusy)
-          if (outcome == FrameworkOutcome.notStarted)
+          if (!viewModel.hasFrameworkAnswers)
             Tooltip(
               tooltip: HintTooltip(strings.frameworkRunHint).call,
               child: PrimaryButton(
@@ -291,9 +291,8 @@ class _VerticalStep extends StatelessWidget {
     final viewModel = context.watch<SnapshotViewModel>();
     final strings = context.strings;
     final theme = context.theme;
-    final answer = viewModel.frameworkAnswer(question);
     final state = viewModel.frameworkState(question);
-    final verdict = answer?.verdict;
+    final verdict = viewModel.frameworkVerdict(question);
     final accent = verdict == null
         ? theme.colorScheme.mutedForeground
         : verdictColour(theme, verdict);
@@ -351,7 +350,11 @@ class _VerticalStep extends StatelessWidget {
 
     final hint = [
       strings.frameworkJumpHint(question.number, question.getTitle(strings)),
-      answer?.headline ?? strings.frameworkNotAsked,
+      if (viewModel.filingsReading(question) case final filings?)
+        filingsSentence(filings, strings)
+      else
+        viewModel.frameworkAnswer(question)?.headline ??
+            strings.frameworkNotAsked,
     ].join('\n');
 
     return Tooltip(

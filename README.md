@@ -38,7 +38,7 @@ edge of a narrow window — unreachable, with nothing to say there was more.
 | Valuation | Valuation | Whether the price is above or below the range the filings support, with the multiples, the cash stream and the growth premium behind it, plus P/E, EV/FCF, FCF yield, PEG and P/S. |
 | What the price is asking | Expectations | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
 | How this was worked out | Valuation | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
-| Seven questions | Framework | A screening framework put to the local model: growth, moat, management, margins, cash, risk and timing, each answered Yes, No or Unclear with a headline, an explanation and cited evidence, beside the filings' own figures for it. One No means move on; seven Yeses offer the watchlist. |
+| Seven questions | Framework | A screening framework: growth, moat, management, margins, cash, risk and timing, each Yes, No or Unclear. Growth, margins, cash and timing are settled by rules over the filings (and risk failed by one where the debt is beyond the cash flow), with the local model's cited research beside them; moat and management are the model's. One No means move on; seven Yeses offer the watchlist. |
 | All tickers | — | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
 | Undervalued scans | — | A background run that prices every filtered company and reports those trading below the bottom of their fair range, most upside first. |
 | Watchlists | — | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
@@ -393,8 +393,34 @@ questions, asked in order, where a single **No** means move on and only seven
 | 6 | What's the risk? | The year's write-down and the margin before it, net debt, years of free cash flow to repay it, interest cover |
 | 7 | Is the timing right? | Price today against the fair range the valuation tab works out |
 
+**What the filings can settle, they settle.** Four of the questions are about
+figures the app already holds, and a 12B model asked whether revenue that grew
+7% a year is growing will say yes nearly always and no now and then. A verdict
+that changes from run to run is not a screen, so those four are rules over the
+filings, and the model's answer to them is kept as its research notes beside
+the rule's verdict. Where the model read it differently, the card says so.
+
+| Question | Yes | No | Left to the model |
+| --- | --- | --- | --- |
+| Growth | Revenue up more than 2% a year over three years and the latest year not down 5% | 2% a year or less, or a weak trend the latest year reverses | A one-year fall of 25%, as often a business sold as a decline |
+| Margins | Operating and gross margin (before write-downs) within a point of three years ago or higher | Either down 3 points or more | Banks, insurers, REITs; no operating income tagged |
+| Cash | Operating cash flow positive every year for three, free cash flow positive, at least 0.8× profit | Two negative years, negative free cash flow, or under 0.5× profit | Banks, insurers, REITs |
+| Risk | Never: the filings cannot say nothing else threatens it | Net debt with neither profit nor spare cash; interest cover under 1.5× with no spare cash; debt over 8 years of spare cash *and* over 5× profit before depreciation | Everything else, and carmakers and machinery makers whose lending arms the filings consolidate |
+| Timing | Price below the fair-value band | Price above it | Nothing: within the band, or no price, is Unclear, and the model is not asked |
+
+Moat and management are not in a filing, and stay the model's. Measured on 346
+valued filers in November 2026, the risk rule fails 19 (Albertsons, American
+Airlines, Sunoco, Skydance and loss-makers carrying debt). Interest cover alone
+failed Ford and General Motors on their lending arms' interest, and debt over
+cash flow alone failed Amazon at twelve years against 1.1× its operating
+profit, which is why each test takes two measures.
+
+The rule's verdict is what is filed, so the list's tiles count what the report
+shows; the report reads the filings live, so a new price or a new year moves a
+verdict without asking the model again.
+
 **One task, seven steps.** A single press queues one row in the jobs list, which
-reports how far through it is (`Answering 3 of 7…`). The questions run in order
+reports how far through it is (`Answering 3 of 7…`); timing is filed from the band without a step of the model's. The questions run in order
 and each answer lands on the tab as it arrives; a question can be asked again
 on its own from its card. A missing server, model or key fails the rest at
 once rather than waiting out seven timeouts; any other failure skips to the

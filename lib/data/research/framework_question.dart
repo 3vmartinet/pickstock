@@ -151,9 +151,27 @@ class FrameworkAnswer extends Equatable {
     required this.headline,
     required this.explanation,
     this.points = const [],
+    this.modelVerdict,
   });
 
+  /// The verdict that counts: the filings' where they settle the question,
+  /// the model's otherwise.
   final FrameworkVerdict verdict;
+
+  /// What the model made of its research, where the filings overruled it —
+  /// kept so the card can say they disagreed. `null` where the model's
+  /// verdict is [verdict], or it was not asked.
+  final FrameworkVerdict? modelVerdict;
+
+  /// This answer with [settled] as its verdict, the model's kept beside it
+  /// where the two differ.
+  FrameworkAnswer settledAs(FrameworkVerdict settled) => FrameworkAnswer(
+    verdict: settled,
+    headline: headline,
+    explanation: explanation,
+    points: points,
+    modelVerdict: settled == verdict ? null : verdict,
+  );
 
   /// The answer in a line, which is what the card leads with.
   final String headline;
@@ -167,6 +185,7 @@ class FrameworkAnswer extends Equatable {
   /// for a framework answer; the kind says which.
   Map<String, Object?> toJson() => {
     'verdict': verdict.name,
+    'modelVerdict': ?modelVerdict?.name,
     'headline': headline,
     'explanation': explanation,
     'points': [for (final point in points) point.toJson()],
@@ -181,6 +200,9 @@ class FrameworkAnswer extends Equatable {
     final points = json['points'];
     return FrameworkAnswer(
       verdict: FrameworkVerdict.parse(json['verdict'] as String?),
+      modelVerdict: json['modelVerdict'] is String
+          ? FrameworkVerdict.parse(json['modelVerdict'] as String)
+          : null,
       headline: headline,
       explanation: json['explanation'] as String? ?? '',
       points: [
@@ -197,7 +219,13 @@ class FrameworkAnswer extends Equatable {
   }
 
   @override
-  List<Object?> get props => [verdict, headline, explanation, points];
+  List<Object?> get props => [
+    verdict,
+    modelVerdict,
+    headline,
+    explanation,
+    points,
+  ];
 }
 
 /// Where a company stands once its answers are in.
