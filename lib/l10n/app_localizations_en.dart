@@ -996,6 +996,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get idleLeadersTitle => 'Largest by market value';
 
   @override
+  String get idleSectorLeadersTitle => 'Largest by sector';
+
+  @override
   String idleLeadersNote(String date) {
     return 'Share price × shares outstanding. Prices as of $date.';
   }

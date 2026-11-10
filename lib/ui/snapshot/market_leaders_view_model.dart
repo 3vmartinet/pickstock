@@ -4,73 +4,96 @@ import 'package:flutter/widgets.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
+import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
-import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 
-SecRepo get _secRepo => GetIt.I.get<SecRepo>();
+AppDatabase get _database => GetIt.I.get<AppDatabase>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
 
-/// The companies that could plausibly be among the largest US-listed filers.
-///
-/// A fixed pool rather than the whole directory: ranking every filer would
-/// mean pricing ten thousand of them, and the stored prices alone cover only
-/// what has been opened, so a ranking read from them would miss whichever
-/// giant nobody looked at yet. Wide enough that the top ten can reshuffle
-/// within it. Filers without a usable share count simply drop out.
-const List<String> marketLeaderCandidates = [
-  'NVDA',
-  'MSFT',
-  'AAPL',
-  'GOOGL',
-  'AMZN',
-  'META',
-  'AVGO',
-  'TSLA',
-  'BRK-B',
-  'LLY',
-  'JPM',
-  'WMT',
-  'ORCL',
-  'V',
-  'MA',
-  'NFLX',
-  'XOM',
-  'COST',
-  'PLTR',
-  'AMD',
-  'JNJ',
-  'UNH',
-];
-
-/// How many of the largest companies the empty report pane lists.
+/// How many companies each ranking lists.
 const int marketLeaderCount = 10;
 
-/// One company in the ranking, valued at the last price known for it.
+/// How many of a sector's companies are priced. They are drawn in turn from
+/// the sector's largest by each measure of size the filings give before a
+/// price is known: earnings and cash flow track market value most closely,
+/// and revenue catches the thin-margin giants they miss, such as retailers
+/// and distributors. The three overlap heavily, so they are interleaved until
+/// this many distinct companies are found, comfortably more than the ten the
+/// ranking shows.
+const int _perSector = 15;
+
+/// The same, across every filer, so a giant without an industry code still
+/// makes the overall ranking. These are also the companies priced first and
+/// kept freshest, being the ones the overall ranking is drawn from.
+const int _overall = 25;
+
+/// How long a price may stand for the sector rankings before it is asked for
+/// again. Longer than [quoteFreshness]: ranking ten companies by size does
+/// not turn on the day's moves, and the sectors together hold nearly two
+/// hundred companies, which is minutes of the quote budget to price.
+const Duration sectorPriceGuard = Duration(hours: 24);
+
+/// Commodity trusts (GLD, SLV, IAU) file under this code: their "market
+/// value" is the metal they hold, not a business.
+const Set<int> _excludedSics = {6221};
+
+/// How many years old a company's latest filing may be and still count.
+const int _maxFilingAgeYears = 3;
+
+/// One company in a ranking, valued at the last price known for it.
 class MarketLeader {
   const MarketLeader({
     required this.company,
     required this.quote,
     required this.shares,
+    required this.sector,
   });
 
   final Company company;
   final Quote quote;
   final double shares;
 
+  /// The sector its industry code falls in, or `null` for none.
+  final SicSector? sector;
+
   /// Price times shares: what the market says the equity is worth.
   double get marketCap => quote.pricePerShare * shares;
 }
 
-/// The largest companies by market value, for the empty report pane.
+/// A company worth pricing, and how soon its price goes stale.
+class _Candidate {
+  const _Candidate({
+    required this.company,
+    required this.shares,
+    required this.sector,
+    required this.isOverall,
+    required this.netIncome,
+  });
+
+  final Company company;
+  final double shares;
+  final SicSector? sector;
+
+  /// Drawn for the overall ranking, which is kept to [quoteFreshness].
+  final bool isOverall;
+
+  final double netIncome;
+}
+
+/// The largest companies by market value, overall and within each sector,
+/// for the empty report pane.
 ///
-/// Stored prices go up first so the ranking is on screen at once, offline
-/// and without a key; stale ones are then re-quoted one at a time, paced like
-/// the list's own pricing, and the ranking re-sorts as each arrives.
+/// Which companies to price is read from the filings: the largest of each
+/// sector by earnings, cash flow and revenue. Stored prices go up first, so
+/// the rankings are on screen at once, offline and without a key; stale ones
+/// are then re-quoted one at a time, paced like the list's own pricing, and
+/// the rankings re-sort as each arrives.
 class MarketLeadersViewModel extends ChangeNotifier {
   /// Whether stale prices are re-quoted. Off in tests, for the same reason as
   /// [ListValuationViewModel.isEnabled].
@@ -85,14 +108,26 @@ class MarketLeadersViewModel extends ChangeNotifier {
   /// Whether the first read of stored prices is still under way.
   bool get isLoading => _isLoading && !_hasLoaded;
 
-  /// The largest first, at most [marketLeaderCount] of them.
-  List<MarketLeader> get leaders {
-    final ranked = _byCik.values.toList()
+  /// The largest companies of all, largest first.
+  List<MarketLeader> get leaders => _ranked(_byCik.values);
+
+  /// The largest companies in [sector], largest first.
+  List<MarketLeader> leadersIn(SicSector sector) =>
+      _ranked(_byCik.values.where((leader) => leader.sector == sector));
+
+  /// The sectors with at least one priced company, in the filter's order.
+  List<SicSector> get sectors => [
+    for (final sector in SicSector.values)
+      if (_byCik.values.any((leader) => leader.sector == sector)) sector,
+  ];
+
+  static List<MarketLeader> _ranked(Iterable<MarketLeader> leaders) {
+    final ranked = leaders.toList()
       ..sort((a, b) => b.marketCap.compareTo(a.marketCap));
     return ranked.take(marketLeaderCount).toList();
   }
 
-  /// Loads the ranking unless it was loaded within [quoteFreshness].
+  /// Loads the rankings unless they were loaded within [quoteFreshness].
   ///
   /// Called each time the empty pane is shown, so coming back to it after a
   /// while brings the prices up to date without re-asking on every visit.
@@ -107,81 +142,132 @@ class MarketLeadersViewModel extends ChangeNotifier {
     _loadedAt = DateTime.now();
     _notify();
     try {
-      final stale = await _readStored();
+      final stale = await _readStored(await _candidates());
       _hasLoaded = true;
       _notify();
       if (isRefreshEnabled && _quoteRepo.isConfigured) await _refresh(stale);
+    } catch (error) {
+      logWarning(() => 'Market leaders could not be read: $error');
     } finally {
+      _hasLoaded = true;
       _isLoading = false;
       _notify();
     }
   }
 
-  /// Reads every candidate's filed share count and stored price, and returns
-  /// the companies whose price should be asked for again, largest first.
-  ///
-  /// All at once: each is a local read, and one at a time the pane would sit
-  /// on its placeholder for as long as the slowest twenty of them added up.
-  Future<List<(Company, double)>> _readStored() async {
-    final read = await Future.wait(marketLeaderCandidates.map(_readOne));
-    final stale = <(Company, double, double)>[];
-    for (final entry in read.nonNulls) {
-      final (company, shares, stored) = entry;
-      if (stored != null) {
-        _byCik[company.cik] = MarketLeader(
-          company: company,
-          quote: stored,
-          shares: shares,
-        );
+  /// The companies worth pricing: the largest of each sector, and of all of
+  /// them, by each measure of size the filings give.
+  Future<List<_Candidate>> _candidates() async {
+    final year = DateTime.now().year;
+    final samples = [
+      for (final sample in await _database.sizeSamples(
+        fromYear: year - _maxFilingAgeYears,
+        toYear: year + 1,
+      ))
+        if (!_excludedSics.contains(sample.sic)) sample,
+    ];
+
+    List<SizeSample> largest(
+      Iterable<SizeSample> pool,
+      double? Function(SizeSample) measure,
+    ) =>
+        pool.where((sample) => (measure(sample) ?? 0) > 0).toList()
+          ..sort((a, b) => measure(b)!.compareTo(measure(a)!));
+
+    // The largest by each measure in turn, until [count] distinct companies
+    // are found or every ranking has run out.
+    Set<SizeSample> pick(Iterable<SizeSample> pool, int count) {
+      final rankings = [
+        largest(pool, (s) => s.netIncome),
+        largest(pool, (s) => s.operatingCashFlow),
+        largest(pool, (s) => s.revenue),
+      ];
+      final picked = <SizeSample>{};
+      for (var depth = 0; picked.length < count; depth++) {
+        final reached = rankings.where((ranking) => depth < ranking.length);
+        if (reached.isEmpty) break;
+        for (final ranking in reached) {
+          if (picked.length < count) picked.add(ranking[depth]);
+        }
       }
-      if (_isStale(stored)) {
-        stale.add((company, shares, stored?.pricePerShare ?? 0));
-      }
+      return picked;
     }
-    // Largest first, so the head of the ranking settles soonest; companies
-    // never priced go last, in the order the pool lists them.
-    stale.sort((a, b) => (b.$3 * b.$2).compareTo(a.$3 * a.$2));
-    return [for (final (company, shares, _) in stale) (company, shares)];
+
+    final overall = pick(samples, _overall);
+    final chosen = {...overall};
+    for (final sector in SicSector.values) {
+      chosen.addAll(
+        pick(
+          samples.where((sample) => SicSector.of(sample.sic) == sector),
+          _perSector,
+        ),
+      );
+    }
+
+    return [
+      for (final sample in chosen)
+        if (primarySymbol(sample.symbols) case final ticker?)
+          _Candidate(
+            company: Company(
+              ticker: ticker,
+              cik: sample.cik,
+              name: sample.name,
+              sic: sample.sic,
+              sharesOutstanding: sample.shares,
+            ),
+            shares: sample.shares,
+            sector: SicSector.of(sample.sic),
+            isOverall: overall.contains(sample),
+            netIncome: sample.netIncome ?? 0,
+          ),
+    ];
   }
 
-  /// One candidate's filer, share count and stored price, or `null` when it
-  /// cannot be valued at all.
-  Future<(Company, double, Quote?)?> _readOne(String ticker) async {
-    try {
-      final snapshot = await _secRepo.fetchSnapshot(ticker);
-      final company = snapshot.company;
-      final shares =
-          company.sharesOutstanding ?? snapshot.years.lastOrNull?.dilutedShares;
-      if (shares == null || shares <= 0) return null;
-      return (company, shares, await _priceRepo.priceFor(company.cik));
-    } catch (error) {
-      // Not in this archive, or filed under another symbol. One missing giant
-      // is no reason to show none of them.
-      logWarning(() => 'Market leader $ticker unavailable: $error');
-      return null;
+  /// Puts every candidate with a stored price into the rankings, and returns
+  /// the ones whose price should be asked for again: the overall ranking's
+  /// first, then the rest, each largest first so the heads of the rankings
+  /// settle soonest.
+  Future<List<_Candidate>> _readStored(List<_Candidate> candidates) async {
+    final stored = await Future.wait(
+      candidates.map((candidate) => _priceRepo.priceFor(candidate.company.cik)),
+    );
+    final stale = <(_Candidate, double)>[];
+    for (final (index, candidate) in candidates.indexed) {
+      final quote = stored[index];
+      if (quote != null) _put(candidate, quote);
+      final guard = candidate.isOverall ? quoteFreshness : sectorPriceGuard;
+      if (_isStale(quote, guard)) {
+        // Unpriced companies rank behind every priced one, by earnings.
+        final size = quote == null
+            ? candidate.netIncome / double.maxFinite
+            : quote.pricePerShare * candidate.shares;
+        stale.add((candidate, size));
+      }
     }
+    stale.sort((a, b) {
+      if (a.$1.isOverall != b.$1.isOverall) return a.$1.isOverall ? -1 : 1;
+      return b.$2.compareTo(a.$2);
+    });
+    return [for (final (candidate, _) in stale) candidate];
   }
 
-  Future<void> _refresh(List<(Company, double)> stale) async {
-    for (final (index, (company, shares)) in stale.indexed) {
+  Future<void> _refresh(List<_Candidate> stale) async {
+    for (final (index, candidate) in stale.indexed) {
       if (_isDisposed) return;
       if (index > 0) await Future<void>.delayed(listQuoteSpacing);
       final wait = _quoteRepo.timeUntilSlot;
       if (wait > Duration.zero) await Future<void>.delayed(wait);
       if (_isDisposed) return;
+      final company = candidate.company;
       try {
         final quote = await _quoteRepo.quoteFor(company.ticker);
         await _priceRepo.save(company.cik, quote);
-        _byCik[company.cik] = MarketLeader(
-          company: company,
-          quote: quote,
-          shares: shares,
-        );
+        _put(candidate, quote);
         _notify();
       } on QuoteException catch (error) {
         logWarning(() => 'Market leader quote ${company.ticker}: $error');
-        // A spent budget or a bulk run will refuse the rest too; the stored
-        // prices stay up and the next visit tries again.
+        // A spent budget, a bulk run or no network will refuse the rest too;
+        // the stored prices stay up and the next visit tries again.
         if (error.failure == QuoteFailure.rateLimited ||
             error.failure == QuoteFailure.jobRunning ||
             error.failure == QuoteFailure.network) {
@@ -191,12 +277,21 @@ class MarketLeadersViewModel extends ChangeNotifier {
     }
   }
 
+  void _put(_Candidate candidate, Quote quote) {
+    _byCik[candidate.company.cik] = MarketLeader(
+      company: candidate.company,
+      quote: quote,
+      shares: candidate.shares,
+      sector: candidate.sector,
+    );
+  }
+
   /// Due a new quote when there is none, it was typed, or it was asked for
-  /// longer ago than [quoteFreshness].
-  bool _isStale(Quote? stored) {
+  /// longer ago than [guard].
+  static bool _isStale(Quote? stored, Duration guard) {
     if (stored == null || !stored.isQuoted) return true;
     final asked = stored.fetchedAt ?? stored.asOf;
-    return DateTime.now().difference(asked) > quoteFreshness;
+    return DateTime.now().difference(asked) > guard;
   }
 
   void _notify() {
@@ -208,4 +303,24 @@ class MarketLeadersViewModel extends ChangeNotifier {
     _isDisposed = true;
     super.dispose();
   }
+}
+
+/// The symbol to quote a filer under, among all it trades as, or `null` if
+/// none is one a share count can be multiplied by.
+///
+/// [symbols] come in the order SEC lists them, which puts the common stock
+/// first, so the first one that is not a preferred share, unit or warrant
+/// (`JPM-PC`, `OXY-WT`) is it. Foreign ordinaries traded over the counter
+/// (five letters ending in F or Y, such as `BEIGF`) are never used: their
+/// price is per a share the filed count does not count in, and multiplied out
+/// they made a $4B company a $600B one. A filer listed only under suffixed
+/// symbols (`BRK-A`, `BRK-B`) falls back to the first of them.
+String? primarySymbol(List<String> symbols) {
+  bool isForeignOtc(String symbol) =>
+      symbol.length == 5 && (symbol.endsWith('F') || symbol.endsWith('Y'));
+  bool hasSuffix(String symbol) => symbol.contains('-') || symbol.contains('.');
+
+  final usable = symbols.where((symbol) => !isForeignOtc(symbol));
+  return usable.where((symbol) => !hasSuffix(symbol)).firstOrNull ??
+      usable.firstOrNull;
 }

@@ -1438,6 +1438,12 @@ abstract class AppLocalizations {
   /// **'Largest by market value'**
   String get idleLeadersTitle;
 
+  /// No description provided for @idleSectorLeadersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Largest by sector'**
+  String get idleSectorLeadersTitle;
+
   /// No description provided for @idleLeadersNote.
   ///
   /// In en, this message translates to:

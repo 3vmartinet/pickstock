@@ -6,6 +6,7 @@ import 'package:pickstock/repo/sec/ticker_directory_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/snapshot/market_leaders_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
+import 'package:pickstock/ui/widgets/responsive_grid.dart';
 import 'package:pickstock/ui/widgets/section_header.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -18,9 +19,12 @@ TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 /// wide monitor instead of running the full content width.
 const double _proseMaxWidth = 480;
 
-/// Width the lists below it are held to: wide enough for a name beside its
-/// figures, narrow enough that a row still reads as one line.
-const double _sectionMaxWidth = 720;
+/// Width the lists below it are held to: wide enough for two sector
+/// rankings side by side, narrow enough that a row still reads as one line.
+const double _sectionMaxWidth = 960;
+
+/// The narrowest a sector's ranking gets before the grid drops a column.
+const double _sectorCardMinWidth = 400;
 
 /// Below this the relative-size bar is dropped, so the name keeps its room.
 const double _barMinRowWidth = 520;
@@ -32,7 +36,7 @@ const double _recentNameMaxWidth = 180;
 
 /// What the report pane shows before a company is opened: a short
 /// introduction, the companies opened last, and the largest companies by
-/// market value as somewhere to start.
+/// market value, overall and in each sector, as somewhere to start.
 class SnapshotIdleView extends StatefulWidget {
   const SnapshotIdleView({super.key});
 
@@ -58,7 +62,12 @@ class _SnapshotIdleViewState extends State<SnapshotIdleView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: ThemeRepo.spaceXLarge,
-        children: [_IdleIntro(), _RecentCompanies(), _MarketLeaders()],
+        children: [
+          _IdleIntro(),
+          _RecentCompanies(),
+          _MarketLeaders(),
+          _SectorLeaders(),
+        ],
       ),
     );
   }
@@ -190,8 +199,7 @@ class _RecentChip extends StatelessWidget {
   }
 }
 
-/// The largest companies by market value, ranked, each with a bar for its
-/// size against the largest.
+/// The largest companies of all by market value.
 class _MarketLeaders extends StatelessWidget {
   const _MarketLeaders();
 
@@ -203,6 +211,81 @@ class _MarketLeaders extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final newest = leaders.isEmpty
+        ? null
+        : leaders
+              .map((leader) => leader.quote.asOf)
+              .reduce((a, b) => a.isAfter(b) ? a : b);
+
+    return _IdleSection(
+      icon: LucideIcons.trophy,
+      title: context.strings.idleLeadersTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: ThemeRepo.spaceSmall,
+        children: [
+          _LeaderTable(leaders: leaders),
+          if (newest != null)
+            Text(
+              context.strings.idleLeadersNote(_formatRepo.timeOrDate(newest)),
+            ).muted().xSmall(),
+        ],
+      ),
+    );
+  }
+}
+
+/// The largest companies of each sector, in the order the sector filter
+/// lists them, two to a row where there is room.
+class _SectorLeaders extends StatelessWidget {
+  const _SectorLeaders();
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<MarketLeadersViewModel>();
+    final sectors = viewModel.sectors;
+    if (sectors.isEmpty) return const SizedBox.shrink();
+
+    return _IdleSection(
+      icon: LucideIcons.layoutGrid,
+      title: context.strings.idleSectorLeadersTitle,
+      child: ResponsiveGrid(
+        minItemWidth: _sectorCardMinWidth,
+        children: [
+          for (final sector in sectors)
+            Column(
+              key: ValueKey(sector),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: ThemeRepo.spaceSmall,
+              children: [
+                Row(
+                  spacing: ThemeRepo.spaceSmall,
+                  children: [
+                    Icon(sector.icon).iconSmall().iconMutedForeground(),
+                    Text(sector.getLabel(context.strings))
+                        .small()
+                        .muted()
+                        .semiBold(),
+                  ],
+                ),
+                _LeaderTable(leaders: viewModel.leadersIn(sector)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A ranking in a bordered table, each row with a bar for its size against
+/// the first. Placeholder rows while [leaders] is still empty.
+class _LeaderTable extends StatelessWidget {
+  const _LeaderTable({required this.leaders});
+
+  final List<MarketLeader> leaders;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = context.theme;
     final rows = leaders.isEmpty
         ? [for (var i = 0; i < marketLeaderCount; i++) const _LeaderSkeleton()]
@@ -215,42 +298,22 @@ class _MarketLeaders extends StatelessWidget {
               ),
           ];
 
-    final newest = leaders.isEmpty
-        ? null
-        : leaders
-              .map((leader) => leader.quote.asOf)
-              .reduce((a, b) => a.isAfter(b) ? a : b);
-
-    return _IdleSection(
-      icon: LucideIcons.landmark,
-      title: context.strings.idleLeadersTitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: ThemeRepo.spaceSmall,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.border),
-              borderRadius: theme.borderRadiusLg,
-            ),
-            child: ClipRRect(
-              borderRadius: theme.borderRadiusLg,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final (index, row) in rows.indexed) ...[
-                    if (index > 0) const Divider(),
-                    row,
-                  ],
-                ],
-              ),
-            ),
-          ),
-          if (newest != null)
-            Text(
-              context.strings.idleLeadersNote(_formatRepo.timeOrDate(newest)),
-            ).muted().xSmall(),
-        ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.border),
+        borderRadius: theme.borderRadiusLg,
+      ),
+      child: ClipRRect(
+        borderRadius: theme.borderRadiusLg,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (index, row) in rows.indexed) ...[
+              if (index > 0) const Divider(),
+              row,
+            ],
+          ],
+        ),
       ),
     );
   }

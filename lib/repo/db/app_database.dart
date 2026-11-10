@@ -51,6 +51,21 @@ const int reportNameMaxLength = 80;
 
 const String _databaseName = 'pickstock';
 
+/// What a company's latest filed year says about its size, before any share
+/// price: enough to pick which companies are worth pricing to find the
+/// largest ones. Figures in dollars, `null` where not filed; [symbols] in the
+/// order SEC's directory lists them.
+typedef SizeSample = ({
+  String cik,
+  String name,
+  int? sic,
+  double shares,
+  double? revenue,
+  double? netIncome,
+  double? operatingCashFlow,
+  List<String> symbols,
+});
+
 /// One SEC filer.
 @DataClassName('CompanyRow')
 class Companies extends Table {
@@ -756,6 +771,55 @@ class AppDatabase extends _$AppDatabase {
       readsFrom: {fiscalYears},
     ).get();
     return {for (final row in rows) row.read<String>('cik')};
+  }
+
+  /// The size of every company that has a share count, a symbol to quote it
+  /// under, and a latest fiscal year between [fromYear] and [toYear].
+  ///
+  /// The share count is the cover's, or the latest year's diluted count where
+  /// the cover gave none, as the valuation itself reads it. The year bounds
+  /// leave out filers that stopped filing and the odd year typed wrong.
+  Future<List<SizeSample>> sizeSamples({
+    required int fromYear,
+    required int toYear,
+  }) async {
+    final rows = await customSelect(
+      'WITH latest AS ('
+      '  SELECT cik, MAX(fiscal_year) AS year FROM fiscal_years'
+      '  WHERE fiscal_year <= ?2 GROUP BY cik'
+      ') '
+      'SELECT c.cik AS cik, c.name AS name, c.sic AS sic, '
+      '  COALESCE(c.shares_outstanding, f.diluted_shares) AS shares, '
+      '  f.revenue AS revenue, f.net_income AS net_income, '
+      '  f.operating_cash_flow AS operating_cash_flow, '
+      // In the order SEC lists them, which puts the common stock first.
+      "  (SELECT group_concat(symbol, ' ') FROM ("
+      '     SELECT t.symbol FROM tickers t WHERE t.cik = c.cik'
+      '     ORDER BY t.rowid)) AS symbols '
+      'FROM companies c '
+      'JOIN latest l ON l.cik = c.cik '
+      'JOIN fiscal_years f ON f.cik = c.cik AND f.fiscal_year = l.year '
+      'WHERE l.year >= ?1 '
+      '  AND COALESCE(c.shares_outstanding, f.diluted_shares) > 0',
+      variables: [Variable.withInt(fromYear), Variable.withInt(toYear)],
+      readsFrom: {companies, fiscalYears, tickers},
+    ).get();
+
+    return [
+      for (final row in rows)
+        if (row.readNullable<String>('symbols') case final symbols?
+            when symbols.isNotEmpty)
+          (
+            cik: row.read<String>('cik'),
+            name: row.read<String>('name'),
+            sic: row.readNullable<int>('sic'),
+            shares: row.read<double>('shares'),
+            revenue: row.readNullable<double>('revenue'),
+            netIncome: row.readNullable<double>('net_income'),
+            operatingCashFlow: row.readNullable<double>('operating_cash_flow'),
+            symbols: symbols.split(' '),
+          ),
+    ];
   }
 
   /// The SIC code of every company that has one, keyed by CIK.

@@ -293,6 +293,7 @@
   "idleBody": "Ten years of reported financials, a fair-value range and institutional ownership, sourced directly from SEC filings.",
   "idleRecentTitle": "Recently viewed",
   "idleLeadersTitle": "Largest by market value",
+  "idleSectorLeadersTitle": "Largest by sector",
   "idleLeadersNote": "Share price × shares outstanding. Prices as of {date}.",
   "@idleLeadersNote": { "placeholders": { "date": { "type": "String" } } },
 
