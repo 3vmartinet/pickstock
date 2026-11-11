@@ -3,11 +3,13 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/app.dart';
+import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
+import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/repo/research/research_note_repo.dart';
 import 'package:pickstock/ui/browse/framework_scores_view_model.dart';
@@ -62,57 +64,111 @@ void main() {
     }
   }
 
+  // Microsoft has no figures in the mock filings, so its answers are scored
+  // as filed: there is nothing to read the filings again from.
   test('counts the yeses among the answers on file', () async {
     for (final question in FrameworkQuestion.values.take(5)) {
-      await _answer(_appleCik, question, FrameworkVerdict.yes);
+      await _answer(_microsoftCik, question, FrameworkVerdict.yes);
     }
-    await _answer(_appleCik, FrameworkQuestion.risk, FrameworkVerdict.unclear);
+    await _answer(
+      _microsoftCik,
+      FrameworkQuestion.risk,
+      FrameworkVerdict.unclear,
+    );
 
     final viewModel = FrameworkScoresViewModel();
     addTearDown(viewModel.dispose);
-    await until(() => viewModel.scoreFor(_appleCik) != null);
+    await until(() => viewModel.scoreFor(_microsoftCik) != null);
 
-    final score = viewModel.scoreFor(_appleCik)!;
+    final score = viewModel.scoreFor(_microsoftCik)!;
     expect(score.satisfied, 5);
     expect(score.answered, 6);
     expect(score.outcome, FrameworkOutcome.incomplete);
     // Never asked, so no gauge at all rather than one at nought.
-    expect(viewModel.scoreFor(_microsoftCik), isNull);
+    expect(viewModel.scoreFor(_appleCik), isNull);
   });
 
   test('a single no puts the company out, whatever else passed', () async {
     for (final question in FrameworkQuestion.values.take(6)) {
-      await _answer(_appleCik, question, FrameworkVerdict.yes);
+      await _answer(_microsoftCik, question, FrameworkVerdict.yes);
     }
-    await _answer(_appleCik, FrameworkQuestion.timing, FrameworkVerdict.no);
+    await _answer(_microsoftCik, FrameworkQuestion.timing, FrameworkVerdict.no);
 
     final viewModel = FrameworkScoresViewModel();
     addTearDown(viewModel.dispose);
-    await until(() => viewModel.scoreFor(_appleCik) != null);
+    await until(() => viewModel.scoreFor(_microsoftCik) != null);
 
-    expect(viewModel.scoreFor(_appleCik)!.satisfied, 6);
-    expect(viewModel.scoreFor(_appleCik)!.outcome, FrameworkOutcome.moveOn);
+    expect(viewModel.scoreFor(_microsoftCik)!.satisfied, 6);
+    expect(viewModel.scoreFor(_microsoftCik)!.outcome, FrameworkOutcome.moveOn);
   });
 
   test('picks up answers a framework run files', () async {
     final viewModel = FrameworkScoresViewModel();
     addTearDown(viewModel.dispose);
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(viewModel.scoreFor(_appleCik), isNull);
+    expect(viewModel.scoreFor(_microsoftCik), isNull);
 
     GetIt.I.get<ResearchQueue>().enqueue(
-      cik: _appleCik,
-      ticker: 'AAPL',
-      companyName: 'Apple Inc.',
+      cik: _microsoftCik,
+      ticker: 'MSFT',
+      companyName: 'Microsoft',
       insight: null,
       frameworkQuestions: const [FrameworkQuestion.growth],
-      work: (_) =>
-          _answer(_appleCik, FrameworkQuestion.growth, FrameworkVerdict.yes),
+      work: (_) => _answer(
+        _microsoftCik,
+        FrameworkQuestion.growth,
+        FrameworkVerdict.yes,
+      ),
     );
-    await until(() => viewModel.scoreFor(_appleCik) != null);
+    await until(() => viewModel.scoreFor(_microsoftCik) != null);
 
-    expect(viewModel.scoreFor(_appleCik)?.satisfied, 1);
+    expect(viewModel.scoreFor(_microsoftCik)?.satisfied, 1);
   });
+
+  test(
+    'reads the filings and the stored price again, as the report does',
+    () async {
+      // Apple's mock filings settle cash as a yes, and timing against the
+      // price; growth they leave to the reading.
+      await _answer(_appleCik, FrameworkQuestion.cash, FrameworkVerdict.no);
+      // Filed at a price below the band, since gone.
+      await _answer(_appleCik, FrameworkQuestion.timing, FrameworkVerdict.yes);
+      // Filed while the filings said yes over the model's no: they no longer
+      // settle it, so the model's own reading is what counts.
+      await _notes.saveAnswer(
+        cik: _appleCik,
+        kind: FrameworkQuestion.growth.noteKind,
+        text: jsonEncode(
+          const FrameworkAnswer(
+            verdict: FrameworkVerdict.yes,
+            modelVerdict: FrameworkVerdict.no,
+            headline: 'Growth is stalling',
+            explanation: '',
+          ).toJson(),
+        ),
+        sources: const [],
+      );
+
+      final viewModel = FrameworkScoresViewModel();
+      addTearDown(viewModel.dispose);
+      await until(() => viewModel.scoreFor(_appleCik) != null);
+
+      var score = viewModel.scoreFor(_appleCik)!;
+      expect(score.verdicts[FrameworkQuestion.cash], FrameworkVerdict.yes);
+      expect(score.verdicts[FrameworkQuestion.growth], FrameworkVerdict.no);
+      // No price on file: unclear, not the yes filed at the old one.
+      expect(
+        score.verdicts[FrameworkQuestion.timing],
+        FrameworkVerdict.unclear,
+      );
+
+      // Far above the band: timing moves with the price, without a run.
+      await GetIt.I.get<PriceRepo>().save(_appleCik, Quote.entered(1000));
+      await viewModel.reloadFigures();
+      score = viewModel.scoreFor(_appleCik)!;
+      expect(score.verdicts[FrameworkQuestion.timing], FrameworkVerdict.no);
+    },
+  );
 
   test('colours a score on a scale between the outcome colours', () {
     final repo = ThemeRepo();
@@ -182,18 +238,20 @@ void main() {
     });
 
     await tester.pumpWidget(const PickStockApp());
-    // The stored answers are read in real time, outside the fake clock.
-    for (var turn = 0; turn < 5; turn++) {
+    final gauge = find.byKey(frameworkGaugeKey(_appleCik));
+    // The stored answers and the figures they are settled against are read
+    // in real time, outside the fake clock.
+    for (var turn = 0; turn < 40 && gauge.evaluate().isEmpty; turn++) {
       await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 30)),
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
       );
       await tester.pump(const Duration(milliseconds: 100));
     }
     await tester.pumpAndSettle();
 
-    final gauge = find.byKey(frameworkGaugeKey(_appleCik));
     expect(gauge, findsOneWidget);
-    expect(tester.widget<FrameworkGauge>(gauge).score.satisfied, 4);
+    // The four answered, and cash, which the filings settle as a yes.
+    expect(tester.widget<FrameworkGauge>(gauge).score.satisfied, 5);
     // Asked nothing, so it keeps its figure.
     expect(find.byKey(frameworkGaugeKey(_microsoftCik)), findsNothing);
   });

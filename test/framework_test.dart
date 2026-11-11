@@ -195,7 +195,7 @@ void main() {
     );
     expect(find.text("The model's research"), findsWidgets);
 
-    // Filed as settled, so the tile counts what the report shows.
+    // Filed as settled, with the model's own verdict kept beside it.
     final notes = await GetIt.I.get<ResearchNoteRepo>().bodiesOfKind(
       FrameworkQuestion.cash.noteKind,
     );
@@ -317,6 +317,27 @@ void main() {
 
     expect(frameworkTask().state, ResearchTaskState.done);
     expect(find.text('Watchlist candidate'), findsOneWidget);
+  });
+
+  testWidgets('a run the model cannot go on with still files what needs no '
+      'model, so the tile has the verdicts the report shows', (tester) async {
+    research
+      ..failure = ResearchFailure.modelStalled
+      ..responsive = false;
+    await openFramework(tester);
+    await run(tester);
+
+    // Stopped at growth, the first question; timing is the price against
+    // the band and is on file all the same.
+    expect(research.screened, hasLength(1));
+    final notes = await tester.runAsync(
+      () => GetIt.I.get<ResearchNoteRepo>().bodiesOfKind(
+        FrameworkQuestion.timing.noteKind,
+      ),
+    );
+    expect(notes!.single.body, contains('"verdict":"yes"'));
+    GetIt.I.get<ResearchQueue>().remove(frameworkTask().id);
+    await pumpFrames(tester);
   });
 
   testWidgets('a rate-limited search waits, then tries again', (tester) async {

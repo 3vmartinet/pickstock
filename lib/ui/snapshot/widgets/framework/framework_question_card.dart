@@ -208,15 +208,17 @@ class _Heading extends StatelessWidget {
 /// What the filings settled, and why, with the model's own reading where it
 /// came out differently.
 class _FilingsLine extends StatelessWidget {
-  const _FilingsLine({required this.reading, required this.modelVerdict});
+  const _FilingsLine({required this.reading, required this.disagreed});
 
   final FilingsReading reading;
-  final FrameworkVerdict? modelVerdict;
+
+  /// The model's own verdict where it differs from [reading]'s, or `null`.
+  final FrameworkVerdict? disagreed;
 
   @override
   Widget build(BuildContext context) {
     final strings = context.strings;
-    final disagreed = modelVerdict;
+    final disagreed = this.disagreed;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: ThemeRepo.spaceXSmall,
@@ -337,9 +339,14 @@ class _Reading extends StatelessWidget {
         : null;
 
     final filings = viewModel.filingsReading(question);
+    // Against the filings as they read now, not as they read when the answer
+    // was filed: a newer year may have come round to the model, or away.
     final filingsLine = filings == null
         ? null
-        : _FilingsLine(reading: filings, modelVerdict: answer?.modelVerdict);
+        : _FilingsLine(
+            reading: filings,
+            disagreed: viewModel.frameworkModelDisagreement(question),
+          );
 
     // Timing is the price against the band, which the filings settle on
     // their own: there is nothing for the model to research.

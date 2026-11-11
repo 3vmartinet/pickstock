@@ -477,17 +477,36 @@ class SnapshotViewModel extends ChangeNotifier {
   }
 
   /// The verdict [question] stands at: the filings' where they settle it,
-  /// the model's answer otherwise, or `null` where neither has one.
+  /// the model's own answer otherwise, or `null` where neither has one.
   ///
   /// The filings are read live rather than from the note, so a new price or
-  /// a new year moves the verdict without asking the model again.
+  /// a new year moves the verdict without asking the model again. Settled
+  /// by [FrameworkScore.verdictOf], as the company's tile is.
   FrameworkVerdict? frameworkVerdict(FrameworkQuestion question) =>
-      filingsReading(question)?.verdict ?? _frameworkAnswers[question]?.verdict;
+      FrameworkScore.verdictOf(
+        question,
+        _frameworkAnswers[question],
+        snapshot: snapshot,
+        valuation: valuation,
+      );
 
-  Map<FrameworkQuestion, FrameworkVerdict> get _verdicts => {
-    for (final question in FrameworkQuestion.values)
-      question: ?frameworkVerdict(question),
-  };
+  /// Where the model read [question] differently from the filings as they
+  /// read now, its own verdict; `null` where the two agree, where the
+  /// filings do not settle it, or where the model was not asked.
+  ///
+  /// Compared live rather than at filing: a new year that brings the
+  /// filings round to the model's reading ends the disagreement, and one
+  /// that moves them away from it starts one.
+  FrameworkVerdict? frameworkModelDisagreement(FrameworkQuestion question) {
+    if (FilingsCheck.settlesAlone(question)) return null;
+    final settled = filingsReading(question)?.verdict;
+    final own = _frameworkAnswers[question]?.ownVerdict;
+    if (settled == null || own == null || own == settled) return null;
+    return own;
+  }
+
+  Map<FrameworkQuestion, FrameworkVerdict> get _verdicts =>
+      frameworkScore.verdicts;
 
   /// The framework's rule, applied to whatever has been answered.
   FrameworkOutcome get frameworkOutcome =>
@@ -495,7 +514,11 @@ class SnapshotViewModel extends ChangeNotifier {
 
   /// The answers so far as a score: what the tab's pie shows, the same as
   /// the company's tile.
-  FrameworkScore get frameworkScore => FrameworkScore(verdicts: _verdicts);
+  FrameworkScore get frameworkScore => FrameworkScore.settle(
+    _frameworkAnswers,
+    snapshot: snapshot,
+    valuation: valuation,
+  );
 
   /// The questions answered no, in the framework's order: what the reader is
   /// told to move on because of.
@@ -669,23 +692,18 @@ class SnapshotViewModel extends ChangeNotifier {
         continue;
       }
       try {
-        // What the filings settle is filed as the verdict, so the tiles —
-        // which read only what is filed — count the same answer the report
-        // shows. The model's research stays as the notes beside it.
+        // What the filings settle is filed as the verdict, with the model's
+        // own kept beside it. Neither the report nor the tiles take the
+        // filed verdict as it stands: both read the filings again as they
+        // are now, and fall back to the model's own where they no longer
+        // settle the question — see [FrameworkScore.verdictOf].
         final settled = FilingsCheck.of(
           question,
           prompts.snapshot,
           valuation: prompts.valuation,
         );
-        final FrameworkAnswer answer;
-        final List<SearchResult> sources;
         if (settled != null && FilingsCheck.settlesAlone(question)) {
-          answer = FrameworkAnswer(
-            verdict: settled.verdict,
-            headline: _settledHeadline,
-            explanation: '',
-          );
-          sources = const [];
+          await _fileSettled(company, question, settled, answered);
         } else {
           final reading = await _researchRepo.screen(
             prompts,
@@ -693,23 +711,13 @@ class SnapshotViewModel extends ChangeNotifier {
             isCancelled: isCancelled,
           );
           if (reading == null || isCancelled()) return;
-          answer = settled == null
-              ? reading.answer
-              : reading.answer.settledAs(settled.verdict);
-          sources = reading.sources;
-        }
-        await _noteRepo.saveAnswer(
-          cik: company.cik,
-          kind: question.noteKind,
-          text: jsonEncode(answer.toJson()),
-          sources: sources,
-        );
-        answered.add(question);
-        if (_isOnScreen(company)) {
-          _frameworkAnswers[question] = answer;
-          _frameworkSources[question] = sources;
-          _frameworkGeneratedAt[question] = DateTime.now();
-          _frameworkFailures.remove(question);
+          await _fileAnswer(
+            company,
+            question,
+            reading.answer.settledAs(settled?.verdict),
+            reading.sources,
+            answered,
+          );
         }
       } on ResearchException catch (error) {
         logWarning(() => 'Framework ${question.name} failed: $error');
@@ -726,6 +734,11 @@ class SnapshotViewModel extends ChangeNotifier {
           }
         }
         if (remaining.length > 1) {
+          // What needs no model is filed all the same: the run is over for
+          // now, and a company whose run stopped at the first question
+          // would otherwise have nothing on file, and no tile to show the
+          // verdicts its report shows.
+          await _fileWhatSettlesAlone(company, prompts, remaining, answered);
           // Only as far as it got: the queue tries the run again from here
           // while the cards say "queued", and once it gives up the task is no
           // longer owed, so the cards say why.
@@ -745,6 +758,76 @@ class SnapshotViewModel extends ChangeNotifier {
     // Told to the queue, so the row says something did not finish rather than
     // claiming a full set of answers.
     if (failure != null) throw failure;
+  }
+
+  /// Files the filings' verdict on each of [questions] they settle without
+  /// the model, for a run the model cannot go on with.
+  ///
+  /// Quietly: a note that cannot be written here is one the next try of the
+  /// run writes, and the failure being told is the model's.
+  Future<void> _fileWhatSettlesAlone(
+    Company company,
+    FrameworkPrompts prompts,
+    List<FrameworkQuestion> questions,
+    Set<FrameworkQuestion> answered,
+  ) async {
+    for (final question in questions) {
+      if (!FilingsCheck.settlesAlone(question)) continue;
+      if (answered.contains(question)) continue;
+      final settled = FilingsCheck.of(
+        question,
+        prompts.snapshot,
+        valuation: prompts.valuation,
+      );
+      if (settled == null) continue;
+      try {
+        await _fileSettled(company, question, settled, answered);
+      } on Object catch (error) {
+        logWarning(() => 'Could not file ${question.name}: $error');
+      }
+    }
+  }
+
+  /// Files [settled] as the answer to a question the model is not asked.
+  Future<void> _fileSettled(
+    Company company,
+    FrameworkQuestion question,
+    FilingsReading settled,
+    Set<FrameworkQuestion> answered,
+  ) => _fileAnswer(
+    company,
+    question,
+    FrameworkAnswer(
+      verdict: settled.verdict,
+      headline: _settledHeadline,
+      explanation: '',
+    ),
+    const [],
+    answered,
+  );
+
+  /// Files [answer] for [company], and puts it on screen if [company] is
+  /// the one being looked at.
+  Future<void> _fileAnswer(
+    Company company,
+    FrameworkQuestion question,
+    FrameworkAnswer answer,
+    List<SearchResult> sources,
+    Set<FrameworkQuestion> answered,
+  ) async {
+    await _noteRepo.saveAnswer(
+      cik: company.cik,
+      kind: question.noteKind,
+      text: jsonEncode(answer.toJson()),
+      sources: sources,
+    );
+    answered.add(question);
+    if (_isOnScreen(company)) {
+      _frameworkAnswers[question] = answer;
+      _frameworkSources[question] = sources;
+      _frameworkGeneratedAt[question] = DateTime.now();
+      _frameworkFailures.remove(question);
+    }
   }
 
   /// What the app already knows, handed over so the model comments on the
@@ -1039,8 +1122,9 @@ class SnapshotViewModel extends ChangeNotifier {
   /// field mysteriously blank.
   QuoteFailure? get quoteFailure => _quoteFailure;
 
-  /// Whether quotes are available at all: without a key the price is typed in,
-  /// and no refresh control is offered.
+  /// Whether quotes are available at all: without a key the price is the
+  /// stored one — a day's close or a typed figure — and no refresh control is
+  /// offered.
   bool get canFetchQuotes => _quoteRepo.isConfigured;
 
   /// The valuation of the loaded company at [pricePerShare], or `null` while
@@ -1062,13 +1146,13 @@ class SnapshotViewModel extends ChangeNotifier {
   }
 
   /// Whether a per-share value can be derived at all: without a share count
-  /// there is nothing to divide the business by.
+  /// there is nothing to divide the business by. Asked of the count the
+  /// valuation itself divides by, so a filer whose only count is in its
+  /// newest 10-Q is valued rather than turned away.
   bool get canBeValued {
     final current = snapshot;
     if (current == null) return false;
-    return (current.company.sharesOutstanding ??
-            current.latest.dilutedShares) !=
-        null;
+    return Valuation.shareCountOf(current) != null;
   }
 
   /// Takes the price as typed, keeping it whether or not it parses so the field

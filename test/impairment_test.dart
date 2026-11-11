@@ -138,11 +138,8 @@ void main() {
     });
 
     test('and in the rules of the questions it misled', () {
-      for (final question in [
-        FrameworkQuestion.cash,
-        FrameworkQuestion.risk,
-        FrameworkQuestion.timing,
-      ]) {
+      // Timing once was a third, until it stopped being asked of the model.
+      for (final question in [FrameworkQuestion.cash, FrameworkQuestion.risk]) {
         expect(
           prompts.promptFor(question).rule,
           contains('write-down'),
@@ -152,6 +149,13 @@ void main() {
       expect(
         prompts.promptFor(FrameworkQuestion.risk).rule,
         contains('not itself one of the three'),
+      );
+    });
+
+    test('and timing has no prompt at all: the model is not asked it', () {
+      expect(
+        () => prompts.promptFor(FrameworkQuestion.timing),
+        throwsArgumentError,
       );
     });
   });

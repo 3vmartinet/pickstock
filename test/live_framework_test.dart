@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pickstock/data/research/filings_check.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
@@ -7,8 +8,11 @@ import 'package:pickstock/repo/research/framework_prompts.dart';
 import 'package:pickstock/repo/research/ollama_repo.dart';
 import 'package:pickstock/repo/research/web_search_repo.dart';
 
-/// Puts all seven framework questions to the model on this machine, for real,
-/// to prove the prompts come back as verdicts the app can read.
+/// Puts the framework's questions to the model on this machine, for real, to
+/// prove the prompts come back as verdicts the app can read.
+///
+/// Six of the seven: timing is the price against the band, which the filings
+/// settle on their own, and the app never asks the model it.
 ///
 /// Skipped unless a key is built in, like the other live tests:
 ///
@@ -27,7 +31,7 @@ final Object? _skip = ollamaApiKey.isEmpty
     ? 'no OLLAMA_API_KEY built in; pass --dart-define-from-file=env.json'
     : null;
 
-/// Seven questions of one to three searches each, on a laptop.
+/// Six questions of one to three searches each, on a laptop.
 const Timeout _runTimeout = Timeout(Duration(minutes: 20));
 
 const double _million = 1000000;
@@ -152,6 +156,9 @@ void main() {
 
       final prompts = FrameworkPrompts(snapshot: _crocs);
       for (final question in FrameworkQuestion.values) {
+        // Settled from the price without a step of the model's, as the app
+        // does: there is no prompt to put.
+        if (FilingsCheck.settlesAlone(question)) continue;
         final started = DateTime.now();
         final reading = await repo.screen(prompts, question);
         final answer = reading!.answer;
@@ -185,10 +192,9 @@ void main() {
         }
         // The case this test exists for: FY2025's 3.7% margin is a write-down,
         // not the business, and the margins question already says so. Risk
-        // and timing quoting it as a collapse contradict it — first one did,
-        // then, once risk was told, the other.
-        if (question == FrameworkQuestion.risk ||
-            question == FrameworkQuestion.timing) {
+        // quoting it as a collapse contradicts it, as it once did — and, once
+        // told, timing did in its place, back when the model was asked that.
+        if (question == FrameworkQuestion.risk) {
           final said = '${answer.headline} ${answer.explanation}'.toLowerCase();
           expect(said, isNot(contains('3.7%')), reason: said);
           // The margin, not any use of the word: "a collapse in demand" is

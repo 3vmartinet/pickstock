@@ -59,7 +59,8 @@ class FrameworkPrompt {
   final bool needsReading;
 }
 
-/// Writes the seven questions for one company.
+/// Writes the framework's questions for one company: all but timing, which
+/// the filings settle against the price without the model.
 ///
 /// Each one is written out rather than templated, for the reason the insights
 /// are: what makes a question worth a minute of the model is that it names the
@@ -77,7 +78,9 @@ class FrameworkPrompts {
 
   final FinancialSnapshot snapshot;
 
-  /// Absent until there is a price, which only the timing question misses.
+  /// Absent until there is a price. The brief then says there is none, and
+  /// nothing the model is asked needs one: timing, the one question about
+  /// the price, is the filings' to settle.
   final Valuation? valuation;
 
   final DateTime today;
@@ -189,9 +192,9 @@ class FrameworkPrompts {
   /// In a year with a write-down the margin quoted is the one before it, and
   /// the margin after it is not written at all. Told in words that the 3.7%
   /// Crocs' FY2025 shows as filed was a write-down, the 12B model went on
-  /// calling it a collapse — on the risk question, then on timing, each in
-  /// turn as the other was told. Shown the figure, it anchors on it; not
-  /// shown it, it cannot. The figure as filed is still there in money.
+  /// calling it a collapse — on one question, then on another once the first
+  /// was told. Shown the figure, it anchors on it; not shown it, it cannot.
+  /// The figure as filed is still there in money.
   String _operatingPart(FiscalYearFigures year) {
     final before = year.operatingIncomeBeforeImpairment;
     if (before == null) {
@@ -225,11 +228,12 @@ class FrameworkPrompts {
     return 'FY${year.fiscalYear}: ${parts.join('; ')}';
   }
 
-  /// All seven, in the framework's order.
-  List<FrameworkPrompt> get all => [
-    for (final question in FrameworkQuestion.values) promptFor(question),
-  ];
-
+  /// What the model is asked about [question].
+  ///
+  /// Six of the seven. Timing is the price against the range the filings
+  /// support, which `FilingsCheck` settles on its own, so the model is never
+  /// asked it and there is no prompt to ask it with: asking for one is a bug,
+  /// and throws an [ArgumentError].
   FrameworkPrompt promptFor(FrameworkQuestion question) => switch (question) {
     FrameworkQuestion.growth => FrameworkPrompt(
       question: question,
@@ -375,28 +379,10 @@ class FrameworkPrompts {
           'investment, the most serious first, each saying how likely it '
           'looks today.',
     ),
-    FrameworkQuestion.timing => FrameworkPrompt(
-      question: question,
-      title: 'Is the timing right?',
-      research:
-          'Question 7 of a stock-screening framework: is now a sensible '
-          'moment to buy $subject? '
-          '${valuation == null ? 'No share price is available in the app, so search for today\'s price too. ' : 'Today\'s price and PickStock\'s valuation are given above. '}'
-          'Search the web for how the share price has moved over the last '
-          'three to twelve months against its 52-week range, the next earnings '
-          'date or other upcoming catalysts, and whether money is moving into '
-          'or out of its sector. Then say in three or four sentences whether '
-          'the timing looks right, and why.',
-      rule:
-          'yes if the price has pulled back or sits below the range the '
-          'filings support, and there is a catalyst ahead; no if the price is '
-          'stretched after a run-up, sits above the range the filings '
-          'support, or a known negative event is ahead; unclear if neither. A '
-          'write-down already reported is not by itself a reason the timing is '
-          'wrong.',
-      points:
-          'two to four pieces of evidence: where the price sits, recent '
-          'moves, and what is coming.',
+    FrameworkQuestion.timing => throw ArgumentError.value(
+      question,
+      'question',
+      'timing is settled by the filings and the price, not asked of the model',
     ),
   };
 

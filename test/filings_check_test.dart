@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pickstock/data/research/filings_check.dart';
 import 'package:pickstock/data/research/framework_question.dart';
+import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
@@ -390,19 +391,103 @@ void main() {
     expect(_check(FrameworkQuestion.management, snapshot), isNull);
   });
 
-  test(
-    'an answer keeps the model\'s verdict where the filings overrule it',
-    () {
-      const answer = FrameworkAnswer(
-        verdict: FrameworkVerdict.no,
-        headline: 'Cash flow is weak',
-        explanation: '',
+  test('an answer keeps the model\'s verdict whatever the filings say', () {
+    const answer = FrameworkAnswer(
+      verdict: FrameworkVerdict.no,
+      headline: 'Cash flow is weak',
+      explanation: '',
+    );
+    final settled = answer.settledAs(FrameworkVerdict.yes);
+    expect(settled.verdict, FrameworkVerdict.yes);
+    expect(settled.modelVerdict, FrameworkVerdict.no);
+    expect(settled.ownVerdict, FrameworkVerdict.no);
+    expect(FrameworkAnswer.fromJson(settled.toJson()), settled);
+    // Kept where the two agree too, and where the filings settle nothing:
+    // the filings can move later, and the model's has to be there to
+    // compare with them.
+    expect(
+      answer.settledAs(FrameworkVerdict.no).modelVerdict,
+      FrameworkVerdict.no,
+    );
+    final unsettled = answer.settledAs(null);
+    expect(unsettled.verdict, FrameworkVerdict.no);
+    expect(unsettled.modelVerdict, FrameworkVerdict.no);
+  });
+
+  test('a note filed before the model\'s verdict was always kept reads its '
+      'verdict as the model\'s', () {
+    // Filed before the filings settled anything, or since, where the model
+    // agreed with them: either way the one verdict on it is the model's.
+    final older = FrameworkAnswer.fromJson({
+      'verdict': 'yes',
+      'headline': 'Revenue up every year',
+    })!;
+    expect(older.modelVerdict, isNull);
+    expect(older.ownVerdict, FrameworkVerdict.yes);
+  });
+
+  group('the verdict a question stands at', () {
+    final growing = _years([100, 110, 121, 133]);
+    final shrinking = _years([133, 121, 110, 100]);
+    // Filed while the filings said yes and the model no.
+    const filed = FrameworkAnswer(
+      verdict: FrameworkVerdict.yes,
+      modelVerdict: FrameworkVerdict.no,
+      headline: 'Growth is stalling',
+      explanation: '',
+    );
+
+    test('is the filings\' as they read now, not as they read when filed', () {
+      expect(
+        FrameworkScore.verdictOf(
+          FrameworkQuestion.growth,
+          filed,
+          snapshot: shrinking,
+        ),
+        FrameworkVerdict.no,
       );
-      final settled = answer.settledAs(FrameworkVerdict.yes);
-      expect(settled.verdict, FrameworkVerdict.yes);
-      expect(settled.modelVerdict, FrameworkVerdict.no);
-      expect(FrameworkAnswer.fromJson(settled.toJson()), settled);
-      expect(answer.settledAs(FrameworkVerdict.no).modelVerdict, isNull);
-    },
-  );
+      expect(
+        FrameworkScore.verdictOf(
+          FrameworkQuestion.growth,
+          filed,
+          snapshot: growing,
+        ),
+        FrameworkVerdict.yes,
+      );
+    });
+
+    test('is the model\'s own where the filings no longer settle it', () {
+      // Too few years to judge growth on: left to the reading, which said no
+      // — not to the filings' yes from the day it was filed.
+      expect(
+        FrameworkScore.verdictOf(
+          FrameworkQuestion.growth,
+          filed,
+          snapshot: _years([100, 110]),
+        ),
+        FrameworkVerdict.no,
+      );
+    });
+
+    test('is the one filed where there are no figures to read', () {
+      expect(
+        FrameworkScore.verdictOf(FrameworkQuestion.growth, filed),
+        FrameworkVerdict.yes,
+      );
+    });
+
+    test('scores every question the filings settle, answered or not', () {
+      final score = FrameworkScore.settle({
+        FrameworkQuestion.moat: filed,
+      }, snapshot: growing);
+      expect(score.verdicts[FrameworkQuestion.moat], FrameworkVerdict.no);
+      expect(score.verdicts[FrameworkQuestion.growth], FrameworkVerdict.yes);
+      // No price, so timing is unclear rather than missing.
+      expect(
+        score.verdicts[FrameworkQuestion.timing],
+        FrameworkVerdict.unclear,
+      );
+      expect(score.verdicts.containsKey(FrameworkQuestion.management), isFalse);
+    });
+  });
 }

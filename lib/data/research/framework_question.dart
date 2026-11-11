@@ -154,23 +154,42 @@ class FrameworkAnswer extends Equatable {
     this.modelVerdict,
   });
 
-  /// The verdict that counts: the filings' where they settle the question,
-  /// the model's otherwise.
+  /// The verdict as it was filed: the filings' where they settled the
+  /// question at the time, the model's otherwise.
+  ///
+  /// Only what was true on the day. The report and the tiles read the
+  /// filings again as they are now, and fall back to [ownVerdict] where they
+  /// no longer settle it — see `FrameworkScore.verdictOf`.
   final FrameworkVerdict verdict;
 
-  /// What the model made of its research, where the filings overruled it —
-  /// kept so the card can say they disagreed. `null` where the model's
-  /// verdict is [verdict], or it was not asked.
+  /// What the model made of its research, filed beside [verdict] whatever
+  /// the filings said, so the card can compare it with the filings as they
+  /// read now. `null` where the model was not asked, and on notes filed
+  /// before it was always kept — read [ownVerdict] rather than this.
   final FrameworkVerdict? modelVerdict;
 
-  /// This answer with [settled] as its verdict, the model's kept beside it
-  /// where the two differ.
-  FrameworkAnswer settledAs(FrameworkVerdict settled) => FrameworkAnswer(
-    verdict: settled,
+  /// What the model itself made of the question.
+  ///
+  /// [modelVerdict] where it was filed. Older notes carry the model's in
+  /// [verdict] instead: those from before the filings settled anything, and
+  /// those from when the model's was only kept where it differed — which
+  /// left it in [verdict] exactly where the two agreed. Where the model was
+  /// never asked — timing, which the filings settle alone — this is the
+  /// filings' verdict, and nothing should read it as the model's.
+  FrameworkVerdict get ownVerdict => modelVerdict ?? verdict;
+
+  /// The model's answer filed with [settled] as its verdict where the
+  /// filings settle the question, and its own verdict kept beside it either
+  /// way.
+  ///
+  /// For the answer as the model gave it, not for one already settled: the
+  /// verdict it carries is taken as the model's.
+  FrameworkAnswer settledAs(FrameworkVerdict? settled) => FrameworkAnswer(
+    verdict: settled ?? verdict,
     headline: headline,
     explanation: explanation,
     points: points,
-    modelVerdict: settled == verdict ? null : verdict,
+    modelVerdict: verdict,
   );
 
   /// The answer in a line, which is what the card leads with.

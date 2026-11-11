@@ -199,7 +199,7 @@ class _TickerTile extends StatelessWidget {
               ],
             ),
           ),
-          _FrameworkRating(company: company),
+          _FrameworkRating(company: company, isSelected: isSelected),
         ],
       ),
     );
@@ -284,10 +284,10 @@ class _PlaceholderTile extends StatelessWidget {
 /// Asks for the company to be priced as the tile is built, which is what
 /// limits the pricing to the tiles actually on screen.
 ///
-/// The selected tile follows the report beside it instead: the report has
-/// the company's own discount rate, where the list makes do with a cached one
-/// or the assumed one, and a tile disagreeing with the tab next to it would
-/// leave the reader wondering which to believe.
+/// The selected tile follows the report beside it instead: the report prices
+/// the company at the quote it has just fetched, where the list makes do with
+/// the stored price or the day's close, and a tile disagreeing with the tab
+/// next to it would leave the reader wondering which to believe.
 class _VerdictMark extends StatelessWidget {
   const _VerdictMark({required this.company, required this.isSelected});
 
@@ -487,16 +487,41 @@ class _WatchlistMarkers extends StatelessWidget {
 /// No ranked figure beside it: the sort still orders the list by one, but
 /// what a company made of the framework says more than a ratio any of them
 /// has.
+///
+/// The selected tile follows the report beside it, as its verdict mark
+/// does: both settle the answers the same way, but the report does it at the
+/// price on screen, which a quote that has just arrived can make newer than
+/// the stored one the list reads.
 class _FrameworkRating extends StatelessWidget {
-  const _FrameworkRating({required this.company});
+  const _FrameworkRating({required this.company, required this.isSelected});
 
   final Company company;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
-    final score = context.select<FrameworkScoresViewModel, FrameworkScore?>(
+    final listed = context.select<FrameworkScoresViewModel, FrameworkScore?>(
       (viewModel) => viewModel.scoreFor(company.cik),
     );
+    // Only once the report holds this company's figures and its answers on
+    // file: while it loads it still holds the last company's answers, and
+    // before the answers are back the score would be the filings alone, for
+    // a company that may never have been asked.
+    final reported = context.select<SnapshotViewModel, FrameworkScore?>(
+      (viewModel) =>
+          isSelected &&
+              viewModel.snapshot?.company.cik == company.cik &&
+              viewModel.hasFrameworkAnswers
+          ? viewModel.frameworkScore
+          : null,
+    );
+    // Kept by the list too, so the tile still says the same once another
+    // company is selected. Not from inside this build, which may not notify.
+    if (reported != null && reported != listed) {
+      final scores = context.read<FrameworkScoresViewModel>();
+      scheduleMicrotask(() => scores.adopt(company.cik, reported));
+    }
+    final score = reported ?? listed;
     if (score == null) return const SizedBox.shrink();
     return FrameworkGauge(key: frameworkGaugeKey(company.cik), score: score);
   }
