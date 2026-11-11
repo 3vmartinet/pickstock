@@ -62,6 +62,37 @@ void main() {
     expect((await prices.priceFor(_nvidiaCik))?.pricePerShare, 180);
   });
 
+  test('leaves a quote newer than the close alone', () async {
+    // The closes are for 9 November. Apple was quoted live the next morning,
+    // when a report was opened; NVIDIA during the 9th itself, which its close
+    // is newer than.
+    await boot({'AAPL': 250, 'NVDA': 180});
+    final prices = GetIt.I.get<PriceRepo>();
+    final asked = DateTime.utc(2026, 11, 10, 15);
+    await prices.save(
+      _appleCik,
+      Quote(pricePerShare: 262, asOf: asked, isQuoted: true, fetchedAt: asked),
+    );
+    await prices.save(
+      _nvidiaCik,
+      Quote(
+        pricePerShare: 175,
+        asOf: DateTime.utc(2026, 11, 9, 15),
+        isQuoted: true,
+        fetchedAt: DateTime.utc(2026, 11, 9, 15),
+      ),
+    );
+
+    await GetIt.I.get<BulkPriceRefresh>().refreshIfDue();
+
+    final apple = await prices.priceFor(_appleCik);
+    expect(apple?.pricePerShare, 262);
+    // Nor is it stamped as just asked for, which would hold it back from
+    // the next quote for longer than it deserves.
+    expect(apple?.fetchedAt?.isAtSameMomentAs(asked), isTrue);
+    expect((await prices.priceFor(_nvidiaCik))?.pricePerShare, 180);
+  });
+
   test('asks once a day, not on every launch', () async {
     await boot({'AAPL': 250});
     final refresh = GetIt.I.get<BulkPriceRefresh>();
@@ -80,6 +111,57 @@ void main() {
       now: () => DateTime.now().add(bulkPriceFreshness * 2),
     );
     await later.refreshIfDue();
+    expect(closes.fetched, 2);
+  });
+
+  test('after an ingest, asks again inside the window', () async {
+    // The launch check stored closes against the filers there were then; the
+    // ingest that follows adds filers with no price at all.
+    await boot({'AAPL': 250});
+    final refresh = GetIt.I.get<BulkPriceRefresh>();
+    await refresh.refreshIfDue();
+    await refresh.refreshIfDue(force: true);
+    expect(closes.fetched, 2);
+  });
+
+  test(
+    'a forced refresh asked for during a check inside the window still runs',
+    () async {
+      // The hourly check finds the closes fresh and asks nothing, but an ingest
+      // finished while it was reading the settings and asked for a forced
+      // refresh: that one must not be dropped.
+      await boot({'AAPL': 250});
+      final refresh = GetIt.I.get<BulkPriceRefresh>();
+      await refresh.refreshIfDue();
+      expect(closes.fetched, 1);
+
+      final check = refresh.refreshIfDue();
+      final forced = refresh.refreshIfDue(force: true);
+      await Future.wait([check, forced]);
+      expect(closes.fetched, 2);
+    },
+  );
+
+  test('a session left open checks again on its own', () async {
+    await boot({'AAPL': 250});
+    BulkPriceRefresh.isRecheckEnabled = true;
+    addTearDown(() => BulkPriceRefresh.isRecheckEnabled = false);
+    var now = DateTime.now();
+    final refresh = BulkPriceRefresh(
+      now: () => now,
+      recheck: const Duration(milliseconds: 50),
+    );
+    addTearDown(refresh.dispose);
+
+    await refresh.refreshIfDue();
+    expect(closes.fetched, 1);
+    // Inside the window, the checks it makes ask nothing.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(closes.fetched, 1);
+
+    // Overnight, with nobody launching anything, the next check asks.
+    now = now.add(bulkPriceFreshness * 2);
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     expect(closes.fetched, 2);
   });
 

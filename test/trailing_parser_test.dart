@@ -101,7 +101,6 @@ void main() {
     expect(trailing.periodEnd, DateTime(2026, 9, 30));
     expect(trailing.fiscalYear, 2026);
     expect(trailing.quarter, 3);
-    expect(trailing.operatingCashFlow, 120);
     expect(trailing.revenue, 1150);
   });
 
@@ -125,7 +124,8 @@ void main() {
       }),
     )!;
     expect(trailing.revenue, isNull);
-    expect(trailing.operatingCashFlow, 120);
+    // The rest of the quarter still stands, dated by the operating cash flow.
+    expect(trailing.periodEnd, DateTime(2026, 9, 30));
   });
 
   test('takes the larger of contract and total revenue, as a year does', () {

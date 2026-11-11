@@ -2650,51 +2650,6 @@ class $TrailingYearsTable extends TrailingYears
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _netIncomeMeta = const VerificationMeta(
-    'netIncome',
-  );
-  @override
-  late final GeneratedColumn<double> netIncome = GeneratedColumn<double>(
-    'net_income',
-    aliasedName,
-    true,
-    type: DriftSqlType.double,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _operatingCashFlowMeta = const VerificationMeta(
-    'operatingCashFlow',
-  );
-  @override
-  late final GeneratedColumn<double> operatingCashFlow =
-      GeneratedColumn<double>(
-        'operating_cash_flow',
-        aliasedName,
-        true,
-        type: DriftSqlType.double,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _capitalExpenditureMeta =
-      const VerificationMeta('capitalExpenditure');
-  @override
-  late final GeneratedColumn<double> capitalExpenditure =
-      GeneratedColumn<double>(
-        'capital_expenditure',
-        aliasedName,
-        true,
-        type: DriftSqlType.double,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _shareBasedCompensationMeta =
-      const VerificationMeta('shareBasedCompensation');
-  @override
-  late final GeneratedColumn<double> shareBasedCompensation =
-      GeneratedColumn<double>(
-        'share_based_compensation',
-        aliasedName,
-        true,
-        type: DriftSqlType.double,
-        requiredDuringInsert: false,
-      );
   static const VerificationMeta _totalDebtMeta = const VerificationMeta(
     'totalDebt',
   );
@@ -2733,10 +2688,6 @@ class $TrailingYearsTable extends TrailingYears
     fiscalYear,
     quarter,
     revenue,
-    netIncome,
-    operatingCashFlow,
-    capitalExpenditure,
-    shareBasedCompensation,
     totalDebt,
     cash,
     dilutedShares,
@@ -2791,39 +2742,6 @@ class $TrailingYearsTable extends TrailingYears
         revenue.isAcceptableOrUnknown(data['revenue']!, _revenueMeta),
       );
     }
-    if (data.containsKey('net_income')) {
-      context.handle(
-        _netIncomeMeta,
-        netIncome.isAcceptableOrUnknown(data['net_income']!, _netIncomeMeta),
-      );
-    }
-    if (data.containsKey('operating_cash_flow')) {
-      context.handle(
-        _operatingCashFlowMeta,
-        operatingCashFlow.isAcceptableOrUnknown(
-          data['operating_cash_flow']!,
-          _operatingCashFlowMeta,
-        ),
-      );
-    }
-    if (data.containsKey('capital_expenditure')) {
-      context.handle(
-        _capitalExpenditureMeta,
-        capitalExpenditure.isAcceptableOrUnknown(
-          data['capital_expenditure']!,
-          _capitalExpenditureMeta,
-        ),
-      );
-    }
-    if (data.containsKey('share_based_compensation')) {
-      context.handle(
-        _shareBasedCompensationMeta,
-        shareBasedCompensation.isAcceptableOrUnknown(
-          data['share_based_compensation']!,
-          _shareBasedCompensationMeta,
-        ),
-      );
-    }
     if (data.containsKey('total_debt')) {
       context.handle(
         _totalDebtMeta,
@@ -2874,22 +2792,6 @@ class $TrailingYearsTable extends TrailingYears
         DriftSqlType.double,
         data['${effectivePrefix}revenue'],
       ),
-      netIncome: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}net_income'],
-      ),
-      operatingCashFlow: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}operating_cash_flow'],
-      ),
-      capitalExpenditure: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}capital_expenditure'],
-      ),
-      shareBasedCompensation: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}share_based_compensation'],
-      ),
       totalDebt: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}total_debt'],
@@ -2917,10 +2819,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
   final int fiscalYear;
   final int quarter;
   final double? revenue;
-  final double? netIncome;
-  final double? operatingCashFlow;
-  final double? capitalExpenditure;
-  final double? shareBasedCompensation;
   final double? totalDebt;
   final double? cash;
   final double? dilutedShares;
@@ -2930,10 +2828,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
     required this.fiscalYear,
     required this.quarter,
     this.revenue,
-    this.netIncome,
-    this.operatingCashFlow,
-    this.capitalExpenditure,
-    this.shareBasedCompensation,
     this.totalDebt,
     this.cash,
     this.dilutedShares,
@@ -2947,20 +2841,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
     map['quarter'] = Variable<int>(quarter);
     if (!nullToAbsent || revenue != null) {
       map['revenue'] = Variable<double>(revenue);
-    }
-    if (!nullToAbsent || netIncome != null) {
-      map['net_income'] = Variable<double>(netIncome);
-    }
-    if (!nullToAbsent || operatingCashFlow != null) {
-      map['operating_cash_flow'] = Variable<double>(operatingCashFlow);
-    }
-    if (!nullToAbsent || capitalExpenditure != null) {
-      map['capital_expenditure'] = Variable<double>(capitalExpenditure);
-    }
-    if (!nullToAbsent || shareBasedCompensation != null) {
-      map['share_based_compensation'] = Variable<double>(
-        shareBasedCompensation,
-      );
     }
     if (!nullToAbsent || totalDebt != null) {
       map['total_debt'] = Variable<double>(totalDebt);
@@ -2983,18 +2863,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
       revenue: revenue == null && nullToAbsent
           ? const Value.absent()
           : Value(revenue),
-      netIncome: netIncome == null && nullToAbsent
-          ? const Value.absent()
-          : Value(netIncome),
-      operatingCashFlow: operatingCashFlow == null && nullToAbsent
-          ? const Value.absent()
-          : Value(operatingCashFlow),
-      capitalExpenditure: capitalExpenditure == null && nullToAbsent
-          ? const Value.absent()
-          : Value(capitalExpenditure),
-      shareBasedCompensation: shareBasedCompensation == null && nullToAbsent
-          ? const Value.absent()
-          : Value(shareBasedCompensation),
       totalDebt: totalDebt == null && nullToAbsent
           ? const Value.absent()
           : Value(totalDebt),
@@ -3016,16 +2884,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
       fiscalYear: serializer.fromJson<int>(json['fiscalYear']),
       quarter: serializer.fromJson<int>(json['quarter']),
       revenue: serializer.fromJson<double?>(json['revenue']),
-      netIncome: serializer.fromJson<double?>(json['netIncome']),
-      operatingCashFlow: serializer.fromJson<double?>(
-        json['operatingCashFlow'],
-      ),
-      capitalExpenditure: serializer.fromJson<double?>(
-        json['capitalExpenditure'],
-      ),
-      shareBasedCompensation: serializer.fromJson<double?>(
-        json['shareBasedCompensation'],
-      ),
       totalDebt: serializer.fromJson<double?>(json['totalDebt']),
       cash: serializer.fromJson<double?>(json['cash']),
       dilutedShares: serializer.fromJson<double?>(json['dilutedShares']),
@@ -3040,12 +2898,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
       'fiscalYear': serializer.toJson<int>(fiscalYear),
       'quarter': serializer.toJson<int>(quarter),
       'revenue': serializer.toJson<double?>(revenue),
-      'netIncome': serializer.toJson<double?>(netIncome),
-      'operatingCashFlow': serializer.toJson<double?>(operatingCashFlow),
-      'capitalExpenditure': serializer.toJson<double?>(capitalExpenditure),
-      'shareBasedCompensation': serializer.toJson<double?>(
-        shareBasedCompensation,
-      ),
       'totalDebt': serializer.toJson<double?>(totalDebt),
       'cash': serializer.toJson<double?>(cash),
       'dilutedShares': serializer.toJson<double?>(dilutedShares),
@@ -3058,10 +2910,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
     int? fiscalYear,
     int? quarter,
     Value<double?> revenue = const Value.absent(),
-    Value<double?> netIncome = const Value.absent(),
-    Value<double?> operatingCashFlow = const Value.absent(),
-    Value<double?> capitalExpenditure = const Value.absent(),
-    Value<double?> shareBasedCompensation = const Value.absent(),
     Value<double?> totalDebt = const Value.absent(),
     Value<double?> cash = const Value.absent(),
     Value<double?> dilutedShares = const Value.absent(),
@@ -3071,16 +2919,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
     fiscalYear: fiscalYear ?? this.fiscalYear,
     quarter: quarter ?? this.quarter,
     revenue: revenue.present ? revenue.value : this.revenue,
-    netIncome: netIncome.present ? netIncome.value : this.netIncome,
-    operatingCashFlow: operatingCashFlow.present
-        ? operatingCashFlow.value
-        : this.operatingCashFlow,
-    capitalExpenditure: capitalExpenditure.present
-        ? capitalExpenditure.value
-        : this.capitalExpenditure,
-    shareBasedCompensation: shareBasedCompensation.present
-        ? shareBasedCompensation.value
-        : this.shareBasedCompensation,
     totalDebt: totalDebt.present ? totalDebt.value : this.totalDebt,
     cash: cash.present ? cash.value : this.cash,
     dilutedShares: dilutedShares.present
@@ -3096,16 +2934,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
           : this.fiscalYear,
       quarter: data.quarter.present ? data.quarter.value : this.quarter,
       revenue: data.revenue.present ? data.revenue.value : this.revenue,
-      netIncome: data.netIncome.present ? data.netIncome.value : this.netIncome,
-      operatingCashFlow: data.operatingCashFlow.present
-          ? data.operatingCashFlow.value
-          : this.operatingCashFlow,
-      capitalExpenditure: data.capitalExpenditure.present
-          ? data.capitalExpenditure.value
-          : this.capitalExpenditure,
-      shareBasedCompensation: data.shareBasedCompensation.present
-          ? data.shareBasedCompensation.value
-          : this.shareBasedCompensation,
       totalDebt: data.totalDebt.present ? data.totalDebt.value : this.totalDebt,
       cash: data.cash.present ? data.cash.value : this.cash,
       dilutedShares: data.dilutedShares.present
@@ -3122,10 +2950,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
           ..write('fiscalYear: $fiscalYear, ')
           ..write('quarter: $quarter, ')
           ..write('revenue: $revenue, ')
-          ..write('netIncome: $netIncome, ')
-          ..write('operatingCashFlow: $operatingCashFlow, ')
-          ..write('capitalExpenditure: $capitalExpenditure, ')
-          ..write('shareBasedCompensation: $shareBasedCompensation, ')
           ..write('totalDebt: $totalDebt, ')
           ..write('cash: $cash, ')
           ..write('dilutedShares: $dilutedShares')
@@ -3140,10 +2964,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
     fiscalYear,
     quarter,
     revenue,
-    netIncome,
-    operatingCashFlow,
-    capitalExpenditure,
-    shareBasedCompensation,
     totalDebt,
     cash,
     dilutedShares,
@@ -3157,10 +2977,6 @@ class TrailingYearRow extends DataClass implements Insertable<TrailingYearRow> {
           other.fiscalYear == this.fiscalYear &&
           other.quarter == this.quarter &&
           other.revenue == this.revenue &&
-          other.netIncome == this.netIncome &&
-          other.operatingCashFlow == this.operatingCashFlow &&
-          other.capitalExpenditure == this.capitalExpenditure &&
-          other.shareBasedCompensation == this.shareBasedCompensation &&
           other.totalDebt == this.totalDebt &&
           other.cash == this.cash &&
           other.dilutedShares == this.dilutedShares);
@@ -3172,10 +2988,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
   final Value<int> fiscalYear;
   final Value<int> quarter;
   final Value<double?> revenue;
-  final Value<double?> netIncome;
-  final Value<double?> operatingCashFlow;
-  final Value<double?> capitalExpenditure;
-  final Value<double?> shareBasedCompensation;
   final Value<double?> totalDebt;
   final Value<double?> cash;
   final Value<double?> dilutedShares;
@@ -3186,10 +2998,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
     this.fiscalYear = const Value.absent(),
     this.quarter = const Value.absent(),
     this.revenue = const Value.absent(),
-    this.netIncome = const Value.absent(),
-    this.operatingCashFlow = const Value.absent(),
-    this.capitalExpenditure = const Value.absent(),
-    this.shareBasedCompensation = const Value.absent(),
     this.totalDebt = const Value.absent(),
     this.cash = const Value.absent(),
     this.dilutedShares = const Value.absent(),
@@ -3201,10 +3009,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
     required int fiscalYear,
     required int quarter,
     this.revenue = const Value.absent(),
-    this.netIncome = const Value.absent(),
-    this.operatingCashFlow = const Value.absent(),
-    this.capitalExpenditure = const Value.absent(),
-    this.shareBasedCompensation = const Value.absent(),
     this.totalDebt = const Value.absent(),
     this.cash = const Value.absent(),
     this.dilutedShares = const Value.absent(),
@@ -3219,10 +3023,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
     Expression<int>? fiscalYear,
     Expression<int>? quarter,
     Expression<double>? revenue,
-    Expression<double>? netIncome,
-    Expression<double>? operatingCashFlow,
-    Expression<double>? capitalExpenditure,
-    Expression<double>? shareBasedCompensation,
     Expression<double>? totalDebt,
     Expression<double>? cash,
     Expression<double>? dilutedShares,
@@ -3234,11 +3034,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
       if (fiscalYear != null) 'fiscal_year': fiscalYear,
       if (quarter != null) 'quarter': quarter,
       if (revenue != null) 'revenue': revenue,
-      if (netIncome != null) 'net_income': netIncome,
-      if (operatingCashFlow != null) 'operating_cash_flow': operatingCashFlow,
-      if (capitalExpenditure != null) 'capital_expenditure': capitalExpenditure,
-      if (shareBasedCompensation != null)
-        'share_based_compensation': shareBasedCompensation,
       if (totalDebt != null) 'total_debt': totalDebt,
       if (cash != null) 'cash': cash,
       if (dilutedShares != null) 'diluted_shares': dilutedShares,
@@ -3252,10 +3047,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
     Value<int>? fiscalYear,
     Value<int>? quarter,
     Value<double?>? revenue,
-    Value<double?>? netIncome,
-    Value<double?>? operatingCashFlow,
-    Value<double?>? capitalExpenditure,
-    Value<double?>? shareBasedCompensation,
     Value<double?>? totalDebt,
     Value<double?>? cash,
     Value<double?>? dilutedShares,
@@ -3267,11 +3058,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
       fiscalYear: fiscalYear ?? this.fiscalYear,
       quarter: quarter ?? this.quarter,
       revenue: revenue ?? this.revenue,
-      netIncome: netIncome ?? this.netIncome,
-      operatingCashFlow: operatingCashFlow ?? this.operatingCashFlow,
-      capitalExpenditure: capitalExpenditure ?? this.capitalExpenditure,
-      shareBasedCompensation:
-          shareBasedCompensation ?? this.shareBasedCompensation,
       totalDebt: totalDebt ?? this.totalDebt,
       cash: cash ?? this.cash,
       dilutedShares: dilutedShares ?? this.dilutedShares,
@@ -3297,20 +3083,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
     if (revenue.present) {
       map['revenue'] = Variable<double>(revenue.value);
     }
-    if (netIncome.present) {
-      map['net_income'] = Variable<double>(netIncome.value);
-    }
-    if (operatingCashFlow.present) {
-      map['operating_cash_flow'] = Variable<double>(operatingCashFlow.value);
-    }
-    if (capitalExpenditure.present) {
-      map['capital_expenditure'] = Variable<double>(capitalExpenditure.value);
-    }
-    if (shareBasedCompensation.present) {
-      map['share_based_compensation'] = Variable<double>(
-        shareBasedCompensation.value,
-      );
-    }
     if (totalDebt.present) {
       map['total_debt'] = Variable<double>(totalDebt.value);
     }
@@ -3334,10 +3106,6 @@ class TrailingYearsCompanion extends UpdateCompanion<TrailingYearRow> {
           ..write('fiscalYear: $fiscalYear, ')
           ..write('quarter: $quarter, ')
           ..write('revenue: $revenue, ')
-          ..write('netIncome: $netIncome, ')
-          ..write('operatingCashFlow: $operatingCashFlow, ')
-          ..write('capitalExpenditure: $capitalExpenditure, ')
-          ..write('shareBasedCompensation: $shareBasedCompensation, ')
           ..write('totalDebt: $totalDebt, ')
           ..write('cash: $cash, ')
           ..write('dilutedShares: $dilutedShares, ')
@@ -8453,10 +8221,6 @@ typedef $$TrailingYearsTableCreateCompanionBuilder =
       required int fiscalYear,
       required int quarter,
       Value<double?> revenue,
-      Value<double?> netIncome,
-      Value<double?> operatingCashFlow,
-      Value<double?> capitalExpenditure,
-      Value<double?> shareBasedCompensation,
       Value<double?> totalDebt,
       Value<double?> cash,
       Value<double?> dilutedShares,
@@ -8469,10 +8233,6 @@ typedef $$TrailingYearsTableUpdateCompanionBuilder =
       Value<int> fiscalYear,
       Value<int> quarter,
       Value<double?> revenue,
-      Value<double?> netIncome,
-      Value<double?> operatingCashFlow,
-      Value<double?> capitalExpenditure,
-      Value<double?> shareBasedCompensation,
       Value<double?> totalDebt,
       Value<double?> cash,
       Value<double?> dilutedShares,
@@ -8532,26 +8292,6 @@ class $$TrailingYearsTableFilterComposer
 
   ColumnFilters<double> get revenue => $composableBuilder(
     column: $table.revenue,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get netIncome => $composableBuilder(
-    column: $table.netIncome,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get operatingCashFlow => $composableBuilder(
-    column: $table.operatingCashFlow,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get capitalExpenditure => $composableBuilder(
-    column: $table.capitalExpenditure,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get shareBasedCompensation => $composableBuilder(
-    column: $table.shareBasedCompensation,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8623,26 +8363,6 @@ class $$TrailingYearsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get netIncome => $composableBuilder(
-    column: $table.netIncome,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get operatingCashFlow => $composableBuilder(
-    column: $table.operatingCashFlow,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get capitalExpenditure => $composableBuilder(
-    column: $table.capitalExpenditure,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get shareBasedCompensation => $composableBuilder(
-    column: $table.shareBasedCompensation,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<double> get totalDebt => $composableBuilder(
     column: $table.totalDebt,
     builder: (column) => ColumnOrderings(column),
@@ -8704,24 +8424,6 @@ class $$TrailingYearsTableAnnotationComposer
 
   GeneratedColumn<double> get revenue =>
       $composableBuilder(column: $table.revenue, builder: (column) => column);
-
-  GeneratedColumn<double> get netIncome =>
-      $composableBuilder(column: $table.netIncome, builder: (column) => column);
-
-  GeneratedColumn<double> get operatingCashFlow => $composableBuilder(
-    column: $table.operatingCashFlow,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get capitalExpenditure => $composableBuilder(
-    column: $table.capitalExpenditure,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get shareBasedCompensation => $composableBuilder(
-    column: $table.shareBasedCompensation,
-    builder: (column) => column,
-  );
 
   GeneratedColumn<double> get totalDebt =>
       $composableBuilder(column: $table.totalDebt, builder: (column) => column);
@@ -8791,10 +8493,6 @@ class $$TrailingYearsTableTableManager
                 Value<int> fiscalYear = const Value.absent(),
                 Value<int> quarter = const Value.absent(),
                 Value<double?> revenue = const Value.absent(),
-                Value<double?> netIncome = const Value.absent(),
-                Value<double?> operatingCashFlow = const Value.absent(),
-                Value<double?> capitalExpenditure = const Value.absent(),
-                Value<double?> shareBasedCompensation = const Value.absent(),
                 Value<double?> totalDebt = const Value.absent(),
                 Value<double?> cash = const Value.absent(),
                 Value<double?> dilutedShares = const Value.absent(),
@@ -8805,10 +8503,6 @@ class $$TrailingYearsTableTableManager
                 fiscalYear: fiscalYear,
                 quarter: quarter,
                 revenue: revenue,
-                netIncome: netIncome,
-                operatingCashFlow: operatingCashFlow,
-                capitalExpenditure: capitalExpenditure,
-                shareBasedCompensation: shareBasedCompensation,
                 totalDebt: totalDebt,
                 cash: cash,
                 dilutedShares: dilutedShares,
@@ -8821,10 +8515,6 @@ class $$TrailingYearsTableTableManager
                 required int fiscalYear,
                 required int quarter,
                 Value<double?> revenue = const Value.absent(),
-                Value<double?> netIncome = const Value.absent(),
-                Value<double?> operatingCashFlow = const Value.absent(),
-                Value<double?> capitalExpenditure = const Value.absent(),
-                Value<double?> shareBasedCompensation = const Value.absent(),
                 Value<double?> totalDebt = const Value.absent(),
                 Value<double?> cash = const Value.absent(),
                 Value<double?> dilutedShares = const Value.absent(),
@@ -8835,10 +8525,6 @@ class $$TrailingYearsTableTableManager
                 fiscalYear: fiscalYear,
                 quarter: quarter,
                 revenue: revenue,
-                netIncome: netIncome,
-                operatingCashFlow: operatingCashFlow,
-                capitalExpenditure: capitalExpenditure,
-                shareBasedCompensation: shareBasedCompensation,
                 totalDebt: totalDebt,
                 cash: cash,
                 dilutedShares: dilutedShares,

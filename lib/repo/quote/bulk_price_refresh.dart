@@ -18,6 +18,10 @@ TickerDirectoryRepo get _directory => GetIt.I.get<TickerDirectoryRepo>();
 /// no request at all.
 const Duration bulkPriceFreshness = Duration(hours: 6);
 
+/// How often a session left open looks at whether [bulkPriceFreshness] has
+/// run out. A look inside the window is one settings read and no request.
+const Duration bulkPriceRecheck = Duration(hours: 1);
+
 /// Where the last check is recorded, in the settings table.
 const String bulkPricesCheckedKey = 'bulkPrices.checkedAt';
 const String bulkPricesTradingDayKey = 'bulkPrices.tradingDay';
@@ -30,16 +34,34 @@ const String bulkPricesTradingDayKey = 'bulkPrices.tradingDay';
 /// them without a quote each, the scan values from them without waiting on
 /// the budget, and the largest-by-value rankings are current for every
 /// company rather than the handful quoted so far. A price the reader typed
-/// is theirs and is left alone.
+/// is theirs and is left alone, and so is a quote newer than the close —
+/// the live price a report asked for this morning.
 ///
 /// A [ChangeNotifier] so the list can hear that every price moved and judge
 /// its tiles again, rather than keeping yesterday's verdicts until relaunch.
 class BulkPriceRefresh extends ChangeNotifier {
-  BulkPriceRefresh({DateTime Function()? now}) : _now = now ?? DateTime.now;
+  BulkPriceRefresh({
+    DateTime Function()? now,
+    Duration recheck = bulkPriceRecheck,
+  }) : _now = now ?? DateTime.now,
+       _recheckEvery = recheck;
+
+  /// Whether a session left open checks again on its own, every
+  /// [bulkPriceRecheck]. Off in tests: a timer left running behind a widget
+  /// test fails it, and a test of the check asks for one itself.
+  static bool isRecheckEnabled = true;
 
   final DateTime Function() _now;
+  final Duration _recheckEvery;
 
   bool _isRunning = false;
+
+  /// Asked for while a check was already under way, past the window. That
+  /// check may have read the directory before an ingest replaced it, so one
+  /// more follows it.
+  bool _isForcePending = false;
+
+  Timer? _recheck;
 
   /// Whether a bulk source is built in at all.
   bool get isConfigured => _bulkPrices.isConfigured;
@@ -51,10 +73,21 @@ class BulkPriceRefresh extends ChangeNotifier {
   DateTime? get tradingDay => _tradingDay;
 
   /// Fetches and stores the latest closes unless that was done within
-  /// [bulkPriceFreshness]. Safe to call on every launch and after every
-  /// ingest; it does nothing without a key.
-  Future<void> refreshIfDue() async {
-    if (!isConfigured || _isRunning) return;
+  /// [bulkPriceFreshness]. Safe to call on every launch; it does nothing
+  /// without a key. The first call also starts the session's own check every
+  /// [bulkPriceRecheck], so a session left open overnight picks up the new
+  /// day without a relaunch.
+  ///
+  /// [force] skips the window, for after an ingest: the closes checked at
+  /// launch were stored against the filers the directory had then, and the
+  /// ones it has just gained have no price at all.
+  Future<void> refreshIfDue({bool force = false}) async {
+    if (!isConfigured) return;
+    _scheduleRecheck();
+    if (_isRunning) {
+      if (force) _isForcePending = true;
+      return;
+    }
     _isRunning = true;
     try {
       final settings = await _database.allSettings();
@@ -66,19 +99,29 @@ class BulkPriceRefresh extends ChangeNotifier {
           isUtc: true,
         );
       }
-      if (checked != null &&
+      final isFresh =
+          checked != null &&
           _now()
                   .difference(DateTime.fromMillisecondsSinceEpoch(checked))
                   .abs() <
-              bulkPriceFreshness) {
-        return;
-      }
-      await _refresh();
+              bulkPriceFreshness;
+      // Not an early return when fresh: a forced refresh asked for while the
+      // settings were being read must still reach the re-run below.
+      if (force || !isFresh) await _refresh();
     } on Object catch (error) {
       logWarning(() => 'Bulk price refresh failed: $error');
     } finally {
       _isRunning = false;
     }
+    if (_isForcePending) {
+      _isForcePending = false;
+      await refreshIfDue(force: true);
+    }
+  }
+
+  void _scheduleRecheck() {
+    if (!isRecheckEnabled || _recheck != null) return;
+    _recheck = Timer.periodic(_recheckEvery, (_) => unawaited(refreshIfDue()));
   }
 
   Future<void> _refresh() async {
@@ -87,7 +130,12 @@ class BulkPriceRefresh extends ChangeNotifier {
     // rather than waiting out a window on nothing.
     if (prices == null) return;
 
-    final typed = await _database.typedPriceCiks();
+    // Kept: a typed price, and a quote stamped after the trading day — from
+    // midnight UTC after it, which is past the New York close. A quote from
+    // during the day, or at its close, is replaced by the close itself.
+    final kept = await _database.pricesKeptFrom(
+      prices.tradingDay.add(const Duration(days: 1)),
+    );
     final now = _now();
     final rows = <SharePricesCompanion>[];
     for (final company in _directory.allCompanies) {
@@ -96,7 +144,7 @@ class BulkPriceRefresh extends ChangeNotifier {
       final close =
           prices.closeBySymbol[company.ticker] ??
           prices.closeBySymbol[company.ticker.replaceAll('-', '.')];
-      if (close == null || typed.contains(company.cik)) continue;
+      if (close == null || kept.contains(company.cik)) continue;
       rows.add(
         SharePricesCompanion.insert(
           cik: company.cik,
@@ -123,5 +171,11 @@ class BulkPriceRefresh extends ChangeNotifier {
           '${prices.tradingDay.toIso8601String().substring(0, 10)}',
     );
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _recheck?.cancel();
+    super.dispose();
   }
 }

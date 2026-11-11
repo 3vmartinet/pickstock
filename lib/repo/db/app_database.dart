@@ -202,10 +202,6 @@ class TrailingYears extends Table {
   IntColumn get fiscalYear => integer()();
   IntColumn get quarter => integer()();
   RealColumn get revenue => real().nullable()();
-  RealColumn get netIncome => real().nullable()();
-  RealColumn get operatingCashFlow => real().nullable()();
-  RealColumn get capitalExpenditure => real().nullable()();
-  RealColumn get shareBasedCompensation => real().nullable()();
   RealColumn get totalDebt => real().nullable()();
   RealColumn get cash => real().nullable()();
   RealColumn get dilutedShares => real().nullable()();
@@ -214,11 +210,13 @@ class TrailingYears extends Table {
   Set<Column<Object>> get primaryKey => {cik};
 }
 
-/// The last share price entered for a company.
+/// The last share price known for a company: a quote from the provider, a
+/// day's close from the bulk refresh, or a price the user typed.
 ///
-/// Unlike every other table this is not a cache of the archive: PickStock ships
-/// no market data, so the price is the user's own input and is the one thing a
-/// schema rebuild must not throw away.
+/// Unlike every other table this is not a cache of the archive: the SEC's
+/// filings carry no prices, so nothing an ingest rebuilds could put these
+/// back. A typed price is the user's own figure, and a quoted one cost a
+/// call from a limited budget, so a schema rebuild must not throw them away.
 @DataClassName('SharePriceRow')
 class SharePrices extends Table {
   TextColumn get cik => text()();
@@ -434,7 +432,7 @@ class AppDatabase extends _$AppDatabase {
   /// leaves an existing database on the old schema, and queries against the new
   /// table fail with `no such table`.
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -450,6 +448,12 @@ class AppDatabase extends _$AppDatabase {
           // extractor version already insists on.
           logInfo(() => 'Adding trailing_years');
           await migrator.createTable(trailingYears);
+        } else if (from < 21) {
+          // The quarter's earnings and cash flows were read and never used.
+          // Copied across without them, so the quarter's revenue, balance
+          // sheet and share count stay valued from until the next ingest.
+          logInfo(() => 'Dropping the unused trailing_years flows');
+          await migrator.alterTable(TableMigration(trailingYears));
         }
         if (from < 3) {
           logInfo(() => 'Adding ingest_runs.archive_last_modified');
@@ -576,9 +580,9 @@ class AppDatabase extends _$AppDatabase {
       // with the rest is what makes the gate ask for a fresh ingest.
       logInfo(() => 'Rebuilding the database schema, v$from -> v$to');
       for (final entity in allSchemaEntities.toList().reversed) {
-        // Entered prices and watchlists are the user's own and cannot be
-        // downloaded again, so they sit out the rebuild. `createAll` below
-        // creates only what is missing.
+        // Prices are not in the archive, and watchlists, settings and reports
+        // are the user's own, so none can be downloaded again and they sit
+        // out the rebuild. `createAll` below creates only what is missing.
         if (entity == sharePrices ||
             entity == watchlists ||
             entity == watchlistEntries ||
@@ -854,9 +858,13 @@ class AppDatabase extends _$AppDatabase {
   /// The size of every company that has a share count, a symbol to quote it
   /// under, and a latest fiscal year between [fromYear] and [toYear].
   ///
-  /// The share count is the cover's, or the latest year's diluted count where
-  /// the cover gave none, as the valuation itself reads it. The year bounds
-  /// leave out filers that stopped filing and the odd year typed wrong.
+  /// The share count is the cover's, or where the cover gave none the diluted
+  /// count of the newest quarter newer than the annual report, then the
+  /// latest year's: the order the valuation itself reads them in, so a filer
+  /// that split since its 10-K is not sized in the old shares. The revenue,
+  /// earnings and cash flow stay the year's; they only pick which companies
+  /// are worth pricing. The year bounds leave out filers that stopped filing
+  /// and the odd year typed wrong.
   Future<List<SizeSample>> sizeSamples({
     required int fromYear,
     required int toYear,
@@ -867,7 +875,8 @@ class AppDatabase extends _$AppDatabase {
       '  WHERE fiscal_year <= ?2 GROUP BY cik'
       ') '
       'SELECT c.cik AS cik, c.name AS name, c.sic AS sic, '
-      '  COALESCE(c.shares_outstanding, f.diluted_shares) AS shares, '
+      '  COALESCE(c.shares_outstanding, ty.diluted_shares, f.diluted_shares) '
+      '    AS shares, '
       '  f.revenue AS revenue, f.net_income AS net_income, '
       '  f.operating_cash_flow AS operating_cash_flow, '
       // In the order SEC lists them, which puts the common stock first.
@@ -877,10 +886,12 @@ class AppDatabase extends _$AppDatabase {
       'FROM companies c '
       'JOIN latest l ON l.cik = c.cik '
       'JOIN fiscal_years f ON f.cik = c.cik AND f.fiscal_year = l.year '
+      'LEFT JOIN trailing_years ty ON ty.cik = c.cik '
       'WHERE l.year >= ?1 '
-      '  AND COALESCE(c.shares_outstanding, f.diluted_shares) > 0',
+      '  AND COALESCE(c.shares_outstanding, ty.diluted_shares, f.diluted_shares)'
+      '    > 0',
       variables: [Variable.withInt(fromYear), Variable.withInt(toYear)],
-      readsFrom: {companies, fiscalYears, tickers},
+      readsFrom: {companies, fiscalYears, trailingYears, tickers},
     ).get();
 
     return [
@@ -1190,7 +1201,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Records a day's closing prices for many filers at once, replacing what
-  /// each had.
+  /// each had. Which filers to leave alone is the caller's to decide: see
+  /// [pricesKeptFrom].
   Future<void> savePrices(List<SharePricesCompanion> rows) async {
     if (rows.isEmpty) return;
     await batch(
@@ -1199,13 +1211,19 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// The filers whose stored price the reader typed, which no refresh may
-  /// overwrite.
-  Future<Set<String>> typedPriceCiks() async {
+  /// The filers whose stored price no close from before [when] may replace:
+  /// one the reader typed, which is theirs, and a quote stamped at [when] or
+  /// later, which is newer than the close — a report opened this morning
+  /// quoted a live price, and yesterday's close landing after it would put
+  /// the older figure back and stamp it as just asked for.
+  Future<Set<String>> pricesKeptFrom(DateTime when) async {
     final rows =
         await (selectOnly(sharePrices)
               ..addColumns([sharePrices.cik])
-              ..where(sharePrices.isQuoted.equals(false)))
+              ..where(
+                sharePrices.isQuoted.equals(false) |
+                    sharePrices.asOf.isBiggerOrEqualValue(when),
+              ))
             .get();
     return {for (final row in rows) row.read(sharePrices.cik)!};
   }

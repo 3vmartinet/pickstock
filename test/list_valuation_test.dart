@@ -179,9 +179,14 @@ void main() {
       bulkPriceRepo: closes,
     );
     ListValuationViewModel.isEnabled = true;
+    // Quoted before the closes' day, so the close replaces it.
     await GetIt.I.get<PriceRepo>().save(
       _apple.cik,
-      Quote(pricePerShare: 250, asOf: DateTime.now(), isQuoted: true),
+      Quote(
+        pricePerShare: 250,
+        asOf: DateTime.utc(2026, 11, 6, 21),
+        isQuoted: true,
+      ),
     );
     final viewModel = ListValuationViewModel();
     addTearDown(viewModel.dispose);
@@ -261,7 +266,7 @@ void main() {
       final viewModel = ListValuationViewModel();
       addTearDown(viewModel.dispose);
 
-      // The report, on the company's own discount rate, judged it fairly
+      // The report, on the quote it had just fetched, judged it fairly
       // priced; the list on its own would have said undervalued at \$80.
       viewModel.adopt(_apple.cik, ValuationVerdict.fairlyValued);
       viewModel.request(_apple);

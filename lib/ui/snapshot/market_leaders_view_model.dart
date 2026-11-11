@@ -13,6 +13,7 @@ import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/extensions/object_extensions.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/price_repo.dart';
+import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
 import 'package:pickstock/ui/browse/list_valuation_view_model.dart';
 import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
@@ -20,6 +21,7 @@ import 'package:pickstock/ui/snapshot/snapshot_view_model.dart';
 AppDatabase get _database => GetIt.I.get<AppDatabase>();
 PriceRepo get _priceRepo => GetIt.I.get<PriceRepo>();
 QuoteRepo get _quoteRepo => GetIt.I.get<QuoteRepo>();
+BulkPriceRefresh get _bulkPrices => GetIt.I.get<BulkPriceRefresh>();
 
 /// How many companies each ranking lists.
 const int marketLeaderCount = 10;
@@ -99,15 +101,48 @@ class _Candidate {
 /// the rankings are on screen at once, offline and without a key; stale ones
 /// are then re-quoted one at a time, paced like the list's own pricing, and
 /// the rankings re-sort as each arrives.
+///
+/// Where the day's closes are loaded in bulk, a stored price is never stale,
+/// a typed one included: the rankings are a screen, and a screen is about the
+/// day, so only a company with no price at all is quoted. When the closes land, the stored
+/// prices are read again and the rankings re-sort on them.
 class MarketLeadersViewModel extends ChangeNotifier {
   /// Whether stale prices are re-quoted. Off in tests, for the same reason as
   /// [ListValuationViewModel.isEnabled].
   static bool isRefreshEnabled = true;
 
+  MarketLeadersViewModel() {
+    if (GetIt.I.isRegistered<BulkPriceRefresh>()) {
+      _bulkPrices.addListener(_onBulkPrices);
+    }
+  }
+
+  /// Every stored price moved at once, so the rankings are read again — from
+  /// the store, which costs no quote.
+  void _onBulkPrices() {
+    if (_isDisposed) return;
+    _loadedAt = null;
+    // Never shown yet: the first showing reads the new prices anyway.
+    if (!_hasLoaded && !_isLoading) return;
+    if (_isLoading) {
+      // The read under way may have taken yesterday's prices; one more after
+      // it takes today's.
+      _isReloadPending = true;
+      return;
+    }
+    unawaited(ensureFresh());
+  }
+
+  /// Whether the day's closes are loaded in bulk, which makes every stored
+  /// close good for the day.
+  static bool get _hasBulkPrices =>
+      GetIt.I.isRegistered<BulkPriceRefresh>() && _bulkPrices.isConfigured;
+
   final Map<String, MarketLeader> _byCik = {};
   bool _isLoading = false;
   bool _hasLoaded = false;
   bool _isDisposed = false;
+  bool _isReloadPending = false;
   DateTime? _loadedAt;
 
   /// Whether the first read of stored prices is still under way.
@@ -157,6 +192,10 @@ class MarketLeadersViewModel extends ChangeNotifier {
       _hasLoaded = true;
       _isLoading = false;
       _notify();
+    }
+    if (_isReloadPending && !_isDisposed) {
+      _isReloadPending = false;
+      unawaited(ensureFresh());
     }
   }
 
@@ -237,11 +276,12 @@ class MarketLeadersViewModel extends ChangeNotifier {
       candidates.map((candidate) => _priceRepo.priceFor(candidate.company.cik)),
     );
     final stale = <(_Candidate, double)>[];
+    final hasBulkPrices = _hasBulkPrices;
     for (final (index, candidate) in candidates.indexed) {
       final quote = stored[index];
       if (quote != null) _put(candidate, quote);
       final guard = candidate.isOverall ? quoteFreshness : sectorPriceGuard;
-      if (_isStale(quote, guard)) {
+      if (_isStale(quote, guard, hasBulkPrices: hasBulkPrices)) {
         // Unpriced companies rank behind every priced one, by earnings.
         final size = quote == null
             ? candidate.netIncome / double.maxFinite
@@ -291,10 +331,20 @@ class MarketLeadersViewModel extends ChangeNotifier {
     );
   }
 
-  /// Due a new quote when there is none, it was typed, or it was asked for
-  /// longer ago than [guard].
-  static bool _isStale(Quote? stored, Duration guard) {
-    if (stored == null || !stored.isQuoted) return true;
+  /// Due a new quote when there is none, or, without the day's closes in
+  /// bulk, when it was typed or asked for longer ago than [guard].
+  ///
+  /// Where the closes are loaded in bulk, no stored price is stale: the next
+  /// day's close replaces a quoted one without a quote each, and a typed one
+  /// is the reader's own, which the closes and the scan leave alone too.
+  static bool _isStale(
+    Quote? stored,
+    Duration guard, {
+    required bool hasBulkPrices,
+  }) {
+    if (stored == null) return true;
+    if (hasBulkPrices) return false;
+    if (!stored.isQuoted) return true;
     final asked = stored.fetchedAt ?? stored.asOf;
     return DateTime.now().difference(asked) > guard;
   }
@@ -306,6 +356,9 @@ class MarketLeadersViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    if (GetIt.I.isRegistered<BulkPriceRefresh>()) {
+      _bulkPrices.removeListener(_onBulkPrices);
+    }
     super.dispose();
   }
 }

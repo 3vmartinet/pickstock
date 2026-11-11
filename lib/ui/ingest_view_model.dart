@@ -438,8 +438,10 @@ class IngestViewModel extends ChangeNotifier {
   /// archive date it recorded.
   Future<void> _finishRun() async {
     await _tickerDirectoryRepo.load();
-    // New filers in the directory have no price yet.
-    unawaited(_bulkPriceRefresh.refreshIfDue());
+    // New filers in the directory have no price yet, and the closes checked
+    // at launch were stored only against the filers there were then, so the
+    // six-hour window does not hold them back.
+    unawaited(_bulkPriceRefresh.refreshIfDue(force: true));
     final run = await _database.lastIngest();
     _loadedArchiveDate = run?.archiveLastModified;
     _lastLoadDuration = run == null ? null : _durationOf(run);

@@ -207,4 +207,54 @@ void main() {
     // upgrade that dropped the tables would cost the download again.
     expect((await database.lastIngest())?.companyCount, 13582);
   });
+
+  test(
+    'a version 20 install keeps its quarters, without the unused flows',
+    () async {
+      final upgradeFile = File('${directory.path}/v20.sqlite');
+      // Today's schema, then trailing_years put back as version 20 had it.
+      final current = AppDatabase.forTesting(NativeDatabase(upgradeFile));
+      await current.lastIngest();
+      await current.close();
+      final raw = sqlite.sqlite3.open(upgradeFile.path);
+      raw.execute('DROP TABLE trailing_years;');
+      raw.execute(
+        'CREATE TABLE "trailing_years" ("cik" TEXT NOT NULL REFERENCES '
+        'companies (cik), "period_end" INTEGER NOT NULL, "fiscal_year" '
+        'INTEGER NOT NULL, "quarter" INTEGER NOT NULL, "revenue" REAL NULL, '
+        '"net_income" REAL NULL, "operating_cash_flow" REAL NULL, '
+        '"capital_expenditure" REAL NULL, "share_based_compensation" REAL '
+        'NULL, "total_debt" REAL NULL, "cash" REAL NULL, "diluted_shares" '
+        'REAL NULL, PRIMARY KEY ("cik"));',
+      );
+      raw.execute(
+        "INSERT INTO companies (cik, name) VALUES ('0000320193', 'Apple');",
+      );
+      raw.execute(
+        'INSERT INTO trailing_years (cik, period_end, fiscal_year, quarter, '
+        'revenue, net_income, operating_cash_flow, capital_expenditure, '
+        'share_based_compensation, total_debt, cash, diluted_shares) '
+        "VALUES ('0000320193', 0, 2026, 3, 400.0, 100.0, 120.0, 20.0, 5.0, "
+        '90.0, 30.0, 15.0);',
+      );
+      raw.execute('PRAGMA user_version = 20;');
+      raw.close();
+
+      final database = AppDatabase.forTesting(NativeDatabase(upgradeFile));
+      addTearDown(database.close);
+
+      // What the valuation reads from the quarter came through, so it goes
+      // on being valued on it until the next ingest.
+      final trailing = await database.trailingFor('0000320193');
+      expect(trailing?.revenue, 400);
+      expect(trailing?.totalDebt, 90);
+      expect(trailing?.cash, 30);
+      expect(trailing?.dilutedShares, 15);
+      // And the flows are gone: naming one now fails.
+      await expectLater(
+        database.customSelect('SELECT net_income FROM trailing_years').get(),
+        throwsA(anything),
+      );
+    },
+  );
 }

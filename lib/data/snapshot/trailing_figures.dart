@@ -14,6 +14,11 @@ import 'package:equatable/equatable.dart';
 /// well as one it reports by quarter. Balance-sheet lines are as at the
 /// quarter end.
 ///
+/// Only what the valuation reads from the quarter is kept: the revenue its
+/// typical margin is applied to, the cash and debt, and the diluted share
+/// count. The margins and the growth stay the years', so the quarter's
+/// earnings and cash flows are not carried.
+///
 /// Every line is nullable, as in a fiscal year, and for one more reason: a
 /// line whose three pieces are not all on file is left out rather than taken
 /// from somewhere else.
@@ -23,10 +28,6 @@ class TrailingFigures extends Equatable {
     required this.fiscalYear,
     required this.quarter,
     this.revenue,
-    this.netIncome,
-    this.operatingCashFlow,
-    this.capitalExpenditure,
-    this.shareBasedCompensation,
     this.totalDebt,
     this.cash,
     this.dilutedShares,
@@ -40,10 +41,6 @@ class TrailingFigures extends Equatable {
   final int quarter;
 
   final double? revenue;
-  final double? netIncome;
-  final double? operatingCashFlow;
-  final double? capitalExpenditure;
-  final double? shareBasedCompensation;
 
   /// Borrowings and leases at the quarter end, summed as a fiscal year sums
   /// them. `null` where the quarter's balance sheet is missing a line the
@@ -68,10 +65,6 @@ class TrailingFigures extends Equatable {
     fiscalYear,
     quarter,
     revenue,
-    netIncome,
-    operatingCashFlow,
-    capitalExpenditure,
-    shareBasedCompensation,
     totalDebt,
     cash,
     dilutedShares,

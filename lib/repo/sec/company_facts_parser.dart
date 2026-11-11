@@ -393,7 +393,9 @@ abstract final class CompanyFactsParser {
   ///
   /// Operating cash flow sets the date: every filer states it, and nearly
   /// always year-to-date. A line that cannot be read to that same date is
-  /// left out rather than taken from another.
+  /// left out rather than taken from another. The flow itself is not kept,
+  /// nor are the quarter's earnings: the valuation takes only the revenue,
+  /// the balance sheet and the share count from the quarter.
   ///
   /// The balance sheet is all or nothing. A filer that states its current
   /// debt or its leases only in the annual report would otherwise lose them
@@ -430,13 +432,6 @@ abstract final class CompanyFactsParser {
         : total == null
         ? contract
         : math.max(contract, total);
-
-    final group = flow(XbrlMetric.profitLoss);
-    final netIncome =
-        flow(XbrlMetric.netIncome) ??
-        (group == null
-            ? null
-            : group - (flow(XbrlMetric.noncontrollingInterestIncome) ?? 0));
 
     // The balance sheet, read only where it is as complete as the annual one.
     const leaseMetrics = [
@@ -491,10 +486,6 @@ abstract final class CompanyFactsParser {
       fiscalYear: reference.fiscalYear,
       quarter: reference.quarter,
       revenue: revenue,
-      netIncome: netIncome,
-      operatingCashFlow: reference.value,
-      capitalExpenditure: flow(XbrlMetric.capitalExpenditure),
-      shareBasedCompensation: flow(XbrlMetric.shareBasedCompensation),
       totalDebt: complete
           ? _plus(sumOf(XbrlMetric.debtComponents, atQuarter), leases)
           : null,

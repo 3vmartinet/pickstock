@@ -451,6 +451,7 @@ Future<AppDatabase> registerTestDependencies({
   // Off unless a test asks for it: see [ListValuationViewModel.isEnabled].
   ListValuationViewModel.isEnabled = false;
   MarketLeadersViewModel.isRefreshEnabled = false;
+  BulkPriceRefresh.isRecheckEnabled = false;
   final database = AppDatabase.forTesting(NativeDatabase.memory());
 
   if (withIngest) {
