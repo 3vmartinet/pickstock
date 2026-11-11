@@ -340,12 +340,6 @@ abstract class AppLocalizations {
   /// **'{percent}% downloaded.'**
   String updateDownloadedPercent(int percent);
 
-  /// No description provided for @updateCancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel the download'**
-  String get updateCancel;
-
   /// No description provided for @updateCancelHint.
   ///
   /// In en, this message translates to:
@@ -886,12 +880,6 @@ abstract class AppLocalizations {
   /// **'Reports'**
   String get jobsTitle;
 
-  /// No description provided for @jobsEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No reports yet.'**
-  String get jobsEmpty;
-
   /// No description provided for @jobsEmptyBody.
   ///
   /// In en, this message translates to:
@@ -946,23 +934,11 @@ abstract class AppLocalizations {
   /// **'Stop'**
   String get jobsCancel;
 
-  /// No description provided for @jobsCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Stopped early'**
-  String get jobsCancelled;
-
   /// No description provided for @jobsDone.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =0{Nothing undervalued} =1{1 undervalued} other{{count} undervalued}}'**
   String jobsDone(int count);
-
-  /// No description provided for @jobsOpen.
-  ///
-  /// In en, this message translates to:
-  /// **'Open'**
-  String get jobsOpen;
 
   /// No description provided for @reportRename.
   ///
@@ -981,12 +957,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete “{name}”? The companies in it are not affected.'**
   String reportDeleteConfirm(String name);
-
-  /// No description provided for @reportNameLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Name'**
-  String get reportNameLabel;
 
   /// No description provided for @reportSubtitle.
   ///
@@ -1161,12 +1131,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All'**
   String get sectorAll;
-
-  /// No description provided for @sectorNarrow.
-  ///
-  /// In en, this message translates to:
-  /// **'Narrow {sector} to SEC industries'**
-  String sectorNarrow(String sector);
 
   /// No description provided for @sectorNarrowedCount.
   ///
@@ -2395,7 +2359,7 @@ abstract class AppLocalizations {
   /// No description provided for @frameworkTimingLookFor.
   ///
   /// In en, this message translates to:
-  /// **'Even great companies are terrible investments at the wrong price: recent pullbacks, upcoming catalysts, sector rotation.'**
+  /// **'The price today against the fair range the valuation works out from the filings. Even a great company is a poor investment above it.'**
   String get frameworkTimingLookFor;
 
   /// No description provided for @frameworkLayoutList.
@@ -2434,30 +2398,6 @@ abstract class AppLocalizations {
   /// **'Seven-questions pane on the left with answers on the right'**
   String get frameworkLayoutVerticalHint;
 
-  /// No description provided for @frameworkPrevious.
-  ///
-  /// In en, this message translates to:
-  /// **'Previous question'**
-  String get frameworkPrevious;
-
-  /// No description provided for @frameworkNext.
-  ///
-  /// In en, this message translates to:
-  /// **'Next question'**
-  String get frameworkNext;
-
-  /// No description provided for @frameworkQuestionPagination.
-  ///
-  /// In en, this message translates to:
-  /// **'Question {current} of {total}'**
-  String frameworkQuestionPagination(int current, int total);
-
-  /// No description provided for @frameworkVerticalExpanded.
-  ///
-  /// In en, this message translates to:
-  /// **'Full list'**
-  String get frameworkVerticalExpanded;
-
   /// No description provided for @frameworkVerticalExpandedHint.
   ///
   /// In en, this message translates to:
@@ -2476,23 +2416,11 @@ abstract class AppLocalizations {
   /// **'Show only the answer for the selected question'**
   String get frameworkVerticalCollapsedHint;
 
-  /// No description provided for @frameworkPinHeader.
-  ///
-  /// In en, this message translates to:
-  /// **'Pin header'**
-  String get frameworkPinHeader;
-
   /// No description provided for @frameworkPinHeaderHint.
   ///
   /// In en, this message translates to:
   /// **'Keep the seven questions scorecard pinned to the top while scrolling answers'**
   String get frameworkPinHeaderHint;
-
-  /// No description provided for @frameworkUnpinHeader.
-  ///
-  /// In en, this message translates to:
-  /// **'Unpin header'**
-  String get frameworkUnpinHeader;
 
   /// No description provided for @frameworkUnpinHeaderHint.
   ///
@@ -2697,12 +2625,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fair value'**
   String get sectionValuation;
-
-  /// No description provided for @labelSharePrice.
-  ///
-  /// In en, this message translates to:
-  /// **'Share price'**
-  String get labelSharePrice;
 
   /// No description provided for @hintSharePrice.
   ///
@@ -3009,6 +2931,12 @@ abstract class AppLocalizations {
   /// **'Discounting {amount} a year — this company\'s median free cash flow margin of {margin}, after stock pay, on its latest revenue — over ten years, fading to 2.5%.'**
   String expectationBasis(String amount, String margin);
 
+  /// No description provided for @expectationBasisStake.
+  ///
+  /// In en, this message translates to:
+  /// **'Discounting {amount} a year — this company\'s median free cash flow margin of {margin}, after stock pay, on its latest revenue, brought down to the {share} of the business the listed shares own — over ten years, fading to 2.5%.'**
+  String expectationBasisStake(String amount, String margin, String share);
+
   /// No description provided for @expectationNormalised.
   ///
   /// In en, this message translates to:
@@ -3105,12 +3033,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{empty} =1{1 company} other{{count} companies}}'**
   String watchlistCount(int count);
 
-  /// No description provided for @watchlistManage.
-  ///
-  /// In en, this message translates to:
-  /// **'Manage lists'**
-  String get watchlistManage;
-
   /// No description provided for @watchlistNew.
   ///
   /// In en, this message translates to:
@@ -3170,24 +3092,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create'**
   String get watchlistCreate;
-
-  /// No description provided for @watchlistDefaultLocked.
-  ///
-  /// In en, this message translates to:
-  /// **'The starred list cannot be deleted.'**
-  String get watchlistDefaultLocked;
-
-  /// No description provided for @watchlistEmptyTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'No lists yet'**
-  String get watchlistEmptyTitle;
-
-  /// No description provided for @watchlistEmptyBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Star a company, or make a list to group the ones you are watching.'**
-  String get watchlistEmptyBody;
 
   /// No description provided for @watchlistNoMatchesTitle.
   ///
@@ -3314,6 +3218,18 @@ abstract class AppLocalizations {
     String carried,
     String excess,
   );
+
+  /// No description provided for @napkinStep3TitleUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'What it owes is not on file'**
+  String get napkinStep3TitleUnknown;
+
+  /// No description provided for @napkinStep3BodyUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The filings carry no usable figure for its cash and debt, so nothing is added for cash or taken off for debt below. Any interest it pays already came out of the {freeCashFlow} above, but debt beyond what that cash can carry would go unseen — check the balance sheet before trusting the range.'**
+  String napkinStep3BodyUnknown(String freeCashFlow);
 
   /// No description provided for @napkinStep4Title.
   ///
@@ -3481,12 +3397,6 @@ abstract class AppLocalizations {
   /// **'{growth} a year assumed'**
   String targetsGrowthAssumed(String growth);
 
-  /// No description provided for @targetsAgainstPrice.
-  ///
-  /// In en, this message translates to:
-  /// **'vs {price} today'**
-  String targetsAgainstPrice(String price);
-
   /// No description provided for @targetsHowTitle.
   ///
   /// In en, this message translates to:
@@ -3499,11 +3409,34 @@ abstract class AppLocalizations {
   /// **'A year of cash to start from'**
   String get targetsHowStep1Title;
 
-  /// No description provided for @targetsHowStep1Body.
+  /// No description provided for @targetsHowStep1Sales.
   ///
   /// In en, this message translates to:
-  /// **'Its last year sold {revenue}. Over the years on file it has turned {margin} of what it sells into spare cash after paying its staff in shares, so the sum starts from {flow} — its own typical conversion, not one unusual year.'**
-  String targetsHowStep1Body(String revenue, String margin, String flow);
+  /// **'In its latest fiscal year it sold {revenue}.'**
+  String targetsHowStep1Sales(String revenue);
+
+  /// No description provided for @targetsHowStep1SalesQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'In the twelve months to {date} it sold {revenue}.'**
+  String targetsHowStep1SalesQuarter(String date, String revenue);
+
+  /// No description provided for @targetsHowStep1Margin.
+  ///
+  /// In en, this message translates to:
+  /// **'Over the years on file it has turned {margin} of what it sells into spare cash after paying its staff in shares, so the sum starts from {flow} — its own typical conversion, not one unusual year.'**
+  String targetsHowStep1Margin(String margin, String flow);
+
+  /// No description provided for @targetsHowStep1MarginStake.
+  ///
+  /// In en, this message translates to:
+  /// **'Over the years on file it has turned {margin} of what it sells into spare cash after paying its staff in shares, or {groupFlow} a year — its own typical conversion, not one unusual year. Only {share} of the business belongs to the listed shares, so the sum starts from their {flow} of it.'**
+  String targetsHowStep1MarginStake(
+    String margin,
+    String groupFlow,
+    String share,
+    String flow,
+  );
 
   /// No description provided for @targetsHowStep2Title.
   ///
@@ -3581,6 +3514,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'It spent {ratio}× more on equipment than wore out, so last year\'s leftover cash on its own would understate what the business normally makes. The typical-year figure above allows for it.'**
   String napkinCaveatBuilding(String ratio);
+
+  /// No description provided for @napkinCaveatBuildingEarnings.
+  ///
+  /// In en, this message translates to:
+  /// **'It spent {ratio}× more on equipment than wore out. That spending is much of why it keeps no spare cash, and profit only charges the part that wore out, so the profit above is a stream the spending has not yet had to pay for.'**
+  String napkinCaveatBuildingEarnings(String ratio);
 
   /// No description provided for @napkinCaveatMargin.
   ///
@@ -3744,12 +3683,6 @@ abstract class AppLocalizations {
   /// **'Timing is read from the price against the range the filings support, so the model is not asked it.'**
   String get filingsTimingNotAsked;
 
-  /// No description provided for @napkinCaveatCurrent.
-  ///
-  /// In en, this message translates to:
-  /// **'The sales, cash and debt above are from the latest quarterly report, for the twelve months to {date}, because the annual report is older. The typical margin is still read across full years.'**
-  String napkinCaveatCurrent(String date);
-
   /// No description provided for @napkinCaveatEarnings.
   ///
   /// In en, this message translates to:
@@ -3773,6 +3706,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'It last filed a share count in {year}, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.'**
   String napkinCaveatShareCountStale(String year);
+
+  /// No description provided for @napkinCaveatShareCountQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'It files no current share count, so the number above is the diluted average from its latest quarterly report, the divisor its earnings are reported against. Every figure here is struck against it, so read them as approximate.'**
+  String get napkinCaveatShareCountQuarter;
+
+  /// No description provided for @napkinCaveatShareCountQuarterStale.
+  ///
+  /// In en, this message translates to:
+  /// **'It last filed a share count in {year}, so the number above is the diluted average from its latest quarterly report, the divisor its earnings are reported against. Every figure here is struck against it, so read them as approximate.'**
+  String napkinCaveatShareCountQuarterStale(String year);
+
+  /// No description provided for @napkinCaveatQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Read from the latest quarterly report, to {date}, because the annual report is older: {figures}. The typical margin is still read across full years.'**
+  String napkinCaveatQuarter(String date, String figures);
+
+  /// No description provided for @napkinQuarterSales.
+  ///
+  /// In en, this message translates to:
+  /// **'the sales, for the twelve months to that date'**
+  String get napkinQuarterSales;
+
+  /// No description provided for @napkinQuarterCashAndDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'the cash and debt'**
+  String get napkinQuarterCashAndDebt;
+
+  /// No description provided for @napkinQuarterShareCount.
+  ///
+  /// In en, this message translates to:
+  /// **'the share count'**
+  String get napkinQuarterShareCount;
+
+  /// No description provided for @napkinListOfTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'{first} and {second}'**
+  String napkinListOfTwo(String first, String second);
+
+  /// No description provided for @napkinListOfThree.
+  ///
+  /// In en, this message translates to:
+  /// **'{first}, {second} and {third}'**
+  String napkinListOfThree(String first, String second, String third);
 
   /// No description provided for @labelPriceEarnings.
   ///

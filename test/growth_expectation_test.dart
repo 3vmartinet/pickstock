@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/growth_expectation.dart';
 
@@ -15,6 +16,8 @@ FinancialSnapshot _snapshot({
   double margin = 0.20,
   int years = 11,
   double? finalCashFlow,
+  double parentStake = 1,
+  TrailingFigures? trailing,
 }) {
   var revenue = 1000 * _million;
   final history = <FiscalYearFigures>[];
@@ -29,6 +32,12 @@ FinancialSnapshot _snapshot({
         revenue: revenue,
         operatingCashFlow: cash,
         capitalExpenditure: 0,
+        // The group's profit and the listed shares' part of it, from which
+        // the stake is read.
+        netIncome: isLast && parentStake < 1
+            ? 10 * _million * parentStake
+            : null,
+        profitLoss: isLast && parentStake < 1 ? 10 * _million : null,
       ),
     );
     revenue *= 1 + growth;
@@ -41,6 +50,7 @@ FinancialSnapshot _snapshot({
       sharesOutstanding: _shares,
     ),
     years: history,
+    trailing: trailing,
   );
 }
 
@@ -198,9 +208,151 @@ void main() {
       expect(wildPerUnit, closeTo(cappedPerUnit, 1e-9));
     });
 
+    test('holds a shrinking record to the same floor as the targets', () {
+      // A business shrinking 30% a year is valued as a bad decade, not a
+      // wind-up — the same -10% the bear target and the band are held to.
+      final shrinking = GrowthExpectation.of(_snapshot(growth: -0.30), 1e9)!;
+      final floored = GrowthExpectation.of(
+        _snapshot(growth: CashFlowModel.minimumCreditedGrowth),
+        1e9,
+      )!;
+
+      expect(shrinking.deliveredGrowthPercent, closeTo(-30, 0.01));
+      final shrinkingPerUnit =
+          shrinking.equityValues(_shares).first.value /
+          shrinking.normalisedCashFlow;
+      final flooredPerUnit =
+          floored.equityValues(_shares).first.value /
+          floored.normalisedCashFlow;
+      expect(shrinkingPerUnit, closeTo(flooredPerUnit, 1e-9));
+    });
+
     test('declines where there is nothing to discount', () {
       expect(GrowthExpectation.of(_snapshot(), 0), isNull);
       expect(GrowthExpectation.of(_snapshot(margin: -0.1), 1e10), isNull);
+    });
+  });
+
+  group('a business the listed shares only part own', () {
+    // A tenth of the group's profit is the listed shares': the rest belongs
+    // to owners outside the company, as MarketWise's Class B unitholders.
+    final whole = GrowthExpectation.of(_snapshot(), 1e10)!;
+    final tenth = GrowthExpectation.of(_snapshot(parentStake: 0.1), 1e10)!;
+
+    test('discounts only the cash that reaches those shares', () {
+      expect(whole.hasOutsideOwners, isFalse);
+      expect(tenth.hasOutsideOwners, isTrue);
+      expect(tenth.parentStake, closeTo(0.1, 1e-9));
+      expect(tenth.groupCashFlow, whole.groupCashFlow);
+      expect(
+        tenth.normalisedCashFlow,
+        closeTo(whole.normalisedCashFlow * 0.1, 1),
+      );
+    });
+
+    test('so the targets and the worth row are the stake\'s too', () {
+      final wholeTargets = whole.priceTargets(_shares);
+      final tenthTargets = tenth.priceTargets(_shares);
+      for (var i = 0; i < wholeTargets.length; i++) {
+        expect(
+          tenthTargets[i].valuePerShare,
+          closeTo(wholeTargets[i].valuePerShare * 0.1, 1e-6),
+        );
+      }
+      expect(
+        tenth.equityValues(_shares).first.value,
+        closeTo(whole.equityValues(_shares).first.value * 0.1, 1e-6),
+      );
+    });
+
+    test('and the price has to ask more growth of a smaller stream', () {
+      expect(
+        tenth.requiredGrowthPercent!,
+        greaterThan(whole.requiredGrowthPercent!),
+      );
+    });
+
+    test('while the year as filed is still set against the group', () {
+      // Both figures are the whole group's, so the stake does not move the
+      // gap between them.
+      final distorted = GrowthExpectation.of(
+        _snapshot(finalCashFlow: 10 * _million, parentStake: 0.1),
+        1e10,
+      )!;
+      final plain = GrowthExpectation.of(
+        _snapshot(finalCashFlow: 10 * _million),
+        1e10,
+      )!;
+      expect(
+        distorted.normalisationEffectPercent,
+        closeTo(plain.normalisationEffectPercent!, 1e-9),
+      );
+    });
+
+    test('and the year as filed is shown at the stake beside the stake', () {
+      // The card reads the discounted figure and the year as filed one under
+      // the other; at a tenth each, the gap between them is the group's gap.
+      final distorted = GrowthExpectation.of(
+        _snapshot(finalCashFlow: 10 * _million, parentStake: 0.1),
+        1e10,
+      )!;
+      final shown = distorted.reportedStakeCashFlow!;
+      expect(shown, closeTo(distorted.reportedCashFlow! * 0.1, 1e-6));
+      expect(
+        (shown - distorted.normalisedCashFlow) /
+            distorted.normalisedCashFlow *
+            100,
+        closeTo(distorted.normalisationEffectPercent!, 1e-9),
+      );
+    });
+
+    test('and the sales the cash comes from are the group\'s', () {
+      expect(tenth.revenue, closeTo(whole.revenue, 1));
+      expect(
+        tenth.revenue * tenth.medianCashFlowMargin / 100,
+        closeTo(tenth.groupCashFlow, 1),
+      );
+    });
+  });
+
+  group('the sales the cash is scaled to', () {
+    test('are the latest fiscal year\'s without a newer quarter', () {
+      final expectation = GrowthExpectation.of(_snapshot(), 1e10)!;
+      expect(expectation.revenue, closeTo(_snapshot().latest.revenue!, 1));
+      expect(expectation.revenueThrough, isNull);
+    });
+
+    test('and the twelve months to the quarter where one supplied them', () {
+      final quarter = DateTime(2026, 9, 30);
+      final expectation = GrowthExpectation.of(
+        _snapshot(
+          trailing: TrailingFigures(
+            periodEnd: quarter,
+            fiscalYear: 2026,
+            quarter: 3,
+            revenue: 5000 * _million,
+          ),
+        ),
+        1e10,
+      )!;
+      expect(expectation.revenue, closeTo(5000 * _million, 1));
+      expect(expectation.revenueThrough, quarter);
+    });
+
+    test('but not where the quarter carried only its balance sheet', () {
+      final expectation = GrowthExpectation.of(
+        _snapshot(
+          trailing: TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            totalDebt: 10 * _million,
+            cash: 5 * _million,
+          ),
+        ),
+        1e10,
+      )!;
+      expect(expectation.revenueThrough, isNull);
     });
   });
 }

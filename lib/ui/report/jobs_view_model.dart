@@ -207,11 +207,7 @@ class JobsViewModel extends ChangeNotifier {
   Future<ReportEntry?> _valueOf(Company company) async {
     try {
       final snapshot = await _secRepo.fetchSnapshot(company.ticker);
-      if ((snapshot.company.sharesOutstanding ??
-              snapshot.latest.dilutedShares) ==
-          null) {
-        return null;
-      }
+      if (Valuation.shareCountOf(snapshot) == null) return null;
 
       // The day's close, where the closes are loaded in bulk: a scan is a
       // screen, and forty minutes of quotes for a screen is forty minutes

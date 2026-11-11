@@ -3,9 +3,13 @@ import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/report/valuation_job.dart';
 import 'package:pickstock/data/snapshot/company.dart';
+import 'package:pickstock/data/snapshot/financial_snapshot.dart';
+import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
+import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/quote/bulk_price_refresh.dart';
 import 'package:pickstock/repo/quote/quote_repo.dart';
+import 'package:pickstock/repo/sec/sec_repo.dart';
 import 'package:pickstock/ui/report/jobs_view_model.dart';
 
 import 'support/test_directory.dart';
@@ -37,6 +41,46 @@ class ScriptedQuoteRepo implements QuoteRepo {
     if (price == null) throw const QuoteException(QuoteFailure.noCoverage);
     return Quote(pricePerShare: price, asOf: DateTime.now(), isQuoted: true);
   }
+}
+
+/// Serves a filer whose only share count is the diluted average in its
+/// newest 10-Q: no cover count, and none in its annual reports.
+class _QuarterSharesSecRepo implements SecRepo {
+  const _QuarterSharesSecRepo();
+
+  @override
+  Future<FinancialSnapshot> fetchSnapshot(String ticker) async =>
+      FinancialSnapshot(
+        company: const Company(
+          ticker: 'AAPL',
+          cik: '0000320193',
+          name: 'Apple Inc.',
+          sic: 3571,
+        ),
+        years: [
+          for (final (year, revenue) in [
+            (2023, 383e9),
+            (2024, 391e9),
+            (2025, 416e9),
+          ])
+            FiscalYearFigures(
+              fiscalYear: year,
+              revenue: revenue,
+              operatingIncome: revenue * 0.3,
+              netIncome: revenue * 0.25,
+              operatingCashFlow: revenue * 0.28,
+              capitalExpenditure: revenue * 0.03,
+              totalDebt: 100e9,
+              cash: 60e9,
+            ),
+        ],
+        trailing: TrailingFigures(
+          periodEnd: DateTime(2026, 6, 30),
+          fiscalYear: 2026,
+          quarter: 3,
+          dilutedShares: 14.8e9,
+        ),
+      );
 }
 
 const _apple = Company(ticker: 'AAPL', cik: '0000320193', name: 'Apple Inc.');
@@ -183,6 +227,25 @@ void main() {
     expect(report!.entries.map((e) => e.ticker), ['AAPL']);
     expect(report.valuedCount, 2);
   });
+
+  test(
+    'values a filer whose only share count is in its newest quarter',
+    () async {
+      // The valuation tab divides by the 10-Q's diluted average where there is
+      // nothing else; the scan has to hold the same bar, not skip the filer.
+      await boot({'AAPL': 1});
+      GetIt.I
+        ..unregister<SecRepo>()
+        ..registerSingleton<SecRepo>(const _QuarterSharesSecRepo());
+
+      jobs.start(name: 'Test scan', companies: [_apple]);
+      await _finish(jobs);
+
+      final report = await jobs.load(jobs.reports.single.id);
+      expect(report!.valuedCount, 1);
+      expect(report.entries.map((e) => e.ticker), ['AAPL']);
+    },
+  );
 
   test('holds the quote budget only while it runs', () async {
     await boot({'AAPL': 40});

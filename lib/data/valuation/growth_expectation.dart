@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:pickstock/data/snapshot/financial_snapshot.dart';
-import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/snapshot/growth_metric.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/normalised_cash_flow.dart';
@@ -35,12 +34,6 @@ const List<int> _recordWindows = [10, 5, 3];
 /// points either way is well inside the precision of any of these inputs.
 const double _inLineTolerance = 2;
 
-/// A margin this many points below its own median is a slide, not noise.
-const double _marginErosionPoints = 3;
-
-/// Capital spending this many times depreciation is building, not maintaining.
-const double _buildingCapexRatio = 1.5;
-
 /// What the market's price is asking of a company, set against what the
 /// company has done.
 ///
@@ -52,14 +45,15 @@ const double _buildingCapexRatio = 1.5;
 /// actually be used to judge.
 class GrowthExpectation extends Equatable {
   const GrowthExpectation._({
-    required this.normalisedCashFlow,
+    required this.groupCashFlow,
+    required this.parentStake,
+    required this.revenue,
+    required this.revenueThrough,
     required this.medianCashFlowMargin,
     required this.reportedCashFlow,
     required this.marketCap,
     required this.deliveredGrowthPercent,
     required this.deliveredOverYears,
-    required this.operatingMarginPercent,
-    required this.marginChangePoints,
     required this.growthRatesOnFile,
   });
 
@@ -72,31 +66,65 @@ class GrowthExpectation extends Equatable {
     if (cashMargin == null) return null;
 
     final record = _delivered(snapshot);
-    final margin = _marginTrend(snapshot);
+    final trailing = snapshot.trailing;
     return GrowthExpectation._(
-      normalisedCashFlow: normalised.flow,
+      groupCashFlow: normalised.flow,
+      parentStake: snapshot.latest.parentStake,
+      revenue: normalised.flow / cashMargin * 100,
+      revenueThrough: trailing?.revenue != null ? trailing?.periodEnd : null,
       medianCashFlowMargin: cashMargin,
       reportedCashFlow: normalised.reported,
       marketCap: marketCap,
       deliveredGrowthPercent: record?.growth,
       deliveredOverYears: record?.years,
-      operatingMarginPercent: margin?.latest,
-      marginChangePoints: margin?.change,
       growthRatesOnFile: _growthRates(snapshot, record?.years),
     );
   }
 
-  /// The cash flow the model discounts: this company's own typical cash
-  /// conversion, after stock pay, applied to what it sells today. The same
-  /// stream the fair-value band is struck on — see [NormalisedCashFlow].
-  final double normalisedCashFlow;
+  /// The whole group's typical cash flow: this company's own typical cash
+  /// conversion, after stock pay, applied to what it sells today — see
+  /// [NormalisedCashFlow].
+  final double groupCashFlow;
+
+  /// How much of the group the listed shares own, as a fraction — `1` for
+  /// all but a handful of filers. See `Valuation.parentStake`.
+  final double parentStake;
+
+  /// What the group sells today, which [medianCashFlowMargin] is applied to:
+  /// the twelve months to [revenueThrough] where a 10-Q supplied it, the
+  /// latest fiscal year's otherwise.
+  final double revenue;
+
+  /// The quarter end [revenue] runs to, or `null` where it is a fiscal
+  /// year's.
+  final DateTime? revenueThrough;
+
+  /// The cash flow the model discounts: the group's, brought down to the
+  /// listed shares' stake in it. The same stream the fair-value band is
+  /// struck on — see `Valuation.freeCashFlowToShareholders` — so the targets,
+  /// the growth the price requires and the band are all read against one
+  /// figure, and against the market value of the shares that own it.
+  double get normalisedCashFlow => groupCashFlow * parentStake;
+
+  /// Whether the cash flow was brought down to the listed shares' stake, so
+  /// the report can say that it was.
+  bool get hasOutsideOwners => parentStake < 1;
 
   /// The median free cash flow margin the normalised figure is built from.
   final double medianCashFlowMargin;
 
   /// The latest year as filed, after stock pay, kept so the report can show
-  /// what was normalised away.
+  /// what was normalised away. The whole group's, as filed, and compared
+  /// against [groupCashFlow].
   final double? reportedCashFlow;
+
+  /// [reportedCashFlow] brought down to the listed shares' stake, as
+  /// [normalisedCashFlow] is, so the two read side by side on the same basis.
+  /// The gap between them is the same as against the group's figures.
+  double? get reportedStakeCashFlow {
+    final reported = reportedCashFlow;
+    return reported == null ? null : reported * parentStake;
+  }
 
   final double marketCap;
 
@@ -110,17 +138,6 @@ class GrowthExpectation extends Equatable {
   /// How many years that record covers.
   final int? deliveredOverYears;
 
-  /// The latest operating margin.
-  final double? operatingMarginPercent;
-
-  /// How far that margin sits from the median of the record window, in
-  /// percentage points.
-  ///
-  /// Revenue growth alone cannot tell bought growth from earned growth: a
-  /// company can compound sales for a decade while its margin drains away.
-  /// This is the check on the record the verdict leans on.
-  final double? marginChangePoints;
-
   /// Every year-on-year revenue change inside the record window, smallest
   /// first.
   ///
@@ -129,21 +146,12 @@ class GrowthExpectation extends Equatable {
   /// of numbers rather than two.
   final List<double> growthRatesOnFile;
 
-  /// Whether growth has come at the cost of profitability, by enough to be
-  /// worth saying out loud.
-  bool get isMarginEroding =>
-      (marginChangePoints ?? 0) <= -_marginErosionPoints;
-
-  /// Whether the company is spending well beyond what wears out — which is why
-  /// its reported cash flow may understate the business.
-  bool isBuildingCapacity(FiscalYearFigures latest) =>
-      (latest.capexToDepreciation ?? 0) >= _buildingCapexRatio;
-
-  /// How far the reported year sits from the normalised base, as a percentage.
+  /// How far the reported year sits from the normalised base, as a
+  /// percentage. Both are the group's, so the stake cancels out.
   double? get normalisationEffectPercent {
     final reported = reportedCashFlow;
-    if (reported == null || normalisedCashFlow <= 0) return null;
-    return (reported - normalisedCashFlow) / normalisedCashFlow * 100;
+    if (reported == null || groupCashFlow <= 0) return null;
+    return (reported - groupCashFlow) / groupCashFlow * 100;
   }
 
   /// The growth the current price requires, at [rate].
@@ -175,10 +183,12 @@ class GrowthExpectation extends Equatable {
   List<({double rate, double value})> equityValues(double shares) {
     final delivered = deliveredGrowthPercent;
     if (delivered == null || shares <= 0) return const [];
-    // Credited only so far: a decade at 45% is not a forecast, it is a wish.
-    final growth = math.min(
-      delivered / 100,
-      CashFlowModel.maximumCreditedGrowth,
+    // Credited only so far in either direction, as the targets are: a decade
+    // at 45% is not a forecast, it is a wish, and a decade at -40% is a
+    // liquidation rather than a business.
+    final growth = math.max(
+      math.min(delivered / 100, CashFlowModel.maximumCreditedGrowth),
+      CashFlowModel.minimumCreditedGrowth,
     );
     return [
       for (final rate in CashFlowModel.discountRates)
@@ -207,10 +217,11 @@ class GrowthExpectation extends Equatable {
   /// within a point of each other, which is three ways of saying one thing.
   /// The extremes are what a bull and a bear case are for; the caps in
   /// [_targetAt] keep them from becoming fiction, and the middle is still the
-  /// median, so the neutral case is unmoved by either end. Held at one discount rate, because
-  /// bundling a pessimistic return into the bear case and an optimistic one
-  /// into the bull compounds two guesses into a spread so wide it says
-  /// nothing — the rate's own effect is reported separately, across the band.
+  /// median, so the neutral case is unmoved by either end. Held at one
+  /// discount rate, because bundling a pessimistic return into the bear case
+  /// and an optimistic one into the bull compounds two guesses into a spread
+  /// so wide it says nothing — the rate's own effect is reported separately,
+  /// across the band.
   ///
   /// Empty where the filings carry too little to read a record from.
   List<PriceTarget> priceTargets(
@@ -288,26 +299,6 @@ class GrowthExpectation extends Equatable {
     return ExpectationVerdict.inLineWithRecord;
   }
 
-  /// The latest operating margin, and how far it sits from its own median
-  /// over the window.
-  static ({double latest, double? change})? _marginTrend(
-    FinancialSnapshot snapshot,
-  ) {
-    final latest = snapshot.latest.operatingMarginPercent;
-    if (latest == null) return null;
-
-    final window = snapshot.years.length > CashFlowModel.horizon
-        ? snapshot.years.sublist(snapshot.years.length - CashFlowModel.horizon)
-        : snapshot.years;
-    final margins = <double>[
-      for (final year in window) ?year.operatingMarginPercent,
-    ]..sort();
-    if (margins.length < 2) return (latest: latest, change: null);
-
-    return (latest: latest, change: latest - margins[margins.length ~/ 2]);
-  }
-
-  /// Annualised revenue growth over the longest window the filings support.
   /// The year-on-year changes across the record window, smallest first.
   static List<double> _growthRates(FinancialSnapshot snapshot, int? window) {
     if (window == null) return const [];
@@ -318,6 +309,7 @@ class GrowthExpectation extends Equatable {
     ]..sort();
   }
 
+  /// Annualised revenue growth over the longest window the filings support.
   static ({double growth, int years})? _delivered(FinancialSnapshot snapshot) {
     final years = snapshot.years;
     for (final window in _recordWindows) {
@@ -336,12 +328,12 @@ class GrowthExpectation extends Equatable {
 
   @override
   List<Object?> get props => [
-    normalisedCashFlow,
+    groupCashFlow,
+    parentStake,
+    revenueThrough,
     marketCap,
     deliveredGrowthPercent,
     deliveredOverYears,
-    operatingMarginPercent,
-    marginChangePoints,
     growthRatesOnFile,
   ];
 }

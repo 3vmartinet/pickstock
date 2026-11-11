@@ -137,18 +137,34 @@ class _Working extends StatelessWidget {
     final money = _formatRepo.compactCurrency;
     final percent = _formatRepo.percent;
     final signed = _formatRepo.signedPercent;
-    final revenue = expectation.marketCap <= 0
-        ? null
-        : expectation.normalisedCashFlow / expectation.medianCashFlowMargin;
+    final margin = percent(expectation.medianCashFlowMargin);
+    final flow = money(expectation.normalisedCashFlow);
 
     return [
       (
         title: strings.targetsHowStep1Title,
-        body: strings.targetsHowStep1Body(
-          revenue == null ? '—' : money(revenue * 100),
-          percent(expectation.medianCashFlowMargin),
-          money(expectation.normalisedCashFlow),
-        ),
+        body: [
+          // Named for what it is: the twelve months to a quarter where a 10-Q
+          // newer than the annual report supplied the sales.
+          if (expectation.revenueThrough case final through?)
+            strings.targetsHowStep1SalesQuarter(
+              _formatRepo.shortDate(through),
+              money(expectation.revenue),
+            )
+          else
+            strings.targetsHowStep1Sales(money(expectation.revenue)),
+          // The group's sales and cash, then the listed shares' stake of it,
+          // so the arithmetic can be followed to the figure the targets use.
+          if (expectation.hasOutsideOwners)
+            strings.targetsHowStep1MarginStake(
+              margin,
+              money(expectation.groupCashFlow),
+              percent(expectation.parentStake * 100),
+              flow,
+            )
+          else
+            strings.targetsHowStep1Margin(margin, flow),
+        ].join(' '),
       ),
       (
         title: strings.targetsHowStep2Title,

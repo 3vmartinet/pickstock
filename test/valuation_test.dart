@@ -7,6 +7,7 @@ import 'package:pickstock/data/snapshot/financial_snapshot.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/snapshot/trailing_figures.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
+import 'package:pickstock/data/valuation/quarter_figure.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation_metric.dart';
@@ -562,6 +563,21 @@ void main() {
       expect(valuation.freeCashFlowYieldPercent, closeTo(10, 0.001));
     });
 
+    test('leaves the enterprise value unknown where the debt is', () {
+      // A missing debt counted as none would print the market value under
+      // the enterprise value's name.
+      final valuation = Valuation(
+        snapshot: _snapshot(totalDebt: null),
+        pricePerShare: 100,
+      );
+      expect(valuation.netDebt, isNull);
+      expect(valuation.marketCap, 1000 * _million);
+      expect(valuation.enterpriseValue, isNull);
+      // The band takes nothing off for it and adds nothing, as before.
+      expect(valuation.netCashAdded, 0);
+      expect(valuation.excessDebtDeducted, 0);
+    });
+
     test('cannot value a filer that reports no share count', () {
       final valuation = Valuation(
         snapshot: _snapshot(sharesOutstanding: null, dilutedShares: null),
@@ -795,8 +811,135 @@ void main() {
       expect(valuation.earningsPerShare, annual.earningsPerShare! / 2);
       // The cover count is already the new one, so the band is unmoved.
       expect(valuation.fairValueHigh, annual.fairValueHigh);
-      // Nothing the reader would check against the annual report changed.
-      expect(valuation.currentThrough, isNull);
+      // The earnings per share did move, so the quarter is still named.
+      expect(valuation.currentThrough, DateTime(2026, 9, 30));
+      expect(valuation.fromQuarter, {QuarterFigure.dilutedShares});
+    });
+
+    test('names only the figures the quarter supplied', () {
+      final salesOnly = Valuation(
+        snapshot: withTrailing(
+          TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            revenue: 1500 * _million,
+          ),
+        ),
+        pricePerShare: 50,
+      );
+      expect(salesOnly.fromQuarter, {QuarterFigure.revenue});
+
+      final everything = Valuation(
+        snapshot: withTrailing(
+          TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            revenue: 1500 * _million,
+            totalDebt: 200 * _million,
+            cash: 20 * _million,
+            dilutedShares: 20 * _million,
+          ),
+        ),
+        pricePerShare: 50,
+      );
+      expect(everything.fromQuarter, {
+        QuarterFigure.revenue,
+        QuarterFigure.netDebt,
+        QuarterFigure.dilutedShares,
+      });
+
+      // Half a balance sheet is no net debt, so the year's stands and the
+      // quarter is not credited with it.
+      final halfSheet = Valuation(
+        snapshot: withTrailing(
+          TrailingFigures(
+            periodEnd: DateTime(2026, 9, 30),
+            fiscalYear: 2026,
+            quarter: 3,
+            totalDebt: 200 * _million,
+          ),
+        ),
+        pricePerShare: 50,
+      );
+      expect(halfSheet.fromQuarter, isEmpty);
+      expect(halfSheet.currentThrough, isNull);
+    });
+
+    test('a count only the quarter carries is enough to value it', () {
+      final annual = _snapshot(sharesOutstanding: null, dilutedShares: null);
+      expect(Valuation.shareCountOf(annual), isNull);
+
+      final snapshot = FinancialSnapshot(
+        company: annual.company,
+        years: annual.years,
+        trailing: TrailingFigures(
+          periodEnd: DateTime(2026, 9, 30),
+          fiscalYear: 2026,
+          quarter: 3,
+          dilutedShares: 20 * _million,
+        ),
+      );
+      expect(Valuation.shareCountOf(snapshot), 20 * _million);
+      final valuation = Valuation(snapshot: snapshot, pricePerShare: 50);
+      expect(valuation.sharesOutstanding, Valuation.shareCountOf(snapshot));
+      expect(valuation.fairValueHigh, isNotNull);
+    });
+  });
+
+  group('what the worked example warns about', () {
+    /// A filer building out on borrowed time: margins sliding from 20% to
+    /// 12% and spending three times what wears out, with cash flow either
+    /// on file or not.
+    FinancialSnapshot building({double? operatingCashFlow}) =>
+        FinancialSnapshot(
+          company: const Company(
+            ticker: 'BLD',
+            cik: '0000000002',
+            name: 'Build Corp',
+            sharesOutstanding: 10 * _million,
+          ),
+          years: [
+            for (final (index, margin) in [0.20, 0.20, 0.19, 0.12].indexed)
+              FiscalYearFigures(
+                fiscalYear: 2022 + index,
+                revenue: 1000 * _million,
+                operatingIncome: 1000 * _million * margin,
+                netIncome: 80 * _million,
+                operatingCashFlow: operatingCashFlow,
+                capitalExpenditure: 300 * _million,
+                depreciationAmortisation: 100 * _million,
+              ),
+          ],
+        );
+
+    test('reads the margin slide and the building spree off the filings', () {
+      final valuation = Valuation(
+        snapshot: building(operatingCashFlow: 500 * _million),
+        pricePerShare: 100,
+      );
+      expect(valuation.basis, ValuationBasis.freeCashFlow);
+      expect(valuation.marginChangePoints, closeTo(-8, 1e-9));
+      expect(valuation.isMarginEroding, isTrue);
+      expect(valuation.capexToDepreciation, closeTo(3, 1e-9));
+      expect(valuation.isBuildingCapacity, isTrue);
+    });
+
+    test('and still does where it is valued on its profit', () {
+      // No cash flow to discount, so no growth expectation either — which
+      // used to take both warnings away with it.
+      final valuation = Valuation(snapshot: building(), pricePerShare: 100);
+      expect(valuation.basis, ValuationBasis.earnings);
+      expect(valuation.isMarginEroding, isTrue);
+      expect(valuation.isBuildingCapacity, isTrue);
+    });
+
+    test('says nothing of a margin with nothing to compare it to', () {
+      final valuation = Valuation(snapshot: _snapshot(), pricePerShare: 100);
+      expect(valuation.marginChangePoints, isNull);
+      expect(valuation.isMarginEroding, isFalse);
+      expect(valuation.isBuildingCapacity, isFalse);
     });
   });
 

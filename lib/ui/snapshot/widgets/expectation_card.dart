@@ -228,7 +228,9 @@ class _BasisLines extends StatelessWidget {
     );
     if (expectation == null) return const SizedBox.shrink();
 
-    final reported = expectation.reportedCashFlow;
+    // On the same footing as the first line: the listed shares' stake where
+    // outside owners hold part of the business.
+    final reported = expectation.reportedStakeCashFlow;
     final gap = expectation.normalisationEffectPercent;
 
     return Column(
@@ -236,10 +238,16 @@ class _BasisLines extends StatelessWidget {
       spacing: ThemeRepo.spaceXSmall,
       children: [
         Text(
-          context.strings.expectationBasis(
-            _formatRepo.compactCurrency(expectation.normalisedCashFlow),
-            _formatRepo.percent(expectation.medianCashFlowMargin),
-          ),
+          expectation.hasOutsideOwners
+              ? context.strings.expectationBasisStake(
+                  _formatRepo.compactCurrency(expectation.normalisedCashFlow),
+                  _formatRepo.percent(expectation.medianCashFlowMargin),
+                  _formatRepo.percent(expectation.parentStake * 100),
+                )
+              : context.strings.expectationBasis(
+                  _formatRepo.compactCurrency(expectation.normalisedCashFlow),
+                  _formatRepo.percent(expectation.medianCashFlowMargin),
+                ),
         ).muted().xSmall(),
         if (reported != null && gap != null)
           Text(

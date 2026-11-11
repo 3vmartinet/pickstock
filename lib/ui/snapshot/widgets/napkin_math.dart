@@ -1,7 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
-import 'package:pickstock/data/valuation/growth_expectation.dart';
+import 'package:pickstock/data/valuation/quarter_figure.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
@@ -39,20 +39,12 @@ class NapkinMath extends StatelessWidget {
     final figures = context.select<SnapshotViewModel, FiscalYearFigures?>(
       (viewModel) => viewModel.latestFigures,
     );
-    final expectation = context.select<SnapshotViewModel, GrowthExpectation?>(
-      (viewModel) => viewModel.growthExpectation,
-    );
     if (valuation == null || figures == null) return const SizedBox.shrink();
 
-    final steps = _stepsFor(context.strings, valuation, figures);
+    final steps = napkinStepsFor(context.strings, valuation);
     if (steps.isEmpty) return const SizedBox.shrink();
 
-    final caveats = _caveatsFor(
-      context.strings,
-      valuation,
-      figures,
-      expectation,
-    );
+    final caveats = napkinCaveatsFor(context.strings, valuation, figures);
 
     return Card(
       padding: context.cardPadding,
@@ -91,10 +83,10 @@ class NapkinMath extends StatelessWidget {
 ///
 /// Returns empty where a step cannot be stated: half a derivation with gaps in
 /// it teaches nothing, so the panel simply does not appear.
-List<_Step> _stepsFor(
+@visibleForTesting
+List<({String title, String body})> napkinStepsFor(
   AppLocalizations strings,
   Valuation valuation,
-  FiscalYearFigures figures,
 ) {
   final shares = valuation.sharesOutstanding;
   final marketCap = valuation.marketCap;
@@ -116,7 +108,7 @@ List<_Step> _stepsFor(
     return const [];
   }
 
-  final netDebt = valuation.netDebt ?? 0;
+  final netDebt = valuation.netDebt;
   final excess = valuation.excessDebtDeducted;
   final netCash = valuation.netCashAdded;
   final money = _formatRepo.compactCurrency;
@@ -151,24 +143,32 @@ List<_Step> _stepsFor(
               money(basis),
             ),
     ),
-    (
-      title: netDebt < 0
-          ? strings.napkinStep3TitleCash
-          : excess > 0
-          ? strings.napkinStep3TitleExcess
-          : strings.napkinStep3TitleDebt,
-      body: netDebt < 0
-          ? strings.napkinStep3BodyCash(money(netCash), money(basis))
-          : excess > 0
-          ? strings.napkinStep3BodyExcess(
-              money(netDebt),
-              years(netDebt / basis),
-              money(basis),
-              years(CashFlowModel.carriedDebtYears),
-              money(excess),
-            )
-          : strings.napkinStep3BodyDebt(money(netDebt), money(basis)),
-    ),
+    // A debt that is not on file is said to be missing rather than written
+    // as $0, which would read as a company owing nothing.
+    switch (netDebt) {
+      null => (
+        title: strings.napkinStep3TitleUnknown,
+        body: strings.napkinStep3BodyUnknown(money(basis)),
+      ),
+      < 0 => (
+        title: strings.napkinStep3TitleCash,
+        body: strings.napkinStep3BodyCash(money(netCash), money(basis)),
+      ),
+      final owed when excess > 0 => (
+        title: strings.napkinStep3TitleExcess,
+        body: strings.napkinStep3BodyExcess(
+          money(owed),
+          years(owed / basis),
+          money(basis),
+          years(CashFlowModel.carriedDebtYears),
+          money(excess),
+        ),
+      ),
+      final owed => (
+        title: strings.napkinStep3TitleDebt,
+        body: strings.napkinStep3BodyDebt(money(owed), money(basis)),
+      ),
+    },
     (
       title: strings.napkinStep4Title,
       body: strings.napkinStep4Body(
@@ -262,13 +262,20 @@ List<_Step> _stepsFor(
 }
 
 /// The things that would mislead a reader who took the steps at face value.
-List<String> _caveatsFor(
+@visibleForTesting
+List<String> napkinCaveatsFor(
   AppLocalizations strings,
   Valuation valuation,
   FiscalYearFigures figures,
-  GrowthExpectation? expectation,
 ) {
   final actualGrowth = valuation.growthPercent;
+  final fromQuarter = valuation.fromQuarter;
+  // The share count only reaches the arithmetic from the quarter where there
+  // is no cover count; otherwise the quarter's average is only the earnings
+  // divisor, which the steps never use.
+  final sharesFromQuarter =
+      !valuation.countIsCurrent &&
+      fromQuarter.contains(QuarterFigure.dilutedShares);
   return [
     // First, because every figure in the derivation is struck against the
     // share count: a market value built on the wrong one is wrong throughout,
@@ -280,14 +287,28 @@ List<String> _caveatsFor(
     // stopped in 2010 has a count on record that a reader might otherwise go
     // looking for, and naming the year says how far out of date it is.
     if (!valuation.countIsCurrent)
-      if (valuation.sharesLastFiled case final filed?)
-        strings.napkinCaveatShareCountStale('${filed.year}')
-      else
-        strings.napkinCaveatShareCount,
-    // Said because the sales and the balance sheet above will not match the
-    // annual report a reader checks them against.
+      switch ((valuation.sharesLastFiled, sharesFromQuarter)) {
+        (final filed?, true) => strings.napkinCaveatShareCountQuarterStale(
+          '${filed.year}',
+        ),
+        (final filed?, false) => strings.napkinCaveatShareCountStale(
+          '${filed.year}',
+        ),
+        (null, true) => strings.napkinCaveatShareCountQuarter,
+        (null, false) => strings.napkinCaveatShareCount,
+      },
+    // Said because the figures above will not match the annual report a
+    // reader checks them against — naming only the ones that came from the
+    // quarter, since any of them can have stayed the year's.
     if (valuation.currentThrough case final through?)
-      strings.napkinCaveatCurrent(_formatRepo.shortDate(through)),
+      if (_quarterFigures(
+            strings,
+            sales: fromQuarter.contains(QuarterFigure.revenue),
+            cashAndDebt: fromQuarter.contains(QuarterFigure.netDebt),
+            shares: sharesFromQuarter,
+          )
+          case final figures?)
+        strings.napkinCaveatQuarter(_formatRepo.shortDate(through), figures),
     if (valuation.basis == ValuationBasis.earnings)
       strings.napkinCaveatEarnings,
     if (actualGrowth != null &&
@@ -307,15 +328,47 @@ List<String> _caveatsFor(
       strings.napkinCaveatOutsideOwners(
         _formatRepo.percent(valuation.parentStake * 100),
       ),
-    if (expectation != null && expectation.isBuildingCapacity(figures))
-      strings.napkinCaveatBuilding(
-        _formatRepo.ratio(figures.capexToDepreciation!),
-      ),
-    if (expectation != null && expectation.isMarginEroding)
+    // Worded for the stream the band is struck on: a typical year of cash
+    // already allows for a building spree, a year's profit only charges what
+    // wore out.
+    if (valuation.isBuildingCapacity)
+      valuation.basis == ValuationBasis.earnings
+          ? strings.napkinCaveatBuildingEarnings(
+              _formatRepo.ratio(valuation.capexToDepreciation!),
+            )
+          : strings.napkinCaveatBuilding(
+              _formatRepo.ratio(valuation.capexToDepreciation!),
+            ),
+    if (valuation.isMarginEroding)
       strings.napkinCaveatMargin(
-        _formatRepo.ratio(expectation.marginChangePoints!.abs()),
+        _formatRepo.ratio(valuation.marginChangePoints!.abs()),
       ),
   ];
+}
+
+/// The figures that came from the quarter, as a phrase, or `null` where none
+/// of those the steps use did.
+String? _quarterFigures(
+  AppLocalizations strings, {
+  required bool sales,
+  required bool cashAndDebt,
+  required bool shares,
+}) {
+  final named = [
+    if (sales) strings.napkinQuarterSales,
+    if (cashAndDebt) strings.napkinQuarterCashAndDebt,
+    if (shares) strings.napkinQuarterShareCount,
+  ];
+  return switch (named) {
+    [] => null,
+    [final only] => only,
+    [final first, final second] => strings.napkinListOfTwo(first, second),
+    [final first, final second, final third, ...] => strings.napkinListOfThree(
+      first,
+      second,
+      third,
+    ),
+  };
 }
 
 class _NumberedStep extends StatelessWidget {

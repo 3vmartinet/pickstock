@@ -2,13 +2,13 @@ import 'package:equatable/equatable.dart';
 
 /// The three readings a price target is quoted under.
 enum PriceCase {
-  /// The company's weaker years repeated.
+  /// Its worst year repeated.
   bear,
 
-  /// Its typical year repeated.
+  /// Its middle year repeated.
   neutral,
 
-  /// Its stronger years repeated.
+  /// Its best year repeated.
   bull,
 }
 
@@ -16,8 +16,8 @@ enum PriceCase {
 ///
 /// Not a forecast. Every one of these is the same discounted cash flow run at
 /// a different growth rate, and the three rates are read off the company's own
-/// record rather than guessed: the quarter of its years that went worst, its
-/// middle year, and the quarter that went best. A price target is only as good
+/// record rather than guessed: the worst year it has had, its middle year, and
+/// its best. A price target is only as good
 /// as the growth behind it, so the growth here is the one thing that is not
 /// invented — and the report prints it beside the target so a reader can
 /// disagree with the assumption rather than with the arithmetic.

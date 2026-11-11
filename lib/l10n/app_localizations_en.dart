@@ -185,9 +185,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get updateCancel => 'Cancel the download';
-
-  @override
   String get updateCancelHint =>
       'Stop the download and throw away what has come down. An archive is only usable whole, so there is nothing to resume — starting again starts from the beginning.';
 
@@ -547,9 +544,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get jobsTitle => 'Reports';
 
   @override
-  String get jobsEmpty => 'No reports yet.';
-
-  @override
   String get jobsEmptyBody =>
       'Scan the companies you have filtered to find the ones priced below what their filings support.';
 
@@ -618,9 +612,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get jobsCancel => 'Stop';
 
   @override
-  String get jobsCancelled => 'Stopped early';
-
-  @override
   String jobsDone(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -633,9 +624,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get jobsOpen => 'Open';
-
-  @override
   String get reportRename => 'Rename';
 
   @override
@@ -645,9 +633,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportDeleteConfirm(String name) {
     return 'Delete “$name”? The companies in it are not affected.';
   }
-
-  @override
-  String get reportNameLabel => 'Name';
 
   @override
   String reportSubtitle(int found, int valued, int considered) {
@@ -776,11 +761,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sectorAll => 'All';
-
-  @override
-  String sectorNarrow(String sector) {
-    return 'Narrow $sector to SEC industries';
-  }
 
   @override
   String sectorNarrowedCount(int selected, int total) {
@@ -1588,7 +1568,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get frameworkTimingLookFor =>
-      'Even great companies are terrible investments at the wrong price: recent pullbacks, upcoming catalysts, sector rotation.';
+      'The price today against the fair range the valuation works out from the filings. Even a great company is a poor investment above it.';
 
   @override
   String get frameworkLayoutList => 'List view';
@@ -1612,20 +1592,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Seven-questions pane on the left with answers on the right';
 
   @override
-  String get frameworkPrevious => 'Previous question';
-
-  @override
-  String get frameworkNext => 'Next question';
-
-  @override
-  String frameworkQuestionPagination(int current, int total) {
-    return 'Question $current of $total';
-  }
-
-  @override
-  String get frameworkVerticalExpanded => 'Full list';
-
-  @override
   String get frameworkVerticalExpandedHint =>
       'Show all seven answers as a list';
 
@@ -1637,14 +1603,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show only the answer for the selected question';
 
   @override
-  String get frameworkPinHeader => 'Pin header';
-
-  @override
   String get frameworkPinHeaderHint =>
       'Keep the seven questions scorecard pinned to the top while scrolling answers';
-
-  @override
-  String get frameworkUnpinHeader => 'Unpin header';
 
   @override
   String get frameworkUnpinHeaderHint =>
@@ -1770,9 +1730,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sectionValuation => 'Fair value';
-
-  @override
-  String get labelSharePrice => 'Share price';
 
   @override
   String get hintSharePrice =>
@@ -1976,6 +1933,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String expectationBasisStake(String amount, String margin, String share) {
+    return 'Discounting $amount a year — this company\'s median free cash flow margin of $margin, after stock pay, on its latest revenue, brought down to the $share of the business the listed shares own — over ten years, fading to 2.5%.';
+  }
+
+  @override
   String expectationNormalised(String reported, String gap) {
     return 'Its latest reported free cash flow was $reported, $gap against that, so the year as filed is not used on its own.';
   }
@@ -2044,9 +2006,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get watchlistManage => 'Manage lists';
-
-  @override
   String get watchlistNew => 'New list';
 
   @override
@@ -2077,16 +2036,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get watchlistCreate => 'Create';
-
-  @override
-  String get watchlistDefaultLocked => 'The starred list cannot be deleted.';
-
-  @override
-  String get watchlistEmptyTitle => 'No lists yet';
-
-  @override
-  String get watchlistEmptyBody =>
-      'Star a company, or make a list to group the ones you are watching.';
 
   @override
   String get watchlistNoMatchesTitle => 'Nothing in this list';
@@ -2180,6 +2129,14 @@ class AppLocalizationsEn extends AppLocalizations {
     String excess,
   ) {
     return 'The company owes $netDebt more than it holds — $years years of the $freeCashFlow it keeps. Its lenders are paid first and that interest already came out of the cash above, so up to $carried years\' worth is debt a business simply carries. The $excess beyond that is the lenders\' claim on the business itself, and comes off what it is worth below.';
+  }
+
+  @override
+  String get napkinStep3TitleUnknown => 'What it owes is not on file';
+
+  @override
+  String napkinStep3BodyUnknown(String freeCashFlow) {
+    return 'The filings carry no usable figure for its cash and debt, so nothing is added for cash or taken off for debt below. Any interest it pays already came out of the $freeCashFlow above, but debt beyond what that cash can carry would go unseen — check the balance sheet before trusting the range.';
   }
 
   @override
@@ -2307,19 +2264,34 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String targetsAgainstPrice(String price) {
-    return 'vs $price today';
-  }
-
-  @override
   String get targetsHowTitle => 'How these are worked out';
 
   @override
   String get targetsHowStep1Title => 'A year of cash to start from';
 
   @override
-  String targetsHowStep1Body(String revenue, String margin, String flow) {
-    return 'Its last year sold $revenue. Over the years on file it has turned $margin of what it sells into spare cash after paying its staff in shares, so the sum starts from $flow — its own typical conversion, not one unusual year.';
+  String targetsHowStep1Sales(String revenue) {
+    return 'In its latest fiscal year it sold $revenue.';
+  }
+
+  @override
+  String targetsHowStep1SalesQuarter(String date, String revenue) {
+    return 'In the twelve months to $date it sold $revenue.';
+  }
+
+  @override
+  String targetsHowStep1Margin(String margin, String flow) {
+    return 'Over the years on file it has turned $margin of what it sells into spare cash after paying its staff in shares, so the sum starts from $flow — its own typical conversion, not one unusual year.';
+  }
+
+  @override
+  String targetsHowStep1MarginStake(
+    String margin,
+    String groupFlow,
+    String share,
+    String flow,
+  ) {
+    return 'Over the years on file it has turned $margin of what it sells into spare cash after paying its staff in shares, or $groupFlow a year — its own typical conversion, not one unusual year. Only $share of the business belongs to the listed shares, so the sum starts from their $flow of it.';
   }
 
   @override
@@ -2376,6 +2348,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String napkinCaveatBuilding(String ratio) {
     return 'It spent $ratio× more on equipment than wore out, so last year\'s leftover cash on its own would understate what the business normally makes. The typical-year figure above allows for it.';
+  }
+
+  @override
+  String napkinCaveatBuildingEarnings(String ratio) {
+    return 'It spent $ratio× more on equipment than wore out. That spending is much of why it keeps no spare cash, and profit only charges the part that wore out, so the profit above is a stream the spending has not yet had to pay for.';
   }
 
   @override
@@ -2502,11 +2479,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Timing is read from the price against the range the filings support, so the model is not asked it.';
 
   @override
-  String napkinCaveatCurrent(String date) {
-    return 'The sales, cash and debt above are from the latest quarterly report, for the twelve months to $date, because the annual report is older. The typical margin is still read across full years.';
-  }
-
-  @override
   String get napkinCaveatEarnings =>
       'It generates no spare cash, so this uses accounting profit instead — a weaker measure, because profit is an opinion and cash is a fact.';
 
@@ -2522,6 +2494,40 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String napkinCaveatShareCountStale(String year) {
     return 'It last filed a share count in $year, so the number above is the average across the fiscal year that its earnings are reported against. Every figure here is struck against it, so read them as approximate.';
+  }
+
+  @override
+  String get napkinCaveatShareCountQuarter =>
+      'It files no current share count, so the number above is the diluted average from its latest quarterly report, the divisor its earnings are reported against. Every figure here is struck against it, so read them as approximate.';
+
+  @override
+  String napkinCaveatShareCountQuarterStale(String year) {
+    return 'It last filed a share count in $year, so the number above is the diluted average from its latest quarterly report, the divisor its earnings are reported against. Every figure here is struck against it, so read them as approximate.';
+  }
+
+  @override
+  String napkinCaveatQuarter(String date, String figures) {
+    return 'Read from the latest quarterly report, to $date, because the annual report is older: $figures. The typical margin is still read across full years.';
+  }
+
+  @override
+  String get napkinQuarterSales =>
+      'the sales, for the twelve months to that date';
+
+  @override
+  String get napkinQuarterCashAndDebt => 'the cash and debt';
+
+  @override
+  String get napkinQuarterShareCount => 'the share count';
+
+  @override
+  String napkinListOfTwo(String first, String second) {
+    return '$first and $second';
+  }
+
+  @override
+  String napkinListOfThree(String first, String second, String third) {
+    return '$first, $second and $third';
   }
 
   @override

@@ -6,11 +6,18 @@ import 'package:pickstock/data/snapshot/fiscal_year_figures.dart';
 import 'package:pickstock/data/snapshot/sic_sector.dart';
 import 'package:pickstock/data/valuation/cash_flow_model.dart';
 import 'package:pickstock/data/valuation/normalised_cash_flow.dart';
+import 'package:pickstock/data/valuation/quarter_figure.dart';
 import 'package:pickstock/data/valuation/valuation_basis.dart';
 import 'package:pickstock/data/valuation/valuation_verdict.dart';
 
 /// How many years of history the growth the multiple pays for looks back over.
 const int _growthWindowYears = 5;
+
+/// A margin this many points below its own median is a slide, not noise.
+const double _marginErosionPoints = 3;
+
+/// Capital spending this many times depreciation is building, not maintaining.
+const double _buildingCapexRatio = 1.5;
 
 /// Real estate investment trusts, which file under this industry code. Their
 /// capital spending is their business, so free cash flow says nothing about
@@ -40,14 +47,22 @@ class Valuation extends Equatable {
     // two-for-one, Booking's 33M against 772M after its twenty-five — and
     // earnings per share, and the fair value of a filer with no cover count,
     // that many times too high.
-    final yearDiluted = trailing?.dilutedShares ?? latest.dilutedShares;
-    final outstanding = snapshot.company.sharesOutstanding ?? yearDiluted;
+    final yearDiluted = _dilutedSharesOf(snapshot);
+    final outstanding = shareCountOf(snapshot);
     final diluted = yearDiluted ?? snapshot.company.sharesOutstanding;
     // What the business sells and owes now, from the newest quarter where it
     // is newer than the annual report; the year's otherwise.
     final revenue = trailing?.revenue ?? latest.revenue;
     final netDebt = trailing?.netDebt ?? latest.netDebt;
     final rates = _growthRates(snapshot);
+    // Each line is taken from the quarter on its own, so any of them can be
+    // the year's while the others are the quarter's — a 10-Q whose balance
+    // sheet is missing a line leaves the cash and debt annual.
+    final fromQuarter = <QuarterFigure>{
+      if (trailing?.revenue != null) QuarterFigure.revenue,
+      if (trailing?.netDebt != null) QuarterFigure.netDebt,
+      if (trailing?.dilutedShares != null) QuarterFigure.dilutedShares,
+    };
 
     return Valuation._(
       pricePerShare: pricePerShare,
@@ -65,11 +80,10 @@ class Valuation extends Equatable {
       revenue: revenue,
       netDebt: netDebt,
       fiscalYear: latest.fiscalYear,
-      currentThrough:
-          trailing != null &&
-              (trailing.revenue != null || trailing.netDebt != null)
-          ? trailing.periodEnd
-          : null,
+      currentThrough: fromQuarter.isEmpty ? null : trailing?.periodEnd,
+      fromQuarter: fromQuarter,
+      capexToDepreciation: latest.capexToDepreciation,
+      marginChangePoints: _marginChange(snapshot),
       growthPercent: _median(rates),
       windowYears: rates.length,
       isCovered: covers(snapshot.company.sic),
@@ -92,6 +106,9 @@ class Valuation extends Equatable {
     required this.netDebt,
     required this.fiscalYear,
     required this.currentThrough,
+    required this.fromQuarter,
+    required this.capexToDepreciation,
+    required this.marginChangePoints,
     required this.growthPercent,
     required int windowYears,
     required this.isCovered,
@@ -199,10 +216,38 @@ class Valuation extends Equatable {
   /// The fiscal year every figure above is taken from.
   final int fiscalYear;
 
-  /// The quarter end that the revenue, the cash and the debt are read to,
-  /// where a 10-Q newer than the annual report supplied them; `null` where
-  /// they are the annual report's.
+  /// The quarter end of the 10-Q that supplied any of [fromQuarter], where
+  /// one newer than the annual report did; `null` where every figure is the
+  /// annual report's.
   final DateTime? currentThrough;
+
+  /// Which figures were read from that quarter rather than the year, so the
+  /// worked example names those and only those.
+  final Set<QuarterFigure> fromQuarter;
+
+  /// The latest year's capital spending over its depreciation, or `null`
+  /// where either is missing.
+  final double? capexToDepreciation;
+
+  /// How far the latest operating margin sits from its own median over the
+  /// last decade, in percentage points, or `null` where there are too few
+  /// margins on file to have a median.
+  ///
+  /// Revenue growth alone cannot tell bought growth from earned growth: a
+  /// company can compound sales for a decade while its margin drains away.
+  /// Read off the filings rather than the cash flow, so it is said whichever
+  /// stream the band is struck on.
+  final double? marginChangePoints;
+
+  /// Whether growth has come at the cost of profitability, by enough to be
+  /// worth saying out loud.
+  bool get isMarginEroding =>
+      (marginChangePoints ?? 0) <= -_marginErosionPoints;
+
+  /// Whether the company is spending well beyond what wears out — which is
+  /// why one year's cash or profit may understate the business.
+  bool get isBuildingCapacity =>
+      (capexToDepreciation ?? 0) >= _buildingCapexRatio;
 
   /// Typical growth of revenue per share over the window, in percentage
   /// points, before the band's floor and ceiling: what the company has
@@ -222,10 +267,16 @@ class Valuation extends Equatable {
   }
 
   /// Market value plus net debt: what an acquirer pays for the whole business.
+  ///
+  /// `null` where the debt is not on file as well as where the market value
+  /// is not: a missing debt counted as none would print the market value
+  /// under the enterprise value's name, which reads as a company owing
+  /// nothing.
   double? get enterpriseValue {
     final equity = marketCap;
-    if (equity == null) return null;
-    return equity + (netDebt ?? 0);
+    final debt = netDebt;
+    if (equity == null || debt == null) return null;
+    return equity + debt;
   }
 
   /// Earnings per diluted share, as the company would report it.
@@ -522,6 +573,35 @@ class Valuation extends Equatable {
     return (perShare - priorPerShare) / priorPerShare * 100;
   }
 
+  /// The share count the band divides by: the cover count where there is
+  /// one, the diluted average otherwise — the same resolution the valuation
+  /// itself makes, so a report can ask whether a company can be valued
+  /// without building one.
+  static double? shareCountOf(FinancialSnapshot snapshot) =>
+      snapshot.company.sharesOutstanding ?? _dilutedSharesOf(snapshot);
+
+  /// The diluted average, the newest quarter's where there is one.
+  static double? _dilutedSharesOf(FinancialSnapshot snapshot) =>
+      snapshot.trailing?.dilutedShares ?? snapshot.latest.dilutedShares;
+
+  /// The latest operating margin less its median over the last
+  /// [CashFlowModel.horizon] years, or `null` where there are fewer than two
+  /// margins to take a median of.
+  static double? _marginChange(FinancialSnapshot snapshot) {
+    final latest = snapshot.latest.operatingMarginPercent;
+    if (latest == null) return null;
+
+    final years = snapshot.years;
+    final window = years.length > CashFlowModel.horizon
+        ? years.sublist(years.length - CashFlowModel.horizon)
+        : years;
+    final margins = <double>[
+      for (final year in window) ?year.operatingMarginPercent,
+    ]..sort();
+    if (margins.length < 2) return null;
+    return latest - margins[margins.length ~/ 2];
+  }
+
   static double? _median(List<double> sorted) {
     if (sorted.isEmpty) return null;
     final middle = sorted.length ~/ 2;
@@ -553,6 +633,9 @@ class Valuation extends Equatable {
     netDebt,
     fiscalYear,
     currentThrough,
+    fromQuarter,
+    capexToDepreciation,
+    marginChangePoints,
     growthPercent,
     _windowYears,
     isCovered,
