@@ -15,7 +15,8 @@ import 'package:shadcn_flutter/shadcn_flutter_extension.dart';
 
 FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 
-/// Opens the settings, from the app menu's Settings… item or ⌘,.
+/// Opens the settings: from the app menu's Settings… item or ⌘, on a Mac,
+/// and from Ctrl+, or the settings button everywhere else.
 ///
 /// A dialog because Flutter draws this app in one window: Apple's guidance is
 /// a separate settings window, and a dialog over the app is the nearest thing
@@ -25,8 +26,29 @@ FormatRepo get _formatRepo => GetIt.I.get<FormatRepo>();
 /// Laid out as Apple asks of a settings window with a single pane: titled
 /// "PickStock Settings", every change applied the moment it is made, and so
 /// no OK or Apply — only the way out.
-Future<void> showSettings(BuildContext context) =>
-    showAppDialog<void>(context, builder: (_) => const SettingsDialog());
+///
+/// Opened once at a time, whichever way it was asked for: ⌘, or Ctrl+, while
+/// the settings button's dialog is up would otherwise stack a second copy.
+Future<void> showSettings(BuildContext context) async {
+  if (_openOver?.mounted ?? false) return;
+  _openOver = context;
+  final opening = ++_openings;
+  try {
+    await showAppDialog<void>(context, builder: (_) => const SettingsDialog());
+  } finally {
+    if (opening == _openings) _openOver = null;
+  }
+}
+
+/// What the open settings were shown over, if they are open.
+///
+/// A context rather than a flag: a window torn down with the dialog still up
+/// never finishes its future, and a flag would then keep the settings shut for
+/// whatever is built next; an unmounted context reads as closed.
+BuildContext? _openOver;
+
+/// Counts each opening, so one that ends late does not clear a newer one.
+int _openings = 0;
 
 class SettingsDialog extends StatelessWidget {
   const SettingsDialog({super.key});

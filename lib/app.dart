@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -80,10 +82,6 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
   /// not to a screen, and has no context of its own.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey();
 
-  /// Whether the settings are already open, so a second ⌘, does not stack a
-  /// second copy on the first.
-  bool _isSettingsOpen = false;
-
   /// The update the screens below were last brought up to date with.
   int _dataRevision = 0;
 
@@ -100,10 +98,14 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
       // menu's call would be left unanswered for as long as it is open.
       if (call.method == openSettingsMethod) unawaited(_openSettings());
     });
+    // Everywhere else there is no native menu to send it, so the app listens
+    // for the shortcut itself.
+    HardwareKeyboard.instance.addHandler(_onKey);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
     appMenuChannel.setMethodCallHandler(null);
     _ingest.removeListener(_onIngestChanged);
     super.dispose();
@@ -121,19 +123,30 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
     _dataRevision = revision;
     context.read<BrowseViewModel>().ensureCurrent();
     unawaited(context.read<SnapshotViewModel>().reloadFigures());
+    // The tiles' scores too: settled against the figures they were read
+    // with, they would otherwise disagree with the report until the research
+    // queue or the day's closes next moved.
+    unawaited(context.read<FrameworkScoresViewModel>().reloadFigures());
+  }
+
+  /// Opens the settings on Ctrl+, where the app menu cannot.
+  ///
+  /// On the keyboard rather than through `Shortcuts`: the shortcut belongs to
+  /// the app, not to whichever widget has focus, and it has to work before
+  /// anything has been clicked as much as from inside a text field.
+  bool _onKey(KeyEvent event) {
+    final pressed = HardwareKeyboard.instance.logicalKeysPressed;
+    if (!opensSettings(event, pressed, defaultTargetPlatform)) return false;
+    unawaited(_openSettings());
+    return true;
   }
 
   Future<void> _openSettings() async {
     // The overlay's context rather than the navigator's: a dialog needs an
     // overlay above it, and the navigator's own context sits above its own.
     final context = _navigatorKey.currentState?.overlay?.context;
-    if (context == null || _isSettingsOpen) return;
-    _isSettingsOpen = true;
-    try {
-      await showSettings(context);
-    } finally {
-      _isSettingsOpen = false;
-    }
+    if (context == null) return;
+    await showSettings(context);
   }
 
   @override
@@ -157,6 +170,32 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
       debugShowCheckedModeBanner: false,
     );
   }
+}
+
+/// Whether [event], with [pressed] held, is the settings shortcut on
+/// [platform]: Ctrl+, — the convention on Linux and Windows for ⌘, on a Mac.
+///
+/// Never on macOS, where the native menu already answers ⌘, and Ctrl+, is
+/// nobody's settings key.
+@visibleForTesting
+bool opensSettings(
+  KeyEvent event,
+  Set<LogicalKeyboardKey> pressed,
+  TargetPlatform platform,
+) {
+  if (platform == TargetPlatform.macOS) return false;
+  if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.comma) {
+    return false;
+  }
+  bool held(LogicalKeyboardKey left, LogicalKeyboardKey right) =>
+      pressed.contains(left) || pressed.contains(right);
+  return held(
+        LogicalKeyboardKey.controlLeft,
+        LogicalKeyboardKey.controlRight,
+      ) &&
+      !held(LogicalKeyboardKey.shiftLeft, LogicalKeyboardKey.shiftRight) &&
+      !held(LogicalKeyboardKey.altLeft, LogicalKeyboardKey.altRight) &&
+      !held(LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.metaRight);
 }
 
 /// Window and tab title. Not user-facing copy inside the app, so it stays out

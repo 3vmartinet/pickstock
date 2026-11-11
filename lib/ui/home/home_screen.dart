@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:pickstock/l10n/localization_extensions.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_view_model.dart';
@@ -15,6 +16,7 @@ import 'package:pickstock/ui/watchlist/widgets/watchlist_sync.dart';
 import 'package:pickstock/ui/widgets/brand_mark.dart';
 import 'package:pickstock/ui/report/widgets/jobs_button.dart';
 import 'package:pickstock/ui/widgets/ingest_button.dart';
+import 'package:pickstock/ui/widgets/settings_button.dart';
 import 'package:pickstock/ui/widgets/theme_toggle_button.dart';
 import 'package:provider/provider.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -75,11 +77,18 @@ class _HomeAppBar extends StatelessWidget {
       subtitle: context.isCompact
           ? null
           : Text(context.strings.browseSubtitle(total)),
-      // The ingest button last: it is the only one of the three that is
+      // The ingest button last: it is the only one of these that is
       // sometimes a labelled button and sometimes a line of text, and a slot
       // that changes width belongs at the end of the row rather than between
       // two icons it would shove about.
-      trailing: const [JobsButton(), ThemeToggleButton(), IngestButton()],
+      trailing: [
+        const JobsButton(),
+        // Not on macOS, where the app menu's Settings… is the way in.
+        if (SettingsButton.isShown(defaultTargetPlatform))
+          const SettingsButton(),
+        const ThemeToggleButton(),
+        const IngestButton(),
+      ],
     );
   }
 }

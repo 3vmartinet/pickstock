@@ -91,6 +91,33 @@ void main() {
     expect(await database.watchlistMembership(), isEmpty);
   });
 
+  test('the starred list cannot be deleted from the view model', () async {
+    final starred = viewModel.favourites!;
+    await viewModel.toggleStar(_apple);
+
+    expect(viewModel.canDelete(starred.id), isFalse);
+    expect(await viewModel.delete(starred.id), isFalse);
+
+    expect(viewModel.favourites?.id, starred.id);
+    expect(viewModel.isStarred(_apple), isTrue);
+  });
+
+  test('the starred list cannot be deleted through the repo either', () async {
+    final starred = viewModel.favourites!;
+
+    await GetIt.I.get<WatchlistRepo>().delete(starred.id);
+
+    final lists = await GetIt.I.get<WatchlistRepo>().all();
+    expect(lists.where((list) => list.isDefault), hasLength(1));
+  });
+
+  test('any other list can be deleted', () async {
+    final id = await viewModel.create('Temporary', 1);
+
+    expect(viewModel.canDelete(id), isTrue);
+    expect(await viewModel.delete(id), isTrue);
+  });
+
   test('deleting the selected list stops filtering by it', () async {
     final id = await viewModel.create('Temporary', 1);
     viewModel.select(id);

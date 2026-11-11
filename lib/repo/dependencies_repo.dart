@@ -1,3 +1,4 @@
+import 'package:drift/native.dart';
 import 'package:get_it/get_it.dart';
 import 'package:pickstock/repo/format_repo.dart';
 import 'package:pickstock/repo/price_repo.dart';
@@ -23,6 +24,11 @@ import 'package:pickstock/repo/watchlist/watchlist_repo.dart';
 
 /// Run with `--dart-define=PICKSTOCK_MOCK_DATA=true` to drive the UI from the
 /// canned fixture instead of the live EDGAR API.
+///
+/// Nothing on disk is opened in that mode: the database is held in memory, so
+/// the lists, the saved scans and the browse filters all work against tables
+/// that start empty and vanish with the app, and a fixture run can never
+/// migrate, seed or write the real `pickstock.sqlite`.
 const bool usesMockData = bool.fromEnvironment('PICKSTOCK_MOCK_DATA');
 
 /// The one place every dependency is wired up.
@@ -32,7 +38,16 @@ abstract final class DependenciesRepo {
       ..registerLazySingleton<ThemeRepo>(ThemeRepo.new)
       ..registerLazySingleton<FormatRepo>(FormatRepo.new)
       ..registerLazySingleton<TickerDirectoryRepo>(TickerDirectoryRepo.new)
-      ..registerLazySingleton<AppDatabase>(AppDatabase.new)
+      // In memory rather than a second set of repos: the watchlists, the
+      // saved reports and the browse filters all read the same tables, and
+      // one empty database covers every one of them — including the screens
+      // that query it directly — where a mock per repo would leave whichever
+      // was forgotten writing to the real file.
+      ..registerLazySingleton<AppDatabase>(
+        () => usesMockData
+            ? AppDatabase.forTesting(NativeDatabase.memory())
+            : AppDatabase(),
+      )
       ..registerLazySingleton<BulkIngestRepo>(BulkIngestRepo.new)
       ..registerLazySingleton<SecRepo>(
         () => usesMockData ? const MockSecRepo() : const LocalSecRepo(),

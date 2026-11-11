@@ -23,6 +23,8 @@ abstract interface class WatchlistRepo {
 
   Future<void> update(int id, {required String name, required int colourIndex});
 
+  /// Deletes the list with [id], unless it is the starred one: the star has to
+  /// have somewhere to put things, so that list is never deleted, whoever asks.
   Future<void> delete(int id);
 
   Future<void> add(int watchlistId, String cik);
@@ -64,7 +66,14 @@ class LocalWatchlistRepo implements WatchlistRepo {
   }) => _database.renameWatchlist(id, name, colourIndex);
 
   @override
-  Future<void> delete(int id) => _database.deleteWatchlist(id);
+  Future<void> delete(int id) async {
+    // Checked here as well as in the menu, which only leaves the item out:
+    // the menu keeps the user from asking, and this keeps any other caller
+    // from doing it.
+    final lists = await _database.allWatchlists();
+    if (lists.any((row) => row.list.id == id && row.list.isDefault)) return;
+    await _database.deleteWatchlist(id);
+  }
 
   @override
   Future<void> add(int watchlistId, String cik) =>

@@ -130,9 +130,18 @@ class WatchlistViewModel extends ChangeNotifier {
     await _reload();
   }
 
-  Future<void> delete(int id) async {
+  /// Whether the list with [id] can be deleted: every list but the starred
+  /// one, which the star button needs.
+  bool canDelete(int id) =>
+      _watchlists.any((list) => list.id == id && !list.isDefault);
+
+  /// Deletes the list with [id], and says whether it did. The starred list is
+  /// refused, and nothing is reloaded for it, since nothing changed.
+  Future<bool> delete(int id) async {
+    if (!canDelete(id)) return false;
     await _watchlistRepo.delete(id);
     await _reload();
+    return true;
   }
 }
 
