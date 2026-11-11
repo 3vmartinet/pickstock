@@ -180,10 +180,12 @@ class ListValuationViewModel extends ChangeNotifier {
   /// Takes the report's [verdict] for [cik] as the tile's own, and its
   /// [upside] with it when the report has one.
   ///
-  /// The report judges with the company's own discount rate, where the list
-  /// makes do with a cached or assumed one. Without this, a tile would show
-  /// the report's verdict while selected and fall back to its own, possibly
-  /// different, the moment another tile was picked.
+  /// Both value the company the same way, at the same fixed return; what
+  /// differs is the price. The report fetches a fresh quote on opening, where
+  /// the list reads the stored one or the day's close, which can sit either
+  /// side of a verdict's line. Without this, a tile would show the report's
+  /// verdict while selected and fall back to its own, possibly different, the
+  /// moment another tile was picked.
   void adopt(String cik, ValuationVerdict verdict, {ValuationUpside? upside}) {
     if (_isDisposed) return;
     final now = DateTime.now();

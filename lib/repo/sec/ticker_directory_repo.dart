@@ -94,8 +94,7 @@ class TickerDirectoryRepo {
   /// A price is stored per filer, so a quote for a warrant or a preferred
   /// share would otherwise be kept as the company's share price and
   /// multiplied by its common share count. Opendoor's `OPENW` warrant was,
-  /// at 3.5 cents, and the company read as 32,000% undervalued. The beta is
-  /// fetched under the same symbol, for the same reason.
+  /// at 3.5 cents, and the company read as 32,000% undervalued.
   ///
   /// [company]'s own symbol where the directory knows nothing better — a
   /// filer listed only once, or a company not in the directory at all.

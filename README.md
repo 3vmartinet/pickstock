@@ -39,7 +39,7 @@ edge of a narrow window — unreachable, with nothing to say there was more.
 | What the price is asking | Expectations | The growth rate the current price requires, solved out of a reverse DCF, set against the growth the company has actually delivered. |
 | How this was worked out | Valuation | The same valuation as a seven-step worked example in plain words, with the company's own numbers in it, beside the cards it explains. |
 | Seven questions | Framework | A screening framework: growth, moat, management, margins, cash, risk and timing, each Yes, No or Unclear. Growth, margins, cash and timing are settled by rules over the filings (and risk failed by one where the debt is beyond the cash flow), with the local model's cited research beside them; moat and management are the model's. One No means move on; seven Yeses offer the watchlist. |
-| All tickers | — | The whole EDGAR directory, filterable by symbol or company name and **sortable** by name or by growth; picking one loads its report. |
+| All tickers | — | The whole EDGAR directory, filterable by symbol or company name, narrowed by revenue growth, cash generation, cash against debt and verdict, and **sortable** by name, by growth or by upside to the fair range; picking one loads its report. |
 | Undervalued scans | — | A background run that prices every filtered company and reports those trading below the bottom of their fair range, most upside first. |
 | Watchlists | — | Named, colour-coded lists of companies. Star one for the built-in list, or put it in as many of your own as you like, then narrow the directory to a list. |
 
@@ -98,17 +98,19 @@ published one. An **Update available** button appears only when SEC has actually
 rebuilt it; the archive changes every few days at most, and a permanently
 visible refresh invites a pointless 1.4 GB download. With *Download updates
 automatically* on (the default — see [Settings](#settings)) that download
-starts by itself and the button goes straight to offering the load.
+starts by itself and the button goes straight to offering the load — or,
+with *Apply updates automatically* also on (it is off unless turned on), the
+load starts by itself too.
 
 The first download is a **blocking full-screen step** — there is no ticker
 directory to search and no figures to report without it.
 
 **A refresh never blocks.** Both of its steps run behind a working app: the
-download touches no table, and the load fills *copies* of the four tables it
+download touches no table, and the load fills *copies* of the five tables it
 replaces — `tickers_next`, `companies_next`, `fiscal_years_next`,
-`fiscal_quarters_next` — which take the live tables' place in one transaction
-when every company is in. Until then the app reads the figures it had; after
-it, the new ones, all at once; never a mixture and never nothing. The load
+`fiscal_quarters_next`, `trailing_years_next` — which take the live tables'
+place in one transaction when every company is in. Until then the app reads
+the figures it had; after it, the new ones, all at once; never a mixture and never nothing. The load
 used to shut the app because it began by clearing the tables, which it never
 needed to: of its four minutes, writing the rows takes under a second and the
 rest is parsing 19 GB of JSON on background isolates. Measured on a full
@@ -176,11 +178,36 @@ like until the next ingest.
 Tiles are twice as wide as tall: symbol over company name on the left, and the
 ranked figure on the right so it lines up down the edge for comparison rather
 than sitting under each name. It is filterable by symbol or company name and
-sortable by name (case-insensitively) or by growth: revenue over 1, 2, 3, 5 or
-10 years, or free cash flow over the last year. Each tile shows the figure it is
-ranked on — the growth rate, or the latest revenue when the list is
-alphabetical. Ordering, filter and scroll position survive opening a company and
-coming back.
+sortable by:
+
+| Ordering | Ranks by |
+| --- | --- |
+| Name | The company name, case-insensitively |
+| Revenue growth, fastest first | The annual rate over the revenue filter's window, or the latest year with no filter on |
+| Free cash flow growth, 1 year | Free cash flow against the year before |
+| Upside to fair low / fair high | How far the price is from that end of the fair range, largest or smallest first |
+
+Each tile shows the figure it is ranked on — the growth rate, or the latest
+revenue when the list is alphabetical; under an upside ordering a tag beside
+the verdict says the upside it is ranked by. Upsides are known only once the
+list has priced a company, so those not priced yet, or that cannot be valued,
+sit at the end in either direction. Ordering, filters and scroll position
+survive opening a company and coming back.
+
+Which companies are in the list is the filters' business, not the ordering's.
+Beside the sector row:
+
+| Filter | Keeps |
+| --- | --- |
+| Revenue growth | Revenue growing on average over 1, 2, 3, 5 or 10 years, or rising in every year of 2, 3, 5 or 10 |
+| Cash generative | Free cash flow positive in the latest year, or 2, 3, 5 or 10 years running |
+| Cash to debt | Cash covering debt 1×, 2×, 3× or 5× over, or anything from 1× to 10× on a slider; a company owing nothing passes at every multiple |
+| Verdict | Undervalued, fairly valued or overvalued, as the tiles mark them; absent with neither a Finnhub nor a Massive key, since nothing could be priced |
+
+Revenue growth used to be offered as an ordering per window, which made the
+sort control the place to ask "which companies grew" — a filtering question
+put to a control that cannot filter. Ranking by revenue growth now ranks over
+the filter's window, so the figure on each tile is the one the filter tested.
 
 The search field sits flush left above the list and filters on symbol or company
 name. There is no submit button and no suggestion dropdown: the list is the
@@ -199,13 +226,14 @@ A rate is only quoted where it means something:
 * The base must clear `minimumGrowthBase` (currently $1m). A shell company going
   from $8,000 of revenue to $97m is arithmetically a 10,000% annual rate and
   tells you nothing; without the floor those companies head every ranking.
-**Run-of-growth orderings** ask a stricter question: revenue higher than the
-year before it in *every* year of the window, over 2, 3, 5 or 10 years. A dip
+
+The **rising** windows ask a stricter question: revenue higher than the year
+before it in *every* year of the window, over 2, 3, 5 or 10 years. A dip
 breaks the run, and so does a missing year — a gap in the filings is not read
-through. Companies that fail sort last with `—`, exactly as a company with no
-figure does, and the ones that qualify are ranked among themselves by the annual
-rate over the same window, so steady compounders lead rather than one lucky
-year.
+through. Companies that fail leave the list rather than sorting last, and
+ranked by revenue growth the ones that qualify are ordered among themselves by
+the annual rate over the same window, so steady compounders lead rather than
+one lucky year.
 
 * The window ends at the company's **latest fiscal year** — the same one the
   report headlines — not the latest year that happens to carry a figure, so the
@@ -224,8 +252,10 @@ commercial provider, and the only part that needs a key.
 **The key is not in this repository.** Copy `env.example.json` to `env.json`,
 paste a key, and it reaches the app through `--dart-define-from-file=env.json`
 (already wired into every entry in `.vscode/launch.json`). `env.json` is
-gitignored. Without a key the app runs exactly as it did before quotes existed:
-the price is typed in.
+gitignored. Without a key nothing is quoted and everything else works
+unchanged: the price is the stored one — the day's close where a
+[Massive key](#a-price-for-every-company-once-a-day) is built in, otherwise
+the one typed in.
 
 Two things about the free tier, both confirmed against the live endpoint rather
 than the documentation:
@@ -268,13 +298,13 @@ Everything else comes out of the filings:
 
 | Figure | How |
 | --- | --- |
-| Market value | price × shares outstanding (`dei:EntityCommonStockSharesOutstanding` from the newest filing's cover, falling back to `us-gaap:CommonStockSharesOutstanding`) |
-| Enterprise value | market value + net debt: what an acquirer pays for the whole business, reported as context rather than used in the band |
+| Market value | price × shares outstanding (`dei:EntityCommonStockSharesOutstanding` from the newest filing's cover, falling back to `us-gaap:CommonStockSharesOutstanding`; with no cover count at all, the diluted average from the newest 10-Q, then the fiscal year's) |
+| Enterprise value | market value + net debt: what an acquirer pays for the whole business, reported as context rather than used in the band; **Unknown** where the debt is |
 | Earnings per share | net income ÷ diluted weighted-average shares, the divisor the company itself reports against |
 | Stream | The median free cash flow margin after stock pay over up to ten years, applied to the latest revenue (the twelve months to the newest 10-Q where it is newer than the 10-K) — net income where there is no positive cash stream — brought down to the listed shares' stake in the group |
 | Multiple | One discounted cash flow, run on a unit of that stream at a fixed 9% required return, a point either side of it for the band, paying for the typical growth of revenue *per share* over the last five changes, held between −10% and +15% |
-| Balance sheet | As at the newest 10-Q where that is newer than the 10-K. Net cash is added; debt beyond three years of the stream is taken off. The rest of the debt is already paid for out of a cash flow that is after interest |
-| Margin of safety | The low end of the band is a third below the arithmetic. A price has to clear that before the company is called undervalued |
+| Balance sheet | As at the newest 10-Q where that is newer than the 10-K. Net cash is added; debt beyond three years of the stream is taken off. The rest of the debt is already paid for out of a cash flow that is after interest. Where the cash and debt are not on file nothing is added or taken off, and the worked example says so rather than showing $0 |
+| Margin of safety | The low end of the band is 30% below the arithmetic. A price has to clear that before the company is called undervalued |
 | Not covered | Banks, insurers, lenders, brokers and REITs: their cash flow says nothing about what they earn, and the report says so rather than producing a band |
 
 Each of those is the correction to a way the band was wrong against the
@@ -323,15 +353,27 @@ flutter test --dart-define-from-file=env.json test/live_quote_test.dart
 A model on this machine can search the web and comment on the company in front
 of you. Two halves, deliberately: `gemma4:12b-mlx` runs locally through Ollama,
 so nothing about the company you are looking at leaves the machine except the
-search terms the model itself chooses, while the searching is Ollama's hosted
+search terms the model itself chooses, while the searching is done by a search
 service — a local model has no way to reach the web on its own.
+
+**The search is local first.** Where the reader runs a
+[SearXNG](https://docs.searxng.org) server on this machine (by default at
+`http://localhost:8888`), searches go to it, since it has no quota; Ollama's
+hosted search is the fallback when it fails or finds nothing, and the only
+search when no local server is set up. Pages are read on this machine through
+Ollama first and locally where Ollama cannot or will not read them. *Set up
+unlimited search* in the [settings](#settings) walks through starting the
+server — a container app, one command to paste — and switches to it once it
+answers. A hosted search that answers `429` is left alone for as long as its
+`Retry-After` says (an hour when it does not say), so the local server answers
+on its own until then.
 
 `OLLAMA_API_KEY` reaches the app the same way the Finnhub key does, through
 `--dart-define-from-file=env.json`. `OLLAMA_HOST` and `OLLAMA_MODEL` are defines
 too, since which models are pulled is a property of the machine rather than of
-the app. Without a key the feature reports itself unavailable; so does a machine
-with no server listening or without the model pulled, which is checked rather
-than assumed.
+the app. With neither a key nor a local search server the feature reports
+itself unavailable; so does a machine with no Ollama server listening or
+without the model pulled, which is checked rather than assumed.
 
 The model is handed the first 4,000 characters of each page. Ollama's own note
 is that a search returns thousands of tokens a page, and five whole pages is a
@@ -346,7 +388,9 @@ flutter test --dart-define-from-file=env.json test/live_research_test.dart
 Proves the key arrives, that the hosted search answers the shape the parser
 expects, and that the local model actually calls the tools rather than answering
 from memory. Skipped without a key, and the model tests skip themselves if
-nothing is listening.
+nothing is listening. The local-first path — SearXNG, the fallback to the
+hosted search and the rest after a `429` — has no live test; it is covered
+against stubbed servers in `test/local_search_test.dart`.
 
 ### A price for every company, once a day
 
@@ -360,14 +404,23 @@ and end-of-day data. One request a day is all this needs.
 
 `MASSIVE_API_KEY` reaches the app the way the Finnhub key does. With it,
 `BulkPriceRefresh` asks for the latest closes behind a working app once the
-directory has loaded — on launch and after an ingest, at most once every six
-hours — and stores each against its filer under the common share, exactly as
-a Finnhub quote is stored. A price the reader typed is left alone. From then
-on the **tiles judge from the stored close** without a quote each, the
-**scan values from it** and finishes in seconds rather than three quarters
-of an hour, and the largest-by-value rankings are current for every company.
-Opening a company still asks Finnhub for a live price, because a report is
-about now and a screen is about the day.
+directory has loaded — on launch, at most once every six hours, and an open
+session looks every hour for whether six hours have passed, so one left open
+overnight picks up the new trading day without a relaunch — and stores each against its filer under the
+common share, exactly as a Finnhub quote is stored. After an ingest it asks
+again even inside the six hours, so filers new to the directory get a price
+at once. A price the reader typed is left alone, and so is a quote stamped
+after the close's trading day — a live price fetched this morning is newer
+than yesterday's close. From then on the **tiles judge from the stored
+close** without a quote each, the **scan values from it** and finishes in
+seconds rather than three quarters of an hour, and the **largest-by-value
+rankings** read it too: a stored close is never re-quoted there, Finnhub is
+asked only about a ranked company with no stored price, and the rankings
+re-sort themselves when the day's closes land. Their market value uses the
+valuation's share count — the cover count, then the newest 10-Q's diluted
+count, then the year's — so a filer with no cover count that has split since
+its 10-K is sized right. Opening a company still asks Finnhub for a live
+price, because a report is about now and a screen is about the day.
 
 Two things about the free plan, from its own documentation: a day's bars are
 served only **after midnight Eastern**, so the request starts from yesterday
@@ -398,7 +451,9 @@ figures the app already holds, and a 12B model asked whether revenue that grew
 7% a year is growing will say yes nearly always and no now and then. A verdict
 that changes from run to run is not a screen, so those four are rules over the
 filings, and the model's answer to them is kept as its research notes beside
-the rule's verdict. Where the model read it differently, the card says so.
+the rule's verdict, its own verdict with them. Where the model read it
+differently from the filings as they read today, the card says so — so the
+line comes and goes as a new year or a new price moves the rule.
 
 | Question | Yes | No | Left to the model |
 | --- | --- | --- | --- |
@@ -415,24 +470,30 @@ failed Ford and General Motors on their lending arms' interest, and debt over
 cash flow alone failed Amazon at twelve years against 1.1× its operating
 profit, which is why each test takes two measures.
 
-The rule's verdict is what is filed, so the list's tiles count what the report
-shows; the report reads the filings live, so a new price or a new year moves a
-verdict without asking the model again.
+The rule's verdict is what is filed, but neither the report nor the list's
+tiles count the filed verdicts: both settle every question live, against the
+filings and the price as they are now, through the same function, so a tile
+counts what its report shows. The tiles use the stored price, or the report's
+own while the company is open in it. A new price or a new year moves a
+verdict without asking the model again, and where the filings no longer
+settle a question, both fall back to the model's own verdict.
 
-**One task, seven steps.** A single press queues one row in the jobs list, which
-reports how far through it is (`Answering 3 of 7…`); timing is filed from the band without a step of the model's. The questions run in order
-and each answer lands on the tab as it arrives; a question can be asked again
-on its own from its card. A missing server, model or key fails the rest at
-once rather than waiting out seven timeouts; any other failure skips to the
-next question. As with the other questions, a finished row is the way back:
+**One task, seven steps.** A single press queues one row in the jobs list,
+which reports how far through it is (`Answering 3 of 7…`); timing is filed
+from the band without a step of the model's. The questions run in order and
+each answer lands on the tab as it arrives; a question can be asked again on
+its own from its card. A missing server, model or key fails the rest at once
+rather than waiting out six timeouts — though timing, which needs no model,
+is still filed, so a run that stops early still leaves a note and a tile; any
+other failure skips to the next question. As with the other questions, a finished row is the way back:
 opening it shows the company on the Framework tab with the scorecard marked.
 
-**Reading questions must read.** Every question but cash is answered from the
-web, and the 12B model given the filings would sometimes answer from those
+**Reading questions must read.** Every question the model is asked but cash
+is answered from the web, and the 12B model given the filings would sometimes answer from those
 alone. A reply that read nothing is sent back once with an instruction to
 search. If every search it tries is **refused** — Ollama's hosted search rate
 limits, and a day of live test runs was enough to hit it — the question fails
-with that reason and the rest of the run stops, rather than seven answers
+with that reason and the rest of the run stops, rather than six answers
 written from the brief that read exactly like researched ones. The limit is
 metered over a window, not only a total: after a day of live runs the service
 answered `429` with `Retry-After: 7150` — two hours — with allowance still
@@ -488,7 +549,7 @@ and before this they disagreed about the same year: Crocs' FY2025 operating
 margin is 3.7% as filed and 22.0% before the $738.1M it wrote off HEYDUDE, and
 the margins question called it a one-off on what it found on the web while the
 risk question called it a collapse. Now the brief states the write-down and
-the margin before it as a fact all seven share, and the cash, risk and timing
+the margin before it as a fact every question shares, and the cash and risk
 rules say a charge already booked is history: risk is asked what could cause
 the next one instead.
 
@@ -496,7 +557,8 @@ Saying so was not enough for a 12B model: told the 3.7% was a write-down, it
 went on calling it a collapse — on risk, then on timing once risk was told. So
 in a year with a write-down the brief quotes only the margin before it, with
 the operating income as filed in money but no margin after the charge to
-anchor on. With that, all seven Crocs answers agree on 22.0%.
+anchor on. With that, every Crocs answer agrees on 22.0%. (Timing has since
+stopped being asked of the model at all: it is the price against the band.)
 
 The distilling pass is asked twice before a question is given up on: now and
 then the model replies with something other than the JSON asked for, usually by
@@ -507,9 +569,10 @@ throwing away half a minute of reading.
 flutter test --dart-define-from-file=env.json test/live_framework_test.dart
 ```
 
-Puts all seven to the local model for Crocs and prints each verdict, proving
-every answer parses, every kept link is one the search returned, and the risk
-answer no longer quotes the write-down's 3.7% as a collapse.
+Puts the six questions the model is still asked to the local model for Crocs
+— timing is left out, as the app leaves it out — and prints each verdict,
+proving every answer parses, every kept link is one the search returned, and
+the risk answer no longer quotes the write-down's 3.7% as a collapse.
 
 ### Settings
 
@@ -523,26 +586,46 @@ nothing. The menu stays native (`MainMenu.xib`) and reaches Flutter over the
 replaced the system's Edit menu with nothing. The template's `APP_NAME`
 placeholders (*About APP_NAME*, *Quit APP_NAME*) now say PickStock.
 
+Linux has no app menu to put them in, so there — and on any platform but
+macOS — **Ctrl+,** opens them from anywhere in the app, before anything has
+focus, and a gear button beside the theme toggle in the top bar opens them by
+mouse; asking again while they are open does not open a second copy.
+
 Flutter draws the app in one window, so the settings open as a dialog over it
 rather than a window of their own — the nearest equivalent, leaving whatever
 was on screen where it was. Inside, the layout is shadcn's settings form: a
 section with a legend and a line on what it governs, then one bordered row per
 setting, words on the left and the switch on the right, with the whole row
-pressable.
+pressable. There are two sections, *SEC data* and *Research*.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Download updates automatically | On | When the launch check finds SEC has rebuilt the archive, the 1.4 GB download starts in the background with no press. Loading it still waits for one — it runs in the background too, but replaces every figure, so it is yours to start. A download an earlier session left staged is not fetched again, and a failed one is not retried behind your back. Turning it on with an update already offered starts that download at once. |
+| Download updates automatically | On | When the launch check finds SEC has rebuilt the archive, the 1.4 GB download starts in the background with no press. Loading it still waits for one unless the next setting is on — it runs in the background too, but replaces every figure, so by default it is yours to start. A download an earlier session left staged is not fetched again, and a failed one is not retried behind your back. Turning it on with an update already offered starts that download at once. |
+| Apply updates automatically | Off | A downloaded archive is loaded as soon as it is staged, with no press — after a download finishes, and on launch for one an earlier session left staged. Turning it on with an update already staged loads it at once. |
+| Auto-fetch business description | On | Opening a company with no business description on file asks the local model for one, unless it has already been found to find nothing. Off, it is fetched only when asked for from its card. |
+| Web search | Hosted, where a key is built in | Which search the model reads the web through: Ollama's hosted search, with its usage limit, or — once *Set up unlimited search* has started a [SearXNG](#reading-around-the-figures) server on this machine — that server first, with a switch to go back. The server's address (`http://localhost:8888` by default) is stored with it, and the row checks the server when the settings open, so what it says is true now. |
 
-Stored like the others, as a row in `settings` — only when turned off, so the
-default is the absence of one.
+Stored like the others, as a row in `settings` — only when they differ from
+the default, so the default is the absence of one.
 
 ### What the app remembers
 
-The theme, the directory's ordering, the sector filter and the chosen list
-survive a restart. They live in a key/value `settings` table — one row per
-setting, so the next one is not a migration — and like prices and watchlists
-they sit out a schema rebuild.
+These survive a restart:
+
+* the **theme**;
+* the directory's **ordering** and its filters — the **sector** and the
+  industries within it, **revenue growth**, **cash generative**, **cash to
+  debt** — and the **chosen list**;
+* how wide the **list** was left beside the report;
+* the **Framework tab's layout** (list, carousel or side panel), whether the
+  side panel shows only the selected answer, and whether the list layout's
+  scorecard stays pinned;
+* the **ten companies last opened**, which the empty report pane offers back;
+* the [settings](#settings) themselves.
+
+They live in a key/value `settings` table — one row per setting, so the next
+one is not a migration — and like prices and watchlists they sit out a schema
+rebuild.
 
 They are read **once in `main`, before `runApp`**, so every getter on
 `SettingsRepo` is synchronous and the view models can seed themselves in their
@@ -550,11 +633,13 @@ constructors. A view model that awaited its own initial state would render the
 default first and the remembered value a frame later: a flash of the wrong
 theme, and a list that reorders itself as you look at it.
 
-Two things are deliberately not remembered. The **search text** is typed rather
-than chosen, and reopening the app filtered to `aa` with no memory of why would
-be a puzzle. A **deleted list** is forgotten rather than restored — the id is
-checked against the lists that still exist on the way up, and cleared if it is
-gone.
+Three things are deliberately not remembered. The **search text** is typed
+rather than chosen, and reopening the app filtered to `aa` with no memory of
+why would be a puzzle. The **verdict filter** rests on share prices, and a list
+opening already narrowed to them would start spending the quote budget before
+anyone asked it to. A **deleted list** is forgotten rather than restored — the
+id is checked against the lists that still exist on the way up, and cleared if
+it is gone.
 
 An enum stored by name is read back tolerantly: a value this build no longer has
 resets that filter instead of stopping the app from starting.
@@ -597,7 +682,8 @@ already stored, and the rest have moved on.
 Favourites is not a separate mechanism: it is a list like any other, seeded on
 first open, sorting first, and undeletable because the star has to have
 somewhere to put things. One concept instead of a flag beside a table doing the
-same job.
+same job. Undeletable is enforced below the menu as well: the view model and
+the repository both refuse to delete the starred list, so no other caller can.
 
 Lists carry a **palette index rather than a colour**, so a list keeps its
 identity when the theme changes and the dark variant can differ from the light
@@ -660,7 +746,17 @@ It also carries the caveats that would mislead a reader taking the steps at face
 value: capital spending well above depreciation (so the year's cash understates
 the business), an operating margin below its own ten-year normal (so sales
 growth is being won at lower profit), and a valuation resting on accounting
-profit because there is no free cash flow to use.
+profit because there is no free cash flow to use. The first two show whichever
+of the cash stream or the profit the valuation rests on, the capital-spending
+one worded for earnings where it is profit.
+
+Where the newest 10-Q supplied any figure, a caveat says so and names only
+the ones it supplied: the sales (the twelve months to the quarter), the cash
+and debt, and the share count where it is the divisor — that is, where the
+filing carries no cover count. With no cover count, the share-count caveat
+says whether the diluted average is the latest quarterly report's or the
+fiscal year's. Where the cash and debt are not on file at all, step 3 says
+so rather than adding or taking off $0.
 
 ### What the price is asking: a DCF run backwards
 
@@ -704,8 +800,25 @@ and Ford do not tag it and Amazon tags a figure that is plainly not its gross
 profit — so it is left out rather than shown wrong.
 
 Growth is faded linearly to 2.5% across a ten-year horizon rather than held flat
-and then dropped, and a record above 20% a year is credited only to 20% when
-valuing forwards — a decade at 45% is a wish, not a forecast.
+and then dropped, and a record is credited only between −10% and +15% a year
+when valuing forwards, the same limits as the band — a decade at 45% is a
+wish, not a forecast. That holds for the *worth a share if it repeats its
+record* row and for the price targets alike.
+
+**The price targets** — bear, neutral and bull, under *What a share is worth
+if the record repeats* — are the same discounted cash flow run at the
+company's worst, middle and best year of revenue growth on file, not at
+quartiles of it. Their first step says what the company sold, in its latest
+fiscal year or in the twelve months to the newest 10-Q, and the typical cash
+that makes.
+
+**Outside owners are left out here too.** Where part of the group belongs to
+others, the required growth, the worth row, the verdict and the targets all
+discount the cash brought down to the listed shares' stake — the same stream
+as the band — and the basis line and the targets' first step say how much
+belongs to the listed shares. The normalisation gap still compares the
+group's typical cash with the group's reported cash, so the stake does not
+skew it.
 
 Measured against live prices, this separates the sample cleanly: NVIDIA's price
 asked for less growth than it has delivered, Microsoft's and Alphabet's sat in
@@ -842,8 +955,12 @@ time: each is read from `env.json`, and a shell variable of the same name wins �
 debug only, `PICKSTOCK_MOCK_DATA` work the same way. Extra arguments go to
 `flutter build macos`.
 
-`--dart-define=PICKSTOCK_MOCK_DATA=true` swaps the database for a fixture
+`--dart-define=PICKSTOCK_MOCK_DATA=true` swaps the filings for a fixture
 carrying Apple's filed figures, which is what most widget tests run against.
+It also swaps the database file for one in memory, so a fixture run never
+opens, migrates, seeds or writes `pickstock.sqlite`: watchlists, saved scans,
+settings and the chosen list start empty or at their defaults and are gone
+when the app quits.
 
 macOS is sandboxed: `com.apple.security.network.client` is set in both
 entitlements files, without which the bulk download fails silently.
@@ -853,10 +970,16 @@ entitlements files, without which the bulk download fails silently.
 ```
 lib/
   data/          Immutable models and the enums that describe them
+  extensions/    Small extensions on core types (logging)
   repo/
     db/          drift schema and generated code
     sec/         Bulk ingest, XBRL parsing, database-backed reads
-    quote/       Live share prices from Finnhub, behind a key
+    quote/       Live quotes from Finnhub and the daily closes from Massive
+    research/    The local model, SearXNG and hosted search, page reading, notes
+    report/      Saved scan reports
+    settings/    The remembered choices and settings
+    watchlist/   Watchlists and their entries
+    *.dart       Stored prices, formatting, theme, dependency wiring
   ui/            Screens, view models and widgets
   l10n/          ARB bundle and the generated AppLocalizations
 ```
@@ -874,7 +997,9 @@ MVVM with `provider`, repositories behind `get_it`, sealed classes for screen
 state, enhanced enums carrying their own presentation, every string in the ARB
 bundle, and `Row`/`Column`'s `spacing` rather than spacer widgets.
 
-Figures come from 10-K filings only, in USD. A sanity check on the shape of the
+Figures come from 10-K and 10-Q filings, in USD: the years from the 10-Ks,
+and the revenue, cash, debt and share count the valuation uses from the
+newest 10-Q where it is newer. A sanity check on the shape of the
 numbers — not investment advice.
 
 **Net debt** is total borrowings less cash, so it is *negative* when a company
@@ -884,10 +1009,18 @@ because `Net cash −$2.14B` reads as a contradiction.
 
 ## Starting over
 
-Everything is derived from the download, so resetting is deleting one file:
+Resetting is deleting one file:
 
 ```shell
 rm ~/Library/Containers/<bundle-id>/Data/Documents/pickstock.sqlite
 ```
 
 The next launch recreates it empty and the gate asks for a fresh ingest.
+
+**Not everything in that file comes from the download.** The same database
+holds the user's own data, which no ingest brings back: watchlists, saved scan
+reports, typed prices, the settings and remembered choices, and the model's
+research notes — the framework answers and insights, each of which took
+minutes and searches to write. Deleting the file loses all of them along with
+the figures, so copy it first if any of that is worth keeping. An update,
+by contrast, replaces only the downloaded tables and leaves the rest alone.
