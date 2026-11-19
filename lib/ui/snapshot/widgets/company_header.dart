@@ -3,7 +3,7 @@
 // three live in material; `SelectableRegion` in `widgets` takes them as
 // required arguments rather than providing them. Narrowed to the single name
 // so material's `Theme`, `Text` and the rest stay out of this file.
-import 'package:flutter/material.dart' show SelectionArea;
+import 'package:material_ui/material_ui.dart' show SelectionArea;
 import 'package:pickstock/data/snapshot/company.dart';
 import 'package:pickstock/data/snapshot/sic_industry.dart';
 import 'package:pickstock/l10n/localization_extensions.dart';

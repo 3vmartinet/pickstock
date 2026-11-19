@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
-import 'package:pickstock/l10n/app_localizations.dart';
+import 'package:pickstock/l10n/localization_delegates.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/widgets/source_link.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -19,7 +19,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const ShadcnApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: appLocalizationsDelegates,
         home: Center(
           child: SourceLinks(
             sources: [(label: _title, url: _url)],

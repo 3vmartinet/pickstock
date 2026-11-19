@@ -2,12 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/l10n/localization_delegates.dart';
 import 'package:pickstock/app.dart';
 import 'package:pickstock/data/quote/quote.dart';
 import 'package:pickstock/data/research/framework_question.dart';
 import 'package:pickstock/data/research/framework_score.dart';
 import 'package:pickstock/data/snapshot/report_tab.dart';
-import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/db/app_database.dart';
 import 'package:pickstock/repo/price_repo.dart';
 import 'package:pickstock/repo/theme_repo.dart';
@@ -190,7 +190,7 @@ void main() {
     tester,
   ) async {
     Widget gauge(int yes) => ShadcnApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       home: Center(
         child: FrameworkGauge(
           score: FrameworkScore(

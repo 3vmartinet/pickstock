@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
+import 'package:pickstock/l10n/localization_delegates.dart';
 import 'package:pickstock/l10n/app_localizations.dart';
 import 'package:pickstock/repo/theme_repo.dart';
 import 'package:pickstock/ui/app_route.dart';
@@ -161,7 +162,7 @@ class _PickStockAppViewState extends State<_PickStockAppView> {
       darkTheme: _themeRepo.darkTheme,
       themeMode: themeMode,
       navigatorKey: _navigatorKey,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       initialRoute: AppRoute.home.path,
       routes: AppRoute.routes,
